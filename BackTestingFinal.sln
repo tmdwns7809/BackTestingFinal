@@ -7,6 +7,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BackTestingFinal", "BackTes
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TradingLibrary", "..\TradingLibrary\TradingLibrary\TradingLibrary.csproj", "{AE1799E9-A94D-4939-98FE-DBB78DB772E4}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BinanceHand", "..\BinanceHand\BinanceHand\BinanceHand.csproj", "{26E2CE57-26EF-4392-9C97-EBC6C6CFFA4E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "JooHand", "..\JooHand\JooHand\JooHand.csproj", "{9555527B-DA78-44B2-AEBB-DAE72872E46E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +25,14 @@ Global
 		{AE1799E9-A94D-4939-98FE-DBB78DB772E4}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{AE1799E9-A94D-4939-98FE-DBB78DB772E4}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{AE1799E9-A94D-4939-98FE-DBB78DB772E4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{26E2CE57-26EF-4392-9C97-EBC6C6CFFA4E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{26E2CE57-26EF-4392-9C97-EBC6C6CFFA4E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{26E2CE57-26EF-4392-9C97-EBC6C6CFFA4E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{26E2CE57-26EF-4392-9C97-EBC6C6CFFA4E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9555527B-DA78-44B2-AEBB-DAE72872E46E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9555527B-DA78-44B2-AEBB-DAE72872E46E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9555527B-DA78-44B2-AEBB-DAE72872E46E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9555527B-DA78-44B2-AEBB-DAE72872E46E}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

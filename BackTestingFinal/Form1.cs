@@ -1,4 +1,5 @@
 ﻿using System.Windows.Forms;
+using TradingLibrary.Base;
 using TradingLibrary;
 
 namespace BackTestingFinal
@@ -6,12 +7,19 @@ namespace BackTestingFinal
     public partial class Form1 : Form
     {
         BackTesting backTesting;
+        bool update = false;
+        bool isJoo = false;
 
         public Form1()
         {
             InitializeComponent();
 
-            backTesting = new BackTesting(this, @"C:\Users\tmdwn\source\repos\CybosPlus\DaySticks.db", 0.3m);
+            if (update)
+                if (isJoo)
+                    new JooDB(this, update);
+
+            if (isJoo)
+                backTesting = new BackTesting(this, JooDB.path, Commision.Joo);
         }
 
         protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
