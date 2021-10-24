@@ -35,8 +35,8 @@ namespace BackTestingFinal
                 form.Invoke(new Action(() => { MessageBox.Show(sErrMsg, "실행확인", MessageBoxButtons.OK, MessageBoxIcon.Error); }));
             }
 
-            codeList.Add("U001");   //kospi
-            codeList.Add("U201");   //kosdaq
+            //codeList.Add("U001");   //kospi
+            //codeList.Add("U201");   //kosdaq
             var kospi = CpCodeMgr.GetStockListByMarket(CPUTILLib.CPE_MARKET_KIND.CPC_MARKET_KOSPI);
             var kosdaq = CpCodeMgr.GetStockListByMarket(CPUTILLib.CPE_MARKET_KIND.CPC_MARKET_KOSDAQ);
             foreach (var code in kospi)
