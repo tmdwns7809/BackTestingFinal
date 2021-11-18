@@ -1,29 +1,28 @@
 ﻿using System.Windows.Forms;
 using TradingLibrary.Base;
-using TradingLibrary;
+using System;
 
 namespace BackTestingFinal
 {
     public partial class Form1 : Form
     {
-        BackTesting backTesting;
-        bool update = false;
-        bool isJoo = false;
-
         public Form1()
         {
             InitializeComponent();
 
-            if (update)
-                if (isJoo)
-                    new JooDB(this, update);
-                else
-                    new BinanceDB(this, BinanceDB.path + BinanceDB.futures1mName);
+            BaseFunctions.isJoo = MessageBox.Show("isJoo?", "caption", MessageBoxButtons.YesNo) == DialogResult.Yes;
+            var futures = false;
+            if (!BaseFunctions.isJoo)
+                futures = MessageBox.Show("futures?", "caption", MessageBoxButtons.YesNo) == DialogResult.Yes;
+            var update = MessageBox.Show("update?", "caption", MessageBoxButtons.YesNo) == DialogResult.Yes;
+            var check = MessageBox.Show("check duplicate?", "caption", MessageBoxButtons.YesNo) == DialogResult.Yes;
 
-            if (isJoo)
-                backTesting = new BackTesting(this, JooDB.path, Commision.Joo, isJoo);
+            if (BaseFunctions.isJoo)
+                new JooSticksDB(this, update, check);
             else
-                backTesting = new BackTesting(this, BinanceDB.path + BinanceDB.futures1mName, Commision.Binance, isJoo);
+                new BinanceSticksDB(this, update, check, futures);
+
+            BackTesting.instance = new BackTesting(this, BaseFunctions.isJoo);
         }
 
         protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
@@ -31,11 +30,11 @@ namespace BackTestingFinal
             switch (keyData)
             {
                 case Keys.Left:
-                    backTesting.beforeButton.PerformClick();
+                    BackTesting.instance.beforeButton.PerformClick();
                     return true;
 
                 case Keys.Right:
-                    backTesting.afterButton.PerformClick();
+                    BackTesting.instance.afterButton.PerformClick();
                     return true;
 
                 default:

@@ -10,24 +10,24 @@ using System.Drawing;
 using System.Data.SQLite;
 using System.IO;
 using System.Threading;
+using TradingLibrary.Base;
 
 namespace BackTestingFinal
 {
-    class JooDB
+    sealed class JooSticksDB : BaseSticksDB
     {
         CPSYSDIBLib.StockChart StockChart = new CPSYSDIBLib.StockChart();
         CPUTILLib.CpCodeMgr CpCodeMgr = new CPUTILLib.CpCodeMgr();
 
-        List<string> codeList = new List<string>();
+        public static string JooBaseName = "Sticks_";
+        public static string JooPath = @"C:\Users\tmdwn\source\repos\BigFilesCantSaveGit\SticksDB\Joo\";
 
-        public static string path = @"C:\Users\tmdwn\source\repos\BigFilesCantSaveGit\SticksDB\Joo\DaySticks.db";
-
-        Form form;
-
-        public JooDB(Form form, bool update)
+        public JooSticksDB(Form f, bool update, bool check) : base (f, JooPath, JooBaseName, update, check)
         {
-            this.form = form;
+        }
 
+        protected override void ConnectAndGetCodeList()
+        {
             CPUTILLib.CpCybos cpCybos = new CPUTILLib.CpCybos();
             if (cpCybos.IsConnect == 0)
             {
@@ -43,20 +43,15 @@ namespace BackTestingFinal
                 codeList.Add(code);
             foreach (var code in kosdaq)
                 codeList.Add(code);
-
-            if (update)
-                SaveAndUpdate();
-
-            //DeleteAllLast();
         }
 
-        void SaveAndUpdate()
+        protected override void SaveAndUpdateDB()
         {
-            var conn = new SQLiteConnection("Data Source =" + path);
+            var conn = new SQLiteConnection("Data Source =" + path + BaseName + ".db");
             conn.Open();
 
             var start = 10000000;
-            var list = new List<Stick>();
+            var list = new List<JooDBStick>();
             StockChart.Received += new CPSYSDIBLib._ISysDibEvents_ReceivedEventHandler(() =>
             {
                 var code = StockChart.GetHeaderValue(0);
@@ -64,7 +59,7 @@ namespace BackTestingFinal
 
                 for (int i = 0; i < count; i++)
                 {
-                    var stick = new Stick()
+                    var stick = new JooDBStick()
                     {
                         date = (int)StockChart.GetDataValue(0, i),
                         open = (decimal)StockChart.GetDataValue(1, i),
@@ -97,7 +92,7 @@ namespace BackTestingFinal
                 count2++;
 
                 start = 10000000;
-                list = new List<Stick>();
+                list = new List<JooDBStick>();
 
                 new SQLiteCommand("Begin", conn).ExecuteNonQuery();
 
@@ -132,41 +127,13 @@ namespace BackTestingFinal
             conn.Close();
         }
 
-        void DeleteAllLast()    // 일봉DB에 똑같은 날짜가 두개씩 저장된 적이 있었음 증권사쪽 오류로 추정, 그 두개 들어온 데이터중 하나를 지우기 위한 함수
+        protected override int GetSticksCountBetween(string code, DateTime start, DateTime end, ChartValues chartValue)
         {
-            var conn = new SQLiteConnection("Data Source =" + path);
-            conn.Open();
-
-            foreach (var code in codeList)
-            {
-                new SQLiteCommand("Begin", conn).ExecuteNonQuery();
-
-                new SQLiteCommand("CREATE TABLE IF NOT EXISTS '" + code + "' " +
-                    "('date' INTEGER, 'open' REAL, 'high' REAL, 'low' REAL, 'close' REAL, 'volume' REAL)", conn).ExecuteNonQuery();
-
-                var reader = new SQLiteCommand("Select *, rowid From '" + code + "' " +
-                    "where date='20211008'", conn).ExecuteReader();
-                var count = 0;
-                var rowidList = new List<string>();
-                while (reader.Read())
-                {
-                    count++;
-                    rowidList.Add(reader["rowid"].ToString());
-                }
-
-                if (count != 2)
-                    form.Invoke(new Action(() => { MessageBox.Show("오류"); }));
-
-                new SQLiteCommand("DELETE FROM '" + code + "' WHERE date='20211008' and rowid='" + rowidList[1] + "'", conn).ExecuteNonQuery();
-
-                new SQLiteCommand("Commit", conn).ExecuteNonQuery();
-            }
-
-            conn.Close();
+            return 0;
         }
     }
 
-    public class Stick
+    public class JooDBStick
     {
         public int date;
         public decimal open;
