@@ -34,7 +34,7 @@ namespace BackTestingFinal
                 
                 if (check)
                     CheckDB();
-            })); };
+            }));};
         }
 
         protected abstract void ConnectAndGetCodeList();

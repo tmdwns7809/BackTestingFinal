@@ -129,6 +129,9 @@ namespace BackTestingFinal
                                      + "', '" + kline.BaseVolume + "', '" + kline.TakerBuyBaseVolume + "', '" + kline.QuoteVolume + "', '" + kline.TakerBuyQuoteVolume + "', '" + kline.TradeCount + "')", conn).ExecuteNonQuery();
                             }
 
+                            if (count == 0)
+                                BaseFunctions.ShowError(form);
+
                             if (count != 1000)
                                 break;
                             else
