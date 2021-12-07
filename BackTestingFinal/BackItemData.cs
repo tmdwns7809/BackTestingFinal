@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using TradingLibrary;
+using TradingLibrary.Base;
 
 namespace BackTestingFinal
 {
@@ -26,17 +27,34 @@ namespace BackTestingFinal
         public int ShortestBeforeGap = int.MaxValue;
         public bool ExitException;
 
-        public List<TradeStick> list = new List<TradeStick>();
-        public List<int> enterIndexList = new List<int>();
+        public SortedList<ChartValues, ChartListDate> listDic;
 
         public int Count;
         public int Win;
         public string WinRate;
 
-        public BackItemData(string c, int n)
+        public BackItemData(string c, int n, SortedList<ChartValues, ChartListDate> lD)
         {
             Code = c;
             number = n;
+            listDic = lD;
+        }
+    }
+
+    class ChartListDate
+    {
+        public List<TradeStick> list = new List<TradeStick>();
+        public bool endLoaded = false;
+        public int startIndex = 0;
+        public int currentIndex = 0;
+        public BackTradeStick lastStick;
+
+        public void Reset()
+        {
+            list.Clear();
+            endLoaded = false;
+            startIndex = 0;
+            currentIndex = 0;
         }
     }
 }

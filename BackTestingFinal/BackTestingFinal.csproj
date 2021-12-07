@@ -84,6 +84,7 @@
     <Compile Include="BackItemData.cs" />
     <Compile Include="BackResultData.cs" />
     <Compile Include="BackTesting.cs" />
+    <Compile Include="BackTradeStick.cs" />
     <Compile Include="BaseSticksDB.cs" />
     <Compile Include="BinanceSticksDB.cs" />
     <Compile Include="DayData.cs" />

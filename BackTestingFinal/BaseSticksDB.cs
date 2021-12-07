@@ -34,7 +34,13 @@ namespace BackTestingFinal
                 
                 if (check)
                     CheckDB();
+
+                //ChangeColumns();
+                //DeleteIndex();
+                //CreateIndex();
             }));};
+
+            //ChangeNames();
         }
 
         protected abstract void ConnectAndGetCodeList();
@@ -55,7 +61,7 @@ namespace BackTestingFinal
                 conn.Open();
 
                 var codeList = new List<string>();
-                var reader = new SQLiteCommand("Select name From sqlite_master where type='table' order by name", conn).ExecuteReader();
+                var reader = new SQLiteCommand("Select name From sqlite_master where type='table'", conn).ExecuteReader();
                 while (reader.Read())
                     codeList.Add(reader["name"].ToString());
 
@@ -114,6 +120,194 @@ namespace BackTestingFinal
             }
 
             form.Invoke(new Action(() => { form.Text = beforeFormText; }));
+        }
+
+        void ChangeColumns()
+        {
+            if (!form.InvokeRequired)
+                BaseFunctions.ShowError(form);
+
+            var beforeFormText = form.Text;
+
+            var doneTime = 0;
+            foreach (var pair in BaseFunctions.ChartValuesDic)
+            {
+                SQLiteConnection conn = new SQLiteConnection("Data Source =" + path + BaseName + pair.Value.Text + ".db");
+                conn.Open();
+                SQLiteConnection conn2 = new SQLiteConnection("Data Source =" + path + BaseName + pair.Value.Text + "_new.db");
+                conn2.Open();
+
+                var codeList = new List<string>();
+                var reader = new SQLiteCommand("Select name From sqlite_master where type='table'", conn).ExecuteReader();
+                while (reader.Read())
+                    codeList.Add(reader["name"].ToString());
+
+                var firstText = "Changing (" + doneTime + "/" + BaseFunctions.ChartValuesDic.Count + ")DB ...(";
+
+                var doneCode = 0;
+                foreach (var code in codeList)
+                {
+                    form.Invoke(new Action(() => { form.Text = firstText + doneCode + "/" + codeList.Count + ")"; }));
+
+                    new SQLiteCommand("Begin", conn2).ExecuteNonQuery();
+
+                    new SQLiteCommand("CREATE TABLE IF NOT EXISTS '" + code + "' " +
+                        "('time' INTEGER, 'open' REAL, 'high' REAL, 'low' REAL, 'close' REAL, 'baseVolume' REAL, 'takerBuyBaseVolume' REAL, 'quoteVolume' REAL, 'takerBuyQuoteVolume' REAL, 'tradeCount' INTEGER)", conn2).ExecuteNonQuery();
+
+                    var firstRowID = "";
+                    var lastRowID = "";
+                    reader = new SQLiteCommand("Select *, rowid From '" + code + "' order by rowid limit 1", conn).ExecuteReader();
+                    if (reader.Read())
+                        firstRowID = reader["rowid"].ToString();
+                    else
+                        BaseFunctions.ShowError(form);
+                    reader = new SQLiteCommand("Select *, rowid From '" + code + "' order by rowid desc limit 1", conn).ExecuteReader();
+                    if (reader.Read())
+                        lastRowID = reader["rowid"].ToString();
+                    else
+                        BaseFunctions.ShowError(form);
+
+                    reader = new SQLiteCommand("Select *, rowid From '" + code + "' ", conn).ExecuteReader();
+                    var first = true;
+                    var lastRowIDAll = "";
+                    while (reader.Read())
+                    {
+                        new SQLiteCommand("INSERT INTO '" + code + "' ('time', 'open', 'high', 'low', 'close', 'baseVolume', 'takerBuyBaseVolume', 'quoteVolume', 'takerBuyQuoteVolume', 'tradeCount') values " +
+                            "('" + reader["date"].ToString() + reader["time"].ToString() + "', '" + reader["open"].ToString() + "', '" + reader["high"].ToString() + "', '" + reader["low"].ToString() + "', '" + reader["close"].ToString()
+                             + "', '" + reader["baseVolume"].ToString() + "', '" + reader["takerBuyBaseVolume"].ToString() + "', '" + reader["quoteVolume"].ToString() + "', '" + reader["takerBuyQuoteVolume"].ToString() + "', '" + reader["tradeCount"].ToString() + "')", conn2).ExecuteNonQuery();
+
+                        lastRowIDAll = reader["rowid"].ToString();
+
+                        if (first)
+                        {
+                            first = false;
+
+                            if (firstRowID != lastRowIDAll)
+                                BaseFunctions.ShowError(form);
+                        }
+                    }
+                    if (lastRowID != lastRowIDAll)
+                        BaseFunctions.ShowError(form);
+
+                    new SQLiteCommand("Commit", conn2).ExecuteNonQuery();
+
+                    doneCode++;
+                }
+
+                conn.Close();
+                conn2.Close();
+
+                //System.IO.File.Move(path + BaseName + pair.Value.Text + "_new.db", path + BaseName + pair.Value.Text + "_new.db");
+
+                doneTime++;
+            }
+
+            form.Invoke(new Action(() => { form.Text = beforeFormText; }));
+        }
+
+        void CreateIndex()
+        {
+            if (!form.InvokeRequired)
+                BaseFunctions.ShowError(form);
+
+            var beforeFormText = form.Text;
+
+            var doneTime = 0;
+            foreach (var pair in BaseFunctions.ChartValuesDic)
+            {
+                SQLiteConnection conn = new SQLiteConnection("Data Source =" + path + BaseName + pair.Value.Text + ".db");
+                conn.Open();
+
+                var codeList = new List<string>();
+                var reader = new SQLiteCommand("Select name From sqlite_master where type='table'", conn).ExecuteReader();
+                while (reader.Read())
+                    codeList.Add(reader["name"].ToString());
+
+                var firstText = "Creating (" + doneTime + "/" + BaseFunctions.ChartValuesDic.Count + ")DB index ...(";
+
+                var doneCode = 0;
+                foreach (var code in codeList)
+                {
+                    form.Invoke(new Action(() => { form.Text = firstText + doneCode + "/" + codeList.Count + ")"; }));
+
+                    new SQLiteCommand("Begin", conn).ExecuteNonQuery();
+
+                    new SQLiteCommand("CREATE UNIQUE INDEX IF NOT EXISTS '" + code + "_index' ON '" + code + "' ('time')", conn).ExecuteNonQuery();
+
+                    new SQLiteCommand("Commit", conn).ExecuteNonQuery();
+
+                    doneCode++;
+                }
+
+                conn.Close();
+
+                //System.IO.File.Move(path + BaseName + pair.Value.Text + "_new.db", path + BaseName + pair.Value.Text + "_new.db");
+
+                doneTime++;
+            }
+
+            form.Invoke(new Action(() => { form.Text = beforeFormText; }));
+        }
+
+        void DeleteIndex()
+        {
+            if (!form.InvokeRequired)
+                BaseFunctions.ShowError(form);
+
+            var beforeFormText = form.Text;
+
+            var doneTime = 0;
+            foreach (var pair in BaseFunctions.ChartValuesDic)
+            {
+                SQLiteConnection conn = new SQLiteConnection("Data Source =" + path + BaseName + pair.Value.Text + ".db");
+                conn.Open();
+
+                var codeList = new List<string>();
+                var reader = new SQLiteCommand("Select name From sqlite_master where type='table'", conn).ExecuteReader();
+                while (reader.Read())
+                    codeList.Add(reader["name"].ToString());
+
+                var firstText = "Deleting (" + doneTime + "/" + BaseFunctions.ChartValuesDic.Count + ")DB index ...(";
+
+                var doneCode = 0;
+                foreach (var code in codeList)
+                {
+                    form.Invoke(new Action(() => { form.Text = firstText + doneCode + "/" + codeList.Count + ")"; }));
+
+                    new SQLiteCommand("Begin", conn).ExecuteNonQuery();
+
+                    new SQLiteCommand("DROP INDEX '" + code + "_index'", conn).ExecuteNonQuery();
+
+                    new SQLiteCommand("Commit", conn).ExecuteNonQuery();
+
+                    doneCode++;
+                }
+
+                conn.Close();
+
+                //System.IO.File.Move(path + BaseName + pair.Value.Text + "_new.db", path + BaseName + pair.Value.Text + "_new.db");
+
+                doneTime++;
+            }
+
+            form.Invoke(new Action(() => { form.Text = beforeFormText; }));
+        }
+
+        void ChangeNames()
+        {
+            foreach (var pair in BaseFunctions.ChartValuesDic)
+            {
+                try
+                {
+                    System.IO.File.Move(path + BaseName + pair.Value.Text + ".db", path + BaseName + pair.Value.Text + "_old.db");
+                    System.IO.File.Move(path + BaseName + pair.Value.Text + "_new.db", path + BaseName + pair.Value.Text + ".db");
+                }
+                catch (Exception e)
+                {
+
+                    throw;
+                }
+            }
         }
 
         void DeleteAllLast()    // 일봉DB에 똑같은 날짜가 두개씩 저장된 적이 있었음 증권사쪽 오류로 추정, 그 두개 들어온 데이터중 하나를 지우기 위한 함수

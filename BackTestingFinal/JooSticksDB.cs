@@ -22,9 +22,7 @@ namespace BackTestingFinal
         public static string JooBaseName = "Sticks_";
         public static string JooPath = @"C:\Users\tmdwn\source\repos\BigFilesCantSaveGit\SticksDB\Joo\";
 
-        public JooSticksDB(Form f, bool update, bool check) : base (f, JooPath, JooBaseName, update, check)
-        {
-        }
+        public JooSticksDB(Form f, bool update, bool check) : base (f, JooPath, JooBaseName, update, check) { }
 
         protected override void ConnectAndGetCodeList()
         {

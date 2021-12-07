@@ -25,9 +25,7 @@ namespace BackTestingFinal
 
         BinanceClient client;
 
-        public BinanceSticksDB(Form f, bool update, bool check, bool isFuture) : base(f, BinancePath, isFuture ? futureBaseName : spotBaseName, update, check)
-        {
-        }
+        public BinanceSticksDB(Form f, bool update, bool check, bool isFuture) : base(f, BinancePath, isFuture ? futureBaseName : spotBaseName, update, check) { }
 
         protected override void ConnectAndGetCodeList()
         {
