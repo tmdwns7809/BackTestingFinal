@@ -15,7 +15,7 @@ namespace BackTestingFinal
         public DateTime ExitTime;
         public decimal ProfitRate;
         public double CumulativeReturnWhenEnter;
-        public int Days;
-        public int BeforeGap;
+        public string Duration;
+        public string BeforeGap;
     }
 }

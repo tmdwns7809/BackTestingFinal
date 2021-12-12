@@ -49,10 +49,7 @@ namespace BackTestingFinal
 
         void CheckDB()
         {
-            if (!form.InvokeRequired)
-                BaseFunctions.ShowError(form);
-
-            var beforeFormText = form.Text;
+            BaseFunctions.LoadingSettingFirst(form);
 
             var doneTime = 0;
             foreach (var pair in BaseFunctions.ChartValuesDic)
@@ -65,12 +62,10 @@ namespace BackTestingFinal
                 while (reader.Read())
                     codeList.Add(reader["name"].ToString());
 
-                var firstText = "Checking (" + doneTime + "/" + BaseFunctions.ChartValuesDic.Count + ")DB duplicate...(";
-
                 var doneCode = 0;
                 foreach (var code in codeList)
                 {
-                    form.Invoke(new Action(() => { form.Text = firstText + doneCode + "/" + codeList.Count + ")"; }));
+                    BaseFunctions.AddOrChangeLoadingText("Checking (" + doneTime + "/" + BaseFunctions.ChartValuesDic.Count + ")DB duplicate...(" + doneCode + "/" + codeList.Count + ")", doneCode == 0);
 
                     var firstRowID = "";
                     var lastRowID = "";
@@ -119,7 +114,7 @@ namespace BackTestingFinal
                 doneTime++;
             }
 
-            form.Invoke(new Action(() => { form.Text = beforeFormText; }));
+            BaseFunctions.HideLoading();
         }
 
         void ChangeColumns()

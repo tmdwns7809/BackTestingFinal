@@ -53,10 +53,7 @@ namespace BackTestingFinal
 
         protected override void SaveAndUpdateDB()
         {
-            if (!form.InvokeRequired)
-                BaseFunctions.ShowError(form);
-
-            var beforeFormText = form.Text;
+            BaseFunctions.LoadingSettingFirst(form);
 
             var doneTime = 0;
             foreach (var pair in BaseFunctions.ChartValuesDic)
@@ -64,12 +61,10 @@ namespace BackTestingFinal
                 SQLiteConnection conn = new SQLiteConnection("Data Source =" + path + BaseName + pair.Value.Text + ".db");
                 conn.Open();
 
-                var firstText = "Saving (" + doneTime + "/" + BaseFunctions.ChartValuesDic.Count + ")DB...(";
-
                 var doneCode = 0;
                 foreach (var code in codeList)
                 {
-                    form.Invoke(new Action(() => { form.Text = firstText + doneCode + "/" + codeList.Count + ")"; }));
+                    BaseFunctions.AddOrChangeLoadingText("Saving (" + doneTime + "/" + BaseFunctions.ChartValuesDic.Count + ")DB...(" + doneCode + "/" + codeList.Count + ")", doneCode == 0);
 
                     new SQLiteCommand("Begin", conn).ExecuteNonQuery();
 
@@ -150,7 +145,7 @@ namespace BackTestingFinal
                 doneTime++;
             }
 
-            form.Invoke(new Action(() => { form.Text = beforeFormText; }));
+            BaseFunctions.HideLoading();
         }
 
         protected override int GetSticksCountBetween(string code, DateTime start, DateTime end, ChartValues chartValue)
