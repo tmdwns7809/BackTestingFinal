@@ -13,9 +13,10 @@ namespace BackTestingFinal
         public string Code;
         public DateTime EnterTime;
         public DateTime ExitTime;
-        public decimal ProfitRate;
+        public double ProfitRate;
         public double CumulativeReturnWhenEnter;
         public string Duration;
         public string BeforeGap;
+        public bool LorS;
     }
 }

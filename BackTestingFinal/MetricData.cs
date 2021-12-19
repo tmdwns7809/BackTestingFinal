@@ -11,5 +11,7 @@ namespace BackTestingFinal
         public string MetricName;
         public string Market;
         public string Strategy;
+        public string Long;
+        public string Short;
     }
 }

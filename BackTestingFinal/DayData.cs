@@ -16,12 +16,12 @@ namespace BackTestingFinal
         public int Number;
         public int Count;
         public int Win;
-        public decimal WinRate;
-        public decimal WinProfitRateSum;
-        public decimal ProfitRateSum;
-        public decimal ProfitRateAvg;
-        public decimal WinProfitRateAvg;
-        public decimal LoseProfitRateAvg;
+        public double WinRate;
+        public double WinProfitRateSum;
+        public double ProfitRateSum;
+        public double ProfitRateAvg;
+        public double WinProfitRateAvg;
+        public double LoseProfitRateAvg;
 
         public DayStick KOSPIstick;
     }

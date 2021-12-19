@@ -20,10 +20,11 @@ namespace BackTestingFinal
         public string ShortestBeforeGapText;
         public int Count;
         public int Win;
-        public string WinRate;
+        public double WinRate = -1;
         public bool ExitException;
 
         public decimal EnterPrice;
+        public bool EnterPositionIsLong;
         public DateTime EnterTime;
         public DateTime BeforeExitTime;
         public List<(DateTime foundTime, ChartValues chartValues)> EnterFoundList;
@@ -45,7 +46,6 @@ namespace BackTestingFinal
             ShortestBeforeGapText = "";
             Count = 0;
             Win = 0;
-            WinRate = "";
             ExitException = false;
         }
     }

@@ -115,6 +115,7 @@ namespace BackTestingFinal
             }
 
             BaseFunctions.HideLoading();
+            BaseFunctions.AlertStart("done");
         }
 
         void ChangeColumns()

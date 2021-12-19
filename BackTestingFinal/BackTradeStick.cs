@@ -26,9 +26,9 @@ namespace BackTestingFinal
         {
             var limit = 0.001m;
             return 
-                (Price[0] == stick.Price[0] || Math.Abs(1 - Price[0] / stick.Price[0]) < limit) &&
-                (Price[1] == stick.Price[1] || Math.Abs(1 - Price[1] / stick.Price[1]) < limit) &&
-                (Price[2] == stick.Price[2] || Math.Abs(1 - Price[2] / stick.Price[2]) < limit) &&
+                (stick.Price[0] == stick.Price[2] || Price[0] == Price[2] || Price[0] == stick.Price[0] || Math.Abs(1 - Price[0] / stick.Price[0]) < limit) &&
+                (stick.Price[1] == stick.Price[2] || Price[1] == Price[2] || Price[1] == stick.Price[1] || Math.Abs(1 - Price[1] / stick.Price[1]) < limit) &&
+                //(Price[2] == stick.Price[2] || Math.Abs(1 - Price[2] / stick.Price[2]) < limit) &&    open이 안맞는 경우가 많음
                 (Price[3] == stick.Price[3] || Math.Abs(1 - Price[3] / stick.Price[3]) < limit) &&
                 (Ms == stick.Ms || Math.Abs(1 - Ms / stick.Ms) < limit) &&
                 (Md == stick.Md || Math.Abs(1 - Md / stick.Md) < limit) &&

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Threading.Tasks.Dataflow;
 using System.Windows.Forms.DataVisualization.Charting;
 using System.Windows.Forms;
 using System.Drawing;
@@ -30,10 +31,7 @@ namespace BackTestingFinal
         int searchDay = RSINumber + 1;
 
         Action<DayData> clickResultAction;
-        FastObjectListView clickResultListView = new FastObjectListView();
-
-        int start = 0;
-        int end = 99999999;
+        FastObjectListView dayResultListView = new FastObjectListView();
 
         public Chart totalChart = new Chart();
         public Button totalButton = new Button();
@@ -51,9 +49,11 @@ namespace BackTestingFinal
         public Button firstButton = new Button();
         public Button lastButton = new Button();
         public FastObjectListView metricListView = new FastObjectListView();
-        public FastObjectListView allListView = new FastObjectListView();
+        public FastObjectListView metricResultListView = new FastObjectListView();
         public FastObjectListView codeListView = new FastObjectListView();
-        public FastObjectListView singleResultListView = new FastObjectListView();
+        public FastObjectListView codeResultListView = new FastObjectListView();
+        public TabControl resultTabControl = new TabControl();
+        public TabControl resultTabControl2 = new TabControl();
 
         string resultImagePath;
 
@@ -82,7 +82,7 @@ namespace BackTestingFinal
         string MetricWinAvgProfitRate = "    WAPR";
         string MetricLoseAvgProfitRate = "    LAPR";
         string MetricMaxHas = "Max Has";
-        string MetricMaxHasDate = "    Date";
+        string MetricMaxHasTime = "    Date";
         string MetricLongestHasDays = "LH Days";
         string MetricLongestHasDaysCode = "    Code";
         string MetricAverageHasDays = "AVGH Days";
@@ -92,10 +92,15 @@ namespace BackTestingFinal
 
         string TimeSpanFormat = @"d\.hh\:mm\:ss";
 
+        private object locker = new object();
+
+        Dictionary<ChartValues, SQLiteConnection> DBDic = new Dictionary<ChartValues, SQLiteConnection>();
+
         public BackTesting(Form form, bool isJoo) : base(form, isJoo)
         {
             sticksDBpath = BaseSticksDB.path;
             sticksDBbaseName = BaseSticksDB.BaseName;
+            SetDB();
 
             var start = sticksDBpath.LastIndexOf('\\');
             var image_folder = sticksDBpath.Substring(0, start) + "image";
@@ -109,7 +114,7 @@ namespace BackTestingFinal
             SetAdditionalMainView();
 
             var lastDate = GetFirstOrLastTime(false, default, BaseChartTimeSet.OneMinute).time.Date;
-            fromTextBox.Text = lastDate.AddDays(-7).ToString(DateTimeFormat);
+            fromTextBox.Text = lastDate.AddDays(-31).ToString(DateTimeFormat);
             toTextBox.Text = lastDate.ToString(DateTimeFormat);
         }
         void SetAdditionalMainView()
@@ -118,25 +123,37 @@ namespace BackTestingFinal
             {
                 var chartValues = mainChart.Tag as ChartValues;
                 var list = showingItemData.listDic[chartValues].list;
-                CheckSuddenBurst(isJoo, list, list[i], chartValues, i - 1);
+                var RSIA2 = CalRSIA(list, list[i], i - 1, 2);
+                var RSIA2Diff = RSIA2 - CalRSIA(list, list[i - 1], i - 2, 2);
+                var RSIA3 = CalRSIA(list, list[i], i - 1, 3);
+                var RSIA3Diff = RSIA3 - CalRSIA(list, list[i - 1], i - 2, 3);
+                var RSIA4 = CalRSIA(list, list[i], i - 1, 4);
+                var RSIA4Diff = RSIA4 - CalRSIA(list, list[i - 1], i - 2, 4);
+                //CheckSuddenBurst(isJoo, list, list[i], chartValues, i - 1);
+                form.Text = showingItemData.Code + "     H:" + list[i].Price[0] + "  L:" + list[i].Price[1] + "  O:" + list[i].Price[2] + "  C:" + list[i].Price[3] + "  Ms:" + list[i].Ms + "  Md:" + list[i].Md +
+                    "  RSIA2:" + Math.Round(RSIA2, 0) + "  RSIA2Diff:" + Math.Round(RSIA2Diff, 0) + "  RSIA3:" + Math.Round(RSIA3, 0) + "  RSIA3Diff:" + Math.Round(RSIA3Diff, 0) + "  RSIA4:" + Math.Round(RSIA4, 0) + "  RSIA4Diff:" + Math.Round(RSIA4Diff, 0);
             };
 
             clickResultAction = new Action<DayData>((date) =>
             {
-                clickResultListView.ClearObjects();
+                dayResultListView.ClearObjects();
 
-                foreach (var data in date.resultDatas)
-                    if (data.EnterTime.Date >= simulDays.Keys[start] && data.ExitTime.Date <= simulDays.Keys[end])
-                        clickResultListView.AddObject(data);
-
-                clickResultListView.Sort(clickResultListView.GetColumn("Profit"), SortOrder.Ascending);
                 var n = 0;
-                foreach (BackResultData ob in clickResultListView.Objects)
-                    ob.NumberForClick = ++n;
-                clickResultListView.Sort(clickResultListView.GetColumn("No."), SortOrder.Descending);
+                foreach (var data in date.resultDatas)
+                    if (data.EnterTime.Date >= simulDays.Keys[0] && data.ExitTime.Date <= date.Date)
+                    {
+                        data.NumberForClick = ++n;
+                        dayResultListView.AddObject(data);
+                    }
+
+                //dayResultListView.Sort(dayResultListView.GetColumn("Profit"), SortOrder.Ascending);
+                //var n = 0;
+                //foreach (BackResultData ob in dayResultListView.Objects)
+                //    ob.NumberForClick = ++n;
+                //dayResultListView.Sort(dayResultListView.GetColumn("No."), SortOrder.Descending);
             });
 
-            SetChart(totalChart, new Size(mainChart.Width, mainChart.Height), new Point(mainChart.Location.X, mainChart.Location.Y));
+            SetChart(totalChart, mainChart.Size, new Point(mainChart.Location.X, mainChart.Location.Y));
             totalChart.Hide();
             totalChart.Click += (sender, e) =>
             {
@@ -156,7 +173,7 @@ namespace BackTestingFinal
 
             var chartArea6 = totalChart.ChartAreas.Add("ChartAreaResult");
             chartArea6.Position = new ElementPosition(0, 0, 100, 100);
-            chartArea6.InnerPlotPosition = new ElementPosition(8, 5, 92, 95);
+            chartArea6.InnerPlotPosition = new ElementPosition(7, 2, 86, 90);
             chartArea6.BackColor = ColorSet.ControlBack;
             chartArea6.BorderColor = ColorSet.FormText;
 
@@ -346,11 +363,11 @@ namespace BackTestingFinal
             SetTextBox(fromTextBox, "");
             fromTextBox.ReadOnly = false;
             fromTextBox.BorderStyle = BorderStyle.Fixed3D;
-            fromTextBox.Size = new Size((Screen.GetWorkingArea(form).Size.Width - mainChart.Location.X - mainChart.Width) / 10 * 4 - 10, 30);
+            fromTextBox.Size = new Size((GetFormWidth(form) - mainChart.Location.X - mainChart.Width) / 3, 30);
             fromTextBox.Location = new Point(mainChart.Location.X + mainChart.Width + 5, mainChart.Location.Y + 5);
 
             SetTextBox(midTextBox, "~");
-            midTextBox.Size = new Size((Screen.GetWorkingArea(form).Size.Width - mainChart.Location.X - mainChart.Width) / 10 - 10, fromTextBox.Height);
+            midTextBox.Size = new Size(20, fromTextBox.Height);
             midTextBox.Location = new Point(fromTextBox.Location.X + fromTextBox.Width + 10, fromTextBox.Location.Y);
 
             SetTextBox(toTextBox, "");
@@ -363,61 +380,46 @@ namespace BackTestingFinal
                 (sender, e) =>
                 {
                     if (DateTime.TryParseExact(fromTextBox.Text, DateTimeFormat, null, System.Globalization.DateTimeStyles.None, out DateTime from) &&
-                        DateTime.TryParseExact(toTextBox.Text, DateTimeFormat, null, System.Globalization.DateTimeStyles.None, out DateTime to) && from <= to) 
-                        Task.Run(new Action(() => { RunTotal(from, to); }));
+                        DateTime.TryParseExact(toTextBox.Text, DateTimeFormat, null, System.Globalization.DateTimeStyles.None, out DateTime to) && from <= to)
+                        Task.Run(new Action(async () => {
+                            var sw = new Stopwatch();
+                            sw.Start();
+                            await RunTotal(from, to);
+                            sw.Stop();
+                            var t = sw.Elapsed.ToString(TimeSpanFormat);
+                        }));
                     else
                         ShowError(form);
                 });
-            runButton.Size = new Size(midTextBox.Width, toTextBox.Height);
-            runButton.Location = new Point(toTextBox.Location.X + toTextBox.Width + 10, toTextBox.Location.Y);
+            runButton.Size = new Size(GetFormWidth(form) - toTextBox.Location.X - toTextBox.Width - 10, toTextBox.Height);
+            runButton.Location = new Point(toTextBox.Location.X + toTextBox.Width + 5, toTextBox.Location.Y);
             #endregion
 
             #region Metric
             SetListView(metricListView, new (string, string, int)[]
                 {
                     ("Metric", "MetricName", 4),
-                    ("Market", "Market", 4),
-                    ("Strategy", "Strategy", 4)
+                    ("Strategy", "Strategy", 4),
+                    ("Long", "Long", 4),
+                    ("Short", "Short", 4),
+                    ("Market", "Market", 4)
                 });
-            metricListView.Size = new Size(Screen.GetWorkingArea(form).Size.Width - mainChart.Location.X - mainChart.Width - 5,
-                (Screen.GetWorkingArea(form).Height - fromTextBox.Location.Y - fromTextBox.Height - 30) / 2 - 10);
+            metricListView.Size = new Size(GetFormWidth(form) - mainChart.Location.X - mainChart.Width - 5,
+                (GetFormHeight(form) - fromTextBox.Location.Y - fromTextBox.Height) / 2 - 10);
             metricListView.Location = new Point(mainChart.Location.X + mainChart.Size.Width, fromTextBox.Location.Y + fromTextBox.Height + 5);
-            #endregion
-
-            #region Period_Total_Result
-            SetListView(allListView, new (string, string, int)[]
-                {
-                    ("No.", "Number", 3),
-                    ("Date", "Date", 4),
-                    ("Count", "Count", 3),
-                    ("Win Rate", "WinRate", 4),
-                    ("PRA", "ProfitRateAvg", 4),
-                    ("WPRA", "WinProfitRateAvg", 4),
-                    ("LPRA", "LoseProfitRateAvg", 4),
-                });
-            allListView.Size = new Size(metricListView.Width, metricListView.Height / 9 * 2);
-            allListView.Location = new Point(metricListView.Location.X, metricListView.Location.Y + metricListView.Height + 10);
-            allListView.SelectionChanged += (sender, e) =>
-            {
-                if (allListView.SelectedIndices.Count == 1)
-                {
-                    var data = allListView.SelectedObject as DayData;
-                    clickResultAction(data);
-                }
-            };
             #endregion
 
             #region Code_List_Result
             SetListView(codeListView, new (string, string, int)[]
                 {
-                    ("Code", "Code", 5),
                     ("No.", "number", 2),
-                    ("Count", "Count", 3),
-                    ("Win Rate", "WinRate", 3),
-                    ("SBG", "ShortestBeforeGapText", 4)
+                    ("Code", "Code", 7),
+                    ("C", "Count", 2),
+                    ("WR(%)", "WinRate", 3),
+                    ("SBG", "ShortestBeforeGapText", 5)
                 });
-            codeListView.Size = new Size(metricListView.Width, metricListView.Height / 9 * 2 - 5);
-            codeListView.Location = new Point(metricListView.Location.X, allListView.Location.Y + allListView.Height + 10);
+            codeListView.Size = new Size(metricListView.Width, GetFormHeight(form) - metricListView.Location.Y - metricListView.Height - GetFormUpBarSize(form) - 10);
+            codeListView.Location = new Point(metricListView.Location.X, metricListView.Location.Y + metricListView.Height + 5);
             codeListView.SelectionChanged += (sender, e) =>
             {
                 if (codeListView.SelectedIndices.Count != 1)
@@ -429,15 +431,7 @@ namespace BackTestingFinal
                 if (simulDays.Count == 0)
                     return;
 
-                singleResultListView.ClearObjects();
-                var n = 0;
-                for (int i = start; i <= end; i++)
-                    foreach (var resultData in simulDays.Values[i].resultDatas)
-                        if (itemData.Code == resultData.Code && resultData.ExitTime.Date == simulDays.Keys[i] && resultData.EnterTime.Date >= simulDays.Keys[start])
-                        {
-                            resultData.NumberForSingle = ++n;
-                            singleResultListView.AddObject(resultData);
-                        }
+                ShowCodeResult(itemData);
             };
             #endregion
 
@@ -454,50 +448,102 @@ namespace BackTestingFinal
                 ShowChart(itemData, (result.foundTime, baseChartViewSticksSize / 2, true), true);
             });
 
-            SetListView(singleResultListView, new (string, string, int)[]
-                {
-                    ("No.", "NumberForSingle", 2),
-                    ("Enter", "EnterDate", 4),
-                    ("Exit", "ExitDate", 4),
-                    ("Profit", "ProfitRate", 2),
-                    ("Dura", "Duration", 2),
-                    ("BefGap", "BeforeGap", 2)
-                });
-            singleResultListView.Size = new Size(metricListView.Width, codeListView.Height);
-            singleResultListView.Location = new Point(codeListView.Location.X, codeListView.Location.Y + codeListView.Height + 10);
-            singleResultListView.SelectionChanged += (sender, e) => { action(singleResultListView); };
+            var tab_page_list = new List<TabPage>() { new TabPage("Metric Result"), new TabPage("Day Result") };
 
-            SetListView(clickResultListView, new (string, string, int)[]
+            SetTabControl(resultTabControl, new Size((mainChart.Width - 20) / 2 - 10, GetFormHeight(form) - mainChart.Location.Y - mainChart.Height - GetFormUpBarSize(form) - 10),
+                new Point(mainChart.Location.X + 10, mainChart.Location.Y + mainChart.Height + 5), tab_page_list);
+
+            var tabPage = resultTabControl.TabPages[0];
+            SetListView(metricResultListView, new (string, string, int)[]
+                {
+                    ("No.", "Number", 2),
+                    ("Date", "Date", 7),
+                    ("C", "Count", 2),
+                    ("WR(%)", "WinRate", 3),
+                    ("PRA(%)", "ProfitRateAvg", 3),
+                    ("WPRA(%)", "WinProfitRateAvg", 3),
+                    ("LPRA(%)", "LoseProfitRateAvg", 3),
+                });
+            metricResultListView.Size = new Size(tabPage.Width - 12, tabPage.Height - 6);
+            metricResultListView.Location = new Point(6, 6);
+            metricResultListView.SelectionChanged += (sender, e) =>
+            {
+                if (metricResultListView.SelectedIndices.Count == 1)
+                {
+                    var data = metricResultListView.SelectedObject as DayData;
+                    clickResultAction(data);
+                    resultTabControl.SelectTab(1);
+                }
+            };
+            tabPage.Controls.Add(metricResultListView);
+
+            tabPage = resultTabControl.TabPages[1];
+            SetListView(dayResultListView, new (string, string, int)[]
                 {
                     ("No.", "NumberForClick", 2),
-                    ("Code", "Code", 4),
-                    ("Enter", "EnterDate", 4),
-                    ("Exit", "ExitDate", 4),
-                    ("Profit", "ProfitRate", 2),
-                    ("Days", "Days", 2)
+                    ("Code", "Code", 7),
+                    ("EnterTime", "EnterTime", 7),
+                    ("ExitTime", "ExitTime", 7),
+                    ("Long", "LorS", 2),
+                    ("PR(%)", "ProfitRate", 3),
+                    ("Dura", "Duration", 5)
                 });
-            clickResultListView.Size = new Size(metricListView.Width, codeListView.Height);
-            clickResultListView.Location = new Point(codeListView.Location.X, singleResultListView.Location.Y + singleResultListView.Height + 10);
-            clickResultListView.SelectionChanged += (sender, e) => {
-                action(clickResultListView);
-
-                singleResultListView.ClearObjects();
-                var n = 0;
-                for (int i = start; i <= end; i++)
-                    foreach (var resultData in simulDays.Values[i].resultDatas)
-                        if (showingItemData.Code == resultData.Code && resultData.ExitTime.Date == simulDays.Values[i].Date && resultData.EnterTime.Date >= simulDays.Values[start].Date)
-                        {
-                            resultData.NumberForSingle = ++n;
-                            singleResultListView.AddObject(resultData);
-                        }
+            dayResultListView.Size = new Size(tabPage.Width - 12, tabPage.Height - 6);
+            dayResultListView.Location = new Point(6, 6);
+            dayResultListView.SelectionChanged += (sender, e) => {
+                action(dayResultListView);
+                ShowCodeResult(itemDataDic[(dayResultListView.SelectedObject as BackResultData).Code]);
             };
+            tabPage.Controls.Add(dayResultListView);
+
+            tab_page_list = new List<TabPage>() { new TabPage("Code Result") };
+
+            SetTabControl(resultTabControl2, new Size(resultTabControl.Width, resultTabControl.Height),
+                new Point(resultTabControl.Location.X + resultTabControl.Width + 10, resultTabControl.Location.Y), tab_page_list);
+
+            tabPage = resultTabControl2.TabPages[0];
+            SetListView(codeResultListView, new (string, string, int)[]
+                {
+                    ("No.", "NumberForSingle", 2),
+                    ("EnterTime", "EnterTime", 7),
+                    ("ExitTime", "ExitTime", 7),
+                    ("Long", "LorS", 2),
+                    ("PR(%)", "ProfitRate", 3),
+                    ("Dura", "Duration", 5),
+                    ("BefGap", "BeforeGap", 5)
+                });
+            codeResultListView.Size = new Size(tabPage.Width - 12, tabPage.Height - 6);
+            codeResultListView.Location = new Point(6, 6);
+            codeResultListView.SelectionChanged += (sender, e) => { action(codeResultListView); };
+            tabPage.Controls.Add(codeResultListView);
             #endregion
+        }
+        void ShowCodeResult(BackItemData itemData)
+        {
+            codeResultListView.ClearObjects();
+            var n = 0;
+            foreach (var day in simulDays)
+                foreach (var resultData in day.Value.resultDatas)
+                    if (itemData.Code == resultData.Code && resultData.ExitTime.Date == day.Key && resultData.EnterTime.Date >= simulDays.Values[0].Date)
+                    {
+                        resultData.NumberForSingle = ++n;
+                        codeResultListView.AddObject(resultData);
+                    }
+        }
+
+        void SetDB()
+        {
+            foreach (var cv in ChartValuesDic.Values)
+            {
+                var conn = new SQLiteConnection("Data Source =" + sticksDBpath + sticksDBbaseName + cv.Text + ".db");
+                DBDic.Add(cv, conn);
+                conn.Open();
+            }
         }
 
         void LoadCodeListAndMetric()
         {
-            var conn = new SQLiteConnection("Data Source =" + sticksDBpath + sticksDBbaseName + BaseChartTimeSet.OneMinute.Text + ".db");
-            conn.Open();
+            var conn = DBDic[BaseChartTimeSet.OneMinute];
 
             var reader = new SQLiteCommand("Select name From sqlite_master where type='table'", conn).ExecuteReader();
 
@@ -513,7 +559,6 @@ namespace BackTestingFinal
                 number++;
             }
 
-            conn.Close();
 
             metricDic.Add(MetricCR, new MetricData() { MetricName = MetricCR });
             metricListView.AddObject(metricDic[MetricCR]);
@@ -551,8 +596,8 @@ namespace BackTestingFinal
 
             metricDic.Add(MetricMaxHas, new MetricData() { MetricName = MetricMaxHas });
             metricListView.AddObject(metricDic[MetricMaxHas]);
-            metricDic.Add(MetricMaxHasDate, new MetricData() { MetricName = MetricMaxHasDate });
-            metricListView.AddObject(metricDic[MetricMaxHasDate]);
+            metricDic.Add(MetricMaxHasTime, new MetricData() { MetricName = MetricMaxHasTime });
+            metricListView.AddObject(metricDic[MetricMaxHasTime]);
             metricDic.Add(MetricLongestHasDays, new MetricData() { MetricName = MetricLongestHasDays });
             metricListView.AddObject(metricDic[MetricLongestHasDays]);
             metricDic.Add(MetricLongestHasDaysCode, new MetricData() { MetricName = MetricLongestHasDaysCode });
@@ -561,11 +606,11 @@ namespace BackTestingFinal
             metricListView.AddObject(metricDic[MetricAverageHasDays]);
         }
 
-        void RunTotal(DateTime start, DateTime end)
+        async Task RunTotal(DateTime start, DateTime end)
         {
             LoadingSettingFirst(form);
 
-            ClearChart(totalChart);
+            form.Invoke(new Action(() => { ClearChart(totalChart); }));
 
             if (simulDays.Count == 0 || start < simulDays.Keys[0] || end > simulDays.Keys[simulDays.Keys.Count - 1])
             {
@@ -574,12 +619,17 @@ namespace BackTestingFinal
                 openDaysPerYear.Clear();
 
                 var size = (int)end.AddDays(1).Subtract(start).TotalSeconds / BaseChartTimeSet.OneMinute.seconds;
-                foreach (var itemData in itemDataDic.Values)
-                {
-                    AddOrChangeLoadingText("Simulating (" + itemData.number + "/" + itemDataDic.Count + ")", itemData.number == 0);
+                var n = 0;
+                AddOrChangeLoadingText("Simulating...(0/" + itemDataDic.Count + ")", true);
+                var action = new Action<BackItemData>((itemData) => {
                     LoadAndCheckSticks(itemData, true, false, size, start, BaseChartTimeSet.OneMinute, false, true);
-                }
-                AddOrChangeLoadingText("Simulating (" + itemDataDic.Count + "/" + itemDataDic.Count + ")", false);
+                    AddOrChangeLoadingText("Simulating...(" + ++n + "/" + itemDataDic.Count + ")", false);
+                });
+                var block = new ActionBlock<BackItemData>(itemData => action(itemData), new ExecutionDataflowBlockOptions { MaxDegreeOfParallelism = 6 });
+                foreach (var itemData in itemDataDic.Values)
+                    block.Post(itemData);
+                block.Complete();
+                await block.Completion;
 
                 if (openDaysPerYear.Values.Count > 2)
                 {
@@ -593,6 +643,7 @@ namespace BackTestingFinal
             form.Invoke(new Action(() => { totalButton.PerformClick(); }));
 
             HideLoading();
+            AlertStart("done");
         }
         TradeStick Calculate_Day_Stick(List<TradeStick> list, int last_index)
         {
@@ -625,22 +676,43 @@ namespace BackTestingFinal
             var startIndex = marketDays.IndexOfKey(start);
             var endIndex = marketDays.IndexOfKey(end);
 
-            var maxBuyItemsAtOnce = int.MinValue;
-            DateTime maxBuyItemsDate = default;
-            var longestHasTime = TimeSpan.MinValue;
-            var longestHasCode = "";
-            var beforeBuyItemsAtOnce = 0;
-            var goingUp = false;
-            allListView.ClearObjects();
+            metricResultListView.ClearObjects();
 
+            var highestFullHasItemsAtADay = int.MinValue;
+            DateTime highestFullHasItemsDate = default;
+            var longestFullHasTime = TimeSpan.MinValue;
+            var longestFullHasCode = "";
+            var beforeFullHasItemsAtADay = 0;
+            var fullGoingUp = false;
             var fullCount = 0;
             var fullWin = 0;
-            decimal fullProfitRateSum = 0;
-            decimal fullProfitWinRateSum = 0;
+            double fullProfitRateSum = 0;
+            double fullProfitWinRateSum = 0;
 
+            var highestLongHasItemsAtADay = int.MinValue;
+            DateTime highestLongHasItemsDate = default;
+            var longestLongHasTime = TimeSpan.MinValue;
+            var longestLongHasCode = "";
+            var longCount = 0;
+            var longWin = 0;
+            double longProfitRateSum = 0;
+            double longProfitWinRateSum = 0;
+
+            var highestShortHasItemsAtADay = int.MinValue;
+            DateTime highestShortHasItemsDate = default;
+            var longestShortHasTime = TimeSpan.MinValue;
+            var longestShortHasCode = "";
+            var shortCount = 0;
+            var shortWin = 0;
+            double shortProfitRateSum = 0;
+            double shortProfitWinRateSum = 0;
+
+            var n = 0;
             for (int i = startIndex; i <= endIndex; i++)
             {
-                var buyItemsAtOnce = 0;
+                var fullHasItemsAtADay = 0;
+                var longHasItemsAtADay = 0;
+                var shortHasItemsAtADay = 0;
 
                 simulDays.Values[i].Count = 0;
                 simulDays.Values[i].Win = 0;
@@ -650,22 +722,49 @@ namespace BackTestingFinal
                 foreach (var resultData in simulDays.Values[i].resultDatas)
                     if (resultData.ExitTime.Date == simulDays.Keys[i] && resultData.EnterTime.Date >= start)
                     {
-                        buyItemsAtOnce++;
-
                         var hasTime = resultData.ExitTime.Subtract(resultData.EnterTime);
-                        if (hasTime > longestHasTime)
+                        if (hasTime > longestFullHasTime)
                         {
-                            longestHasTime = hasTime;
-                            longestHasCode = resultData.Code;
+                            longestFullHasTime = hasTime;
+                            longestFullHasCode = resultData.Code;
+                        }
+                        if (resultData.LorS)
+                        {
+                            if (hasTime > longestLongHasTime)
+                            {
+                                longestLongHasTime = hasTime;
+                                longestLongHasCode = resultData.Code;
+                            }
+                        }
+                        else
+                        {
+                            if (hasTime > longestShortHasTime)
+                            {
+                                longestShortHasTime = hasTime;
+                                longestShortHasCode = resultData.Code;
+                            }
                         }
 
                         var itemData = itemDataDic[resultData.Code];
 
+                        fullHasItemsAtADay++;
                         simulDays.Values[i].Count++;
                         fullCount++;
                         itemData.Count++;
                         simulDays.Values[i].ProfitRateSum += resultData.ProfitRate;
                         fullProfitRateSum += resultData.ProfitRate;
+                        if (resultData.LorS)
+                        {
+                            longHasItemsAtADay++;
+                            longCount++;
+                            longProfitRateSum += resultData.ProfitRate;
+                        }
+                        else
+                        {
+                            shortHasItemsAtADay++;
+                            shortCount++;
+                            shortProfitRateSum += resultData.ProfitRate;
+                        }
                         if (resultData.ProfitRate > commisionRate)
                         {
                             simulDays.Values[i].Win++;
@@ -673,54 +772,99 @@ namespace BackTestingFinal
                             itemData.Win++;
                             simulDays.Values[i].WinProfitRateSum += resultData.ProfitRate;
                             fullProfitWinRateSum += resultData.ProfitRate;
+                            if (resultData.LorS)
+                            {
+                                longWin++;
+                                longProfitWinRateSum += resultData.ProfitRate;
+                            }
+                            else
+                            {
+                                shortWin++;
+                                shortProfitWinRateSum += resultData.ProfitRate;
+                            }
                         }
                     }
 
-                if (buyItemsAtOnce > maxBuyItemsAtOnce)
+                if (fullHasItemsAtADay > highestFullHasItemsAtADay)
                 {
-                    maxBuyItemsAtOnce = buyItemsAtOnce;
-                    maxBuyItemsDate = simulDays.Keys[i];
+                    highestFullHasItemsAtADay = fullHasItemsAtADay;
+                    highestFullHasItemsDate = simulDays.Keys[i];
+                }
+                if (longHasItemsAtADay > highestLongHasItemsAtADay)
+                {
+                    highestLongHasItemsAtADay = longHasItemsAtADay;
+                    highestLongHasItemsDate = simulDays.Keys[i];
+                }
+                if (shortHasItemsAtADay > highestShortHasItemsAtADay)
+                {
+                    highestShortHasItemsAtADay = shortHasItemsAtADay;
+                    highestShortHasItemsDate = simulDays.Keys[i];
                 }
 
-                simulDays.Values[i].WinRate = Math.Round((decimal)simulDays.Values[i].Win / simulDays.Values[i].Count * 100, 2);
+                simulDays.Values[i].WinRate = Math.Round((double)simulDays.Values[i].Win / simulDays.Values[i].Count * 100, 2);
                 simulDays.Values[i].ProfitRateAvg = Math.Round(simulDays.Values[i].ProfitRateSum / simulDays.Values[i].Count, 2);
-                simulDays.Values[i].WinProfitRateAvg = simulDays.Values[i].Win == 0 ? 0m : Math.Round(simulDays.Values[i].WinProfitRateSum / simulDays.Values[i].Win, 2);
-                simulDays.Values[i].LoseProfitRateAvg = simulDays.Values[i].Count == simulDays.Values[i].Win ? 0m : 
+                simulDays.Values[i].WinProfitRateAvg = simulDays.Values[i].Win == 0 ? 0 : Math.Round(simulDays.Values[i].WinProfitRateSum / simulDays.Values[i].Win, 2);
+                simulDays.Values[i].LoseProfitRateAvg = simulDays.Values[i].Count == simulDays.Values[i].Win ? 0 : 
                     Math.Round((simulDays.Values[i].ProfitRateSum - simulDays.Values[i].WinProfitRateSum) / (simulDays.Values[i].Count - simulDays.Values[i].Win), 2);
 
-                if (buyItemsAtOnce > beforeBuyItemsAtOnce)
-                    goingUp = true;
-                else if (buyItemsAtOnce < beforeBuyItemsAtOnce)
+                if (fullHasItemsAtADay > beforeFullHasItemsAtADay)
+                    fullGoingUp = true;
+                else if (fullHasItemsAtADay < beforeFullHasItemsAtADay)
                 {
-                    if (goingUp && beforeBuyItemsAtOnce > 0)
-                        allListView.AddObject(simulDays.Values[i - 1]);
-                    goingUp = false;
+                    //if (goingUp && beforeBuyItemsAtOnce > 0)
+                    //    allListView.AddObject(simulDays.Values[i - 1]);
+                    fullGoingUp = false;
                 }
-                beforeBuyItemsAtOnce = buyItemsAtOnce;
+                beforeFullHasItemsAtADay = fullHasItemsAtADay;
+
+                if (simulDays.Values[i].Count != 0)
+                {
+                    simulDays.Values[i].Number = ++n;
+                    metricResultListView.AddObject(simulDays.Values[i]);
+                }
 
                 totalChart.Series[1].Points.AddXY(simulDays.Keys[i].ToString(DateTimeFormat), simulDays.Values[i].ProfitRateAvg);
-                totalChart.Series[2].Points.AddXY(simulDays.Keys[i].ToString(DateTimeFormat), buyItemsAtOnce);
+                totalChart.Series[2].Points.AddXY(simulDays.Keys[i].ToString(DateTimeFormat), fullHasItemsAtADay);
             }
 
             foreach (var itemData in itemDataDic.Values)
-                itemData.WinRate = (itemData.Count == 0 ? 0 : Math.Round((double)itemData.Win / itemData.Count * 100, 2)) + "%";
+                itemData.WinRate = itemData.Count == 0 ? -1 : Math.Round((double)itemData.Win / itemData.Count * 100, 2);
 
-            allListView.Sort(allListView.GetColumn("PRA"), SortOrder.Ascending);
-            var n = 0;
-            foreach (DayData ob in allListView.Objects)
-                ob.Number = ++n;
-            allListView.Sort(allListView.GetColumn("No."), SortOrder.Descending);
+            //metricResultListView.Sort(metricResultListView.GetColumn("PRA"), SortOrder.Ascending);
+            //var n = 0;
+            //foreach (DayData ob in metricResultListView.Objects)
+            //    ob.Number = ++n;
+            //metricResultListView.Sort(metricResultListView.GetColumn("No."), SortOrder.Descending);
 
-            var WinRate = Math.Round((double)fullWin / fullCount * 100, 2) + "%";
-            metricDic[MetricWinRate].Strategy = WinRate;
+            metricDic[MetricWinRate].Strategy = Math.Round((double)fullWin / fullCount * 100, 2) + "%";
             metricDic[MetricAllCount].Strategy = fullCount.ToString();
             metricDic[MetricAvgProfitRate].Strategy = fullCount == 0 ? "0%" : (Math.Round(fullProfitRateSum / fullCount, 2) + "%");
             metricDic[MetricWinAvgProfitRate].Strategy = fullWin == 0 ? "0%" : (Math.Round(fullProfitWinRateSum / fullWin, 2) + "%");
             metricDic[MetricLoseAvgProfitRate].Strategy = fullCount == fullWin ? "0%" : (Math.Round((fullProfitRateSum - fullProfitWinRateSum) / (fullCount - fullWin), 2) + "%");
-            metricDic[MetricMaxHas].Strategy = maxBuyItemsAtOnce.ToString();
-            metricDic[MetricMaxHasDate].Strategy = maxBuyItemsDate.ToString(DateTimeFormat);
-            metricDic[MetricLongestHasDays].Strategy = longestHasTime + "days";
-            metricDic[MetricLongestHasDaysCode].Strategy = longestHasCode;
+            metricDic[MetricMaxHas].Strategy = highestFullHasItemsAtADay.ToString();
+            metricDic[MetricMaxHasTime].Strategy = highestFullHasItemsDate.ToString(DateTimeFormat);
+            metricDic[MetricLongestHasDays].Strategy = longestFullHasTime.ToString(TimeSpanFormat);
+            metricDic[MetricLongestHasDaysCode].Strategy = longestFullHasCode;
+
+            metricDic[MetricWinRate].Long = Math.Round((double)longWin / longCount * 100, 2) + "%";
+            metricDic[MetricAllCount].Long = longCount.ToString();
+            metricDic[MetricAvgProfitRate].Long = longCount == 0 ? "0%" : (Math.Round(longProfitRateSum / longCount, 2) + "%");
+            metricDic[MetricWinAvgProfitRate].Long = longWin == 0 ? "0%" : (Math.Round(longProfitWinRateSum / longWin, 2) + "%");
+            metricDic[MetricLoseAvgProfitRate].Long = longCount == longWin ? "0%" : (Math.Round((longProfitRateSum - longProfitWinRateSum) / (longCount - longWin), 2) + "%");
+            metricDic[MetricMaxHas].Long = highestLongHasItemsAtADay.ToString();
+            metricDic[MetricMaxHasTime].Long = highestLongHasItemsDate.ToString(DateTimeFormat);
+            metricDic[MetricLongestHasDays].Long = longestLongHasTime.ToString(TimeSpanFormat);
+            metricDic[MetricLongestHasDaysCode].Long = longestLongHasCode;
+
+            metricDic[MetricWinRate].Short = Math.Round((double)shortWin / shortCount * 100, 2) + "%";
+            metricDic[MetricAllCount].Short = shortCount.ToString();
+            metricDic[MetricAvgProfitRate].Short = shortCount == 0 ? "0%" : (Math.Round(shortProfitRateSum / shortCount, 2) + "%");
+            metricDic[MetricWinAvgProfitRate].Short = shortWin == 0 ? "0%" : (Math.Round(shortProfitWinRateSum / shortWin, 2) + "%");
+            metricDic[MetricLoseAvgProfitRate].Short = shortCount == shortWin ? "0%" : (Math.Round((shortProfitRateSum - shortProfitWinRateSum) / (shortCount - shortWin), 2) + "%");
+            metricDic[MetricMaxHas].Short = highestShortHasItemsAtADay.ToString();
+            metricDic[MetricMaxHasTime].Short = highestShortHasItemsDate.ToString(DateTimeFormat);
+            metricDic[MetricLongestHasDays].Short = longestShortHasTime.ToString(TimeSpanFormat);
+            metricDic[MetricLongestHasDaysCode].Short = longestShortHasCode;
         }
         (int has, double kelly) CalculateHasAndKelly(int index, int days)
         {
@@ -893,6 +1037,10 @@ namespace BackTestingFinal
 
         public override void SetChartNowOrLoad(ChartValues chartValues)
         {
+            mainChart.Visible = true;
+            totalChart.Visible = false;
+            totalButton.BackColor = ColorSet.Button;
+
             var from = mainChart.Tag != null ? GetStandardDate() : default;
             var position = double.IsNaN(mainChart.ChartAreas[0].CursorX.Position) ? baseChartViewSticksSize / 2
                 : mainChart.ChartAreas[0].CursorX.Position - mainChart.ChartAreas[0].AxisX.ScaleView.ViewMinimum - 1;
@@ -906,8 +1054,7 @@ namespace BackTestingFinal
             if (from < firstTime)
                 from = firstTime;
 
-            var v = showingItemData.listDic[mainChart.Tag as ChartValues];
-            ShowChart(showingItemData, (from, (int)position, true), v.list.Count != 0);
+            ShowChart(showingItemData, (from, (int)position, true), showingItemData.listDic[mainChart.Tag as ChartValues].list.Count != 0);
         }
         void ShowChart(BackItemData itemData, (DateTime time, int position, bool on) cursor, bool loaded = false)
         {
@@ -915,6 +1062,7 @@ namespace BackTestingFinal
             showingItemData = itemData;
             form.Text = itemData.Code;
             var v = itemData.listDic[chartValues];
+            cursor.time = cursor.time.AddSeconds(-cursor.time.TimeOfDay.TotalSeconds % chartValues.seconds);
 
             if (!loaded)
             {
@@ -927,26 +1075,55 @@ namespace BackTestingFinal
             {
                 if (cursor.time < v.list[0].Time)
                     LoadAndCheckSticks(itemData, false, true, (int)v.list[0].Time.Subtract(cursor.time).TotalSeconds / chartValues.seconds + baseChartViewSticksSize);
-                else if (cursor.time > v.list.Last().Time)
-                    LoadAndCheckSticks(itemData, false, true, (int)cursor.time.Subtract(v.list.Last().Time).TotalSeconds / chartValues.seconds + baseChartViewSticksSize);
+                else if (cursor.time > v.list[v.list.Count - 1].Time)
+                    LoadAndCheckSticks(itemData, false, true, (int)cursor.time.Subtract(v.list[v.list.Count - 1].Time).TotalSeconds / chartValues.seconds + baseChartViewSticksSize);
 
                 if (cursor.time.Subtract(v.list[0].Time).TotalSeconds / chartValues.seconds < baseChartViewSticksSize)
                     LoadAndCheckSticks(itemData, false, true);
-                if (v.list.Last().Time.Subtract(cursor.time).TotalSeconds / chartValues.seconds < baseChartViewSticksSize)
+                if (v.list[v.list.Count - 1].Time.Subtract(cursor.time).TotalSeconds / chartValues.seconds < baseChartViewSticksSize)
                     LoadAndCheckSticks(itemData, false, false);
 
                 var foundIndex = 0;
-                var foundIndex2 = -1;
+                var exitIndex = -1;
+                var enterIndex = -1;
                 for (int i = 0; i < v.list.Count; i++)
                 {
                     if (v.list[i].Time == cursor.time)
                         foundIndex = i;
-                    if ((v.list[i] as BackTradeStick).resultData != default)
-                        foundIndex2 = i;
+                    var resultData = (v.list[i] as BackTradeStick).resultData;
+                    if (resultData != default)
+                    {
+                        exitIndex = i;
+                        var exitOpenTime = resultData.ExitTime.AddSeconds((int)-(resultData.ExitTime.TimeOfDay.TotalSeconds % chartValues.seconds)); 
+                        var enterOpenTime = resultData.EnterTime.AddSeconds((int)-(resultData.EnterTime.TimeOfDay.TotalSeconds % chartValues.seconds));
+                        enterIndex = i - (int)exitOpenTime.Subtract(enterOpenTime).TotalSeconds / chartValues.seconds;
+                        if (v.list[enterIndex].Time != enterOpenTime)
+                            ShowError(form);
+                    }
                 }
 
-                var left = foundIndex2 == -1 ? foundIndex : (foundIndex < foundIndex2 ? foundIndex : foundIndex2);
-                var right = foundIndex2 == -1 ? foundIndex : (foundIndex < foundIndex2 ? foundIndex2 : foundIndex);
+                int left = default;
+                int right = default;
+                if (exitIndex == -1)
+                {
+                    left = foundIndex;
+                    right = foundIndex;
+                }
+                else if (foundIndex > exitIndex)
+                {
+                    left = enterIndex;
+                    right = foundIndex;
+                }
+                else if (foundIndex < enterIndex)
+                {
+                    left = foundIndex;
+                    right = exitIndex;
+                }
+                else
+                {
+                    left = enterIndex;
+                    right = exitIndex;
+                }
 
                 if (v.list.Count > right + baseChartViewSticksSize)
                     v.list.RemoveRange(right + baseChartViewSticksSize, v.list.Count - (right + baseChartViewSticksSize));
@@ -996,7 +1173,7 @@ namespace BackTestingFinal
                     {
                         BackColor = ColorSet.Losing,
                         ForeColor = ColorSet.FormText,
-                        IntervalOffset = index + 0.5,
+                        IntervalOffset = index + 1,
                         StripWidth = 1,
                         TextLineAlignment = StringAlignment.Near,
                         TextAlignment = StringAlignment.Center,
@@ -1006,8 +1183,10 @@ namespace BackTestingFinal
             if ((v.list[index] as BackTradeStick).resultData != default)
             {
                 var resultData = (v.list[index] as BackTradeStick).resultData;
-                var width = (int)(resultData.ExitTime.Subtract(resultData.EnterTime).TotalSeconds / vc.seconds);
-                if (v.list[index].Time != resultData.ExitTime || v.list[index - width].Time != resultData.EnterTime)
+                var EnterTime = resultData.EnterTime.Subtract(new TimeSpan(0, 0, (int)(resultData.EnterTime.TimeOfDay.TotalSeconds % vc.seconds)));
+                var ExitTime = resultData.ExitTime.Subtract(new TimeSpan(0, 0, (int)(resultData.ExitTime.TimeOfDay.TotalSeconds % vc.seconds)));
+                var width = (int)(ExitTime.Subtract(EnterTime).TotalSeconds / vc.seconds);
+                if (v.list[index].Time != ExitTime || v.list[index - width].Time != EnterTime)
                     ShowError(form);
                     
                 foreach (var ca in mainChart.ChartAreas)
@@ -1085,7 +1264,7 @@ namespace BackTestingFinal
 
                 if (!newLoad)
                 {
-                    var lastTime = toPast ? v.list[0].Time : v.list.Last().Time;
+                    var lastTime = toPast ? v.list[0].Time : v.list[v.list.Count - 1].Time;
                     from = chartValues != BaseChartTimeSet.OneMonth ? lastTime.AddSeconds(multiplier * chartValues.seconds) : lastTime.AddMonths(multiplier);
                 }
 
@@ -1095,12 +1274,15 @@ namespace BackTestingFinal
                 var startIndex = FindStartIndex(list, toPast ? (chartValues != BaseChartTimeSet.OneMonth ? from.AddSeconds(-chartValues.seconds * (size - 1)) : from.AddMonths(-(size - 1))) : from);
 
                 for (int i = startIndex; i < list.Count; i++)
+                {
+                    list[i].RSIA = CalRSIA(list, list[i], i - 1);
                     if (CheckSuddenBurst(isJoo, list, list[i], chartValues, i - 1))
                     {
                         (list[i] as BackTradeStick).suddenBurst = true;
                         if (toPast || result.foundTime == DateTime.MinValue)
                             result.foundTime = list[i].Time;
                     }
+                }
 
                 list.RemoveRange(0, startIndex);
 
@@ -1113,6 +1295,10 @@ namespace BackTestingFinal
 
                     v.list = list;
                 }
+
+                if (newLoad)
+                    foreach (var p in itemData.listDic)
+                        p.Value.found = false;
             }
             else
             {
@@ -1125,7 +1311,7 @@ namespace BackTestingFinal
                 if (!newLoad)
                 {
                     var v = itemData.listDic[BaseChartTimeSet.OneMinute];
-                    if ((toPast ? v.list[v.startIndex].Time.AddMinutes(-1) : v.list.Last().Time.AddMinutes(1)) != from)
+                    if ((toPast ? v.list[v.startIndex].Time.AddMinutes(-1) : v.list[v.list.Count - 1].Time.AddMinutes(1)) != from)
                         ShowError(form);
                 }
                 else
@@ -1157,9 +1343,9 @@ namespace BackTestingFinal
                         var to = from.AddSeconds(multiplier * vc.seconds * (size - 1));
                         v.startIndex = FindStartIndex(v.list, toPast ? to : from);
 
-                        if (toPast ? v.list[0].Time <= to : v.list.Last().Time == to)
+                        if (toPast ? v.list[v.startIndex].Time == to : v.list[v.list.Count - 1].Time == to)
                         {
-                            if (v.list[v.startIndex].Time.ToString(HourMinSecTimeFormat) != "00:00:00")
+                            if ((toPast ? v.list[v.startIndex].Time.ToString(HourMinSecTimeFormat) : v.list[v.list.Count - 1].Time.AddSeconds(vc.seconds).ToString(HourMinSecTimeFormat)) != "00:00:00")
                                 ShowError(form);
                         }
                         else
@@ -1169,7 +1355,7 @@ namespace BackTestingFinal
                     {
                         var vl = itemData.listDic.Values[i - 1];
                         if (v.list.Count == 0 || (!v.endLoaded && 
-                            (vl.endLoaded || (toPast ? v.list[v.startIndex].Time > vl.list[vl.startIndex].Time : v.list.Last().Time < vl.list.Last().Time))))
+                            (vl.endLoaded || (toPast ? v.list[v.startIndex].Time > vl.list[vl.startIndex].Time : v.list[v.list.Count - 1].Time < vl.list[v.list.Count - 1].Time))))
                         {
                             var size2 = size / (vc.seconds / vmc.seconds) * (i - minIndex + 1);
                             v.list = LoadSticks(itemData, vc, from2, size2 + (suddenNeedDays - 1), toPast);
@@ -1177,36 +1363,41 @@ namespace BackTestingFinal
                             var to = from.AddSeconds(multiplier * vc.seconds * (size2 - 1));
                             v.startIndex = FindStartIndex(v.list, toPast ? to : from);
 
-                            if (toPast ? v.list[0].Time <= to : v.list.Last().Time == to)
+                            if (toPast ? v.list[v.startIndex].Time == to : v.list[v.list.Count - 1].Time == to)
                             {
-                                if (!newLoad && v.list[v.startIndex].Time.ToString(HourMinSecTimeFormat) != "00:00:00")
+                                if ((toPast ? v.list[v.startIndex].Time.ToString(HourMinSecTimeFormat) : v.list[v.list.Count - 1].Time.AddSeconds(vc.seconds).ToString(HourMinSecTimeFormat)) != "00:00:00")
                                     ShowError(form);
                             }
                             else
                                 v.endLoaded = true;
                         }
-                        v.currentIndex = (int)(vm.list[vm.startIndex].Time.Subtract(v.list[v.startIndex].Time).TotalSeconds / itemData.listDic.Keys[i].seconds) + v.startIndex;
+                        v.currentIndex = (int)(vm.list[vm.startIndex].Time.Subtract(v.list[v.startIndex].Time).TotalSeconds / vc.seconds) + v.startIndex;
                         v.lastStick = new BackTradeStick() { Time = v.list[v.currentIndex].Time };
 
-                        if (!vm.endLoaded && v.lastStick.Time != vm.list[vm.startIndex].Time)
+                        if (vm.list[vm.startIndex].Time.Subtract(v.lastStick.Time).TotalSeconds >= vc.seconds)
                             ShowError(form);
                     }
                 }
 
-                List<(DateTime foundTime, ChartValues chartValues)> foundList = default;
+                List<(DateTime foundTime, ChartValues chartValues)> fixedFoundList = default;
                 for (vm.currentIndex = vm.startIndex; vm.currentIndex < vm.list.Count; vm.currentIndex++)
                 {
-                    foundList = new List<(DateTime foundTime, ChartValues chartValues)>();
+                    var shortFoundList = new List<(DateTime foundTime, ChartValues chartValues)>();
+                    var longFoundList = new List<(DateTime foundTime, ChartValues chartValues)>();
                     vm.lastStick = vm.list[vm.currentIndex] as BackTradeStick;
-                    if (run && !simulDays.ContainsKey(vm.lastStick.Time.Date))
-                    {
-                        simulDays.Add(vm.lastStick.Time.Date, new DayData() { Date = vm.lastStick.Time.Date });
-                        marketDays.Add(vm.lastStick.Time.Date, new DayData() { Date = vm.lastStick.Time.Date });
 
-                        var year = vm.lastStick.Time.Year;
-                        if (!openDaysPerYear.ContainsKey(year))
-                            openDaysPerYear.Add(year, 0);
-                        openDaysPerYear[year]++;
+                    lock (locker)
+                    {
+                        if (run && !simulDays.ContainsKey(vm.lastStick.Time.Date))
+                        {
+                            simulDays.Add(vm.lastStick.Time.Date, new DayData() { Date = vm.lastStick.Time.Date });
+                            marketDays.Add(vm.lastStick.Time.Date, new DayData() { Date = vm.lastStick.Time.Date });
+
+                            var year = vm.lastStick.Time.Year;
+                            if (!openDaysPerYear.ContainsKey(year))
+                                openDaysPerYear.Add(year, 0);
+                            openDaysPerYear[year]++;
+                        }
                     }
 
                     for (int j = minIndex; j <= dayIndex; j++)
@@ -1220,6 +1411,8 @@ namespace BackTestingFinal
                             {
                                 if (!v.lastStick.isEqual(v.list[v.currentIndex] as BackTradeStick))
                                     ShowError(form);
+
+                                v.list[v.currentIndex].RSIA = CalRSIA(v.list, v.list[v.currentIndex], v.currentIndex - 1);
 
                                 v.currentIndex++;
                                 v.lastStick = new BackTradeStick() { Time = v.list[v.currentIndex].Time };
@@ -1247,27 +1440,112 @@ namespace BackTestingFinal
                                 v.lastStick.TCount += vm.lastStick.TCount;
                             }
                         }
+                        else
+                            v.list[v.currentIndex].RSIA = CalRSIA(v.list, v.list[v.currentIndex], v.currentIndex - 1);
+                        v.lastStick.RSIA = CalRSIA(v.list, v.lastStick, v.currentIndex - 1);
 
-                        if ((run || (toPast ? vm.lastStick.Time <= checkStartTime : vm.lastStick.Time >= checkStartTime)) && CheckSuddenBurst(isJoo, v.list, v.lastStick, cv, v.currentIndex - 1))
+                        // st1
+                        if ((run || (toPast ? vm.lastStick.Time <= checkStartTime : vm.lastStick.Time >= checkStartTime)) &&
+                            CheckSuddenBurst(isJoo, v.list, v.lastStick, cv, v.currentIndex - 1))
                         {
-                            if (foundList.Count == 0)
-                                foundList.Add((vm.lastStick.Time, vmc));
-                            foundList.Add((v.lastStick.Time, cv));
+                            if (v.lastStick.Price[3] > v.lastStick.Price[2])
+                            {
+                                if (shortFoundList.Count == 0)
+                                    shortFoundList.Add((vm.lastStick.Time, vmc));
+                                shortFoundList.Add((v.lastStick.Time, cv));
+                            }
+                            else
+                            {
+                                if (longFoundList.Count == 0)
+                                    longFoundList.Add((vm.lastStick.Time, vmc));
+                                longFoundList.Add((v.lastStick.Time, cv));
+                            }
                         }
+
+                        //// st2
+                        //if ((run || (toPast ? vm.lastStick.Time <= checkStartTime : vm.lastStick.Time >= checkStartTime)) &&
+                        //    !double.IsNaN(v.lastStick.RSIA) && !double.IsNaN(v.list[v.currentIndex - 1].RSIA) &&
+                        //    ((v.lastStick.Price[3] / v.lastStick.Price[2] > 1.03m && v.lastStick.RSIA > 80 && v.lastStick.RSIA - v.list[v.currentIndex - 1].RSIA > 30) ||
+                        //        (v.lastStick.Price[2] / v.lastStick.Price[3] > 1.03m && v.lastStick.RSIA < 20 && v.lastStick.RSIA - v.list[v.currentIndex - 1].RSIA < -30)))
+                        //{
+                        //    if (v.lastStick.Price[3] > v.lastStick.Price[2])
+                        //    {
+                        //        if (shortFoundList.Count == 0)
+                        //            shortFoundList.Add((vm.lastStick.Time, vmc));
+                        //        shortFoundList.Add((v.lastStick.Time, cv));
+                        //    }
+                        //    else
+                        //    {
+                        //        if (longFoundList.Count == 0)
+                        //            longFoundList.Add((vm.lastStick.Time, vmc));
+                        //        longFoundList.Add((v.lastStick.Time, cv));
+                        //    }
+                        //}
+
+                        //// st3 안 좋음
+                        //if ((run || (toPast ? vm.lastStick.Time <= checkStartTime : vm.lastStick.Time >= checkStartTime)) && v.currentIndex >= 2)
+                        //{
+                        //    var firstCondition = CheckSuddenBurst(isJoo, v.list, v.list[v.currentIndex - 1], cv, v.currentIndex - 2);
+                        //    if (firstCondition)
+                        //    {
+                        //        firstCondition = (v.lastStick.Price[2] == v.lastStick.Price[3]) || (v.list[v.currentIndex - 1].Price[3] > v.list[v.currentIndex - 1].Price[2] ?
+                        //                (v.list[v.currentIndex - 1].Price[3] / v.list[v.currentIndex - 1].Price[2] - 1m) / (v.lastStick.Price[2] / v.lastStick.Price[3] - 1m) > 5m :
+                        //                (v.list[v.currentIndex - 1].Price[2] / v.list[v.currentIndex - 1].Price[3] - 1m) / (v.lastStick.Price[3] / v.lastStick.Price[2] - 1m) > 5m);
+                        //    }
+
+                        //    if (firstCondition ||
+                        //    ((v.lastStick.Price[3] > v.lastStick.Price[2] ? shortFoundList.Count : longFoundList.Count) > 0 && CheckSuddenBurst(isJoo, v.list, v.lastStick, cv, v.currentIndex - 1)))
+                        //    {
+                        //        if (firstCondition ? v.list[v.currentIndex - 1].Price[3] > v.list[v.currentIndex - 1].Price[2] : v.lastStick.Price[3] > v.lastStick.Price[2])
+                        //        {
+                        //            if (shortFoundList.Count == 0)
+                        //                shortFoundList.Add((vm.lastStick.Time, vmc));
+                        //            shortFoundList.Add((v.lastStick.Time, cv));
+                        //        }
+                        //        else
+                        //        {
+                        //            if (longFoundList.Count == 0)
+                        //                longFoundList.Add((vm.lastStick.Time, vmc));
+                        //            longFoundList.Add((v.lastStick.Time, cv));
+                        //        }
+                        //    }
+                        //}
                     }
 
-                    if (!itemData.Enter && 
-                        foundList.Count >= 3 && (run || toPast || result.foundTime == DateTime.MinValue))
+                    if (!itemData.Enter &&
+                       (shortFoundList.Count >= 3 || longFoundList.Count >= 3) && (run || toPast || result.foundTime == DateTime.MinValue))
                     {
                         itemData.Enter = true;
                         itemData.EnterTime = vm.lastStick.Time;
                         itemData.EnterPrice = vm.lastStick.Price[3];
-                        itemData.EnterFoundList = foundList;
+                        if (shortFoundList.Count >= 3)
+                        {
+                            itemData.EnterFoundList = shortFoundList;
+                            itemData.EnterPositionIsLong = false;
+                        }
+                        else
+                        {
+                            itemData.EnterFoundList = longFoundList;
+                            itemData.EnterPositionIsLong = true;
+                        }
                     }
                     else if (itemData.Enter)
                     {
+                        //var last2ndFound = itemData.EnterFoundList[itemData.EnterFoundList.Count - 2];
+                        //var timeTerm = (int)vm.lastStick.Time.AddSeconds(vmc.seconds).Subtract(last2ndFound.foundTime).TotalSeconds;
+                        //if (timeTerm % last2ndFound.chartValues.seconds == 0)
+                        //{
+                        //    var size2 = timeTerm / last2ndFound.chartValues.seconds - 1;
+                        //    if (size2 >= 2)
+                        //    {
+                        //        var v3 = itemData.listDic[last2ndFound.chartValues];
+                        //        var RSIA = CalRSIA(v3.list, v3.lastStick, v3.currentIndex - 1, size2 > 4 ? 4 : size2);
+                        //        if (RSIA > 50 || RSIA - v3.list[v3.currentIndex - 1].RSIA > 10)
+                        //    }
+                        //}
+
                         var lastFound = itemData.EnterFoundList[itemData.EnterFoundList.Count - 1];
-                        if (itemData.listDic[lastFound.chartValues].lastStick.Time.Subtract(lastFound.foundTime).TotalSeconds >= lastFound.chartValues.seconds)
+                        if (vm.lastStick.Time.AddSeconds(vmc.seconds).Subtract(lastFound.foundTime).TotalSeconds >= lastFound.chartValues.seconds * 2)
                         {
                             itemData.Enter = false;
 
@@ -1278,26 +1556,35 @@ namespace BackTestingFinal
                                     Code = itemData.Code,
                                     EnterTime = itemData.EnterTime,
                                     ExitTime = vm.lastStick.Time,
-                                    ProfitRate = (vm.lastStick.Price[3] / itemData.EnterPrice - 1) * 100,
+                                    ProfitRate = Math.Round((double)((itemData.EnterPositionIsLong ? vm.lastStick.Price[3] / itemData.EnterPrice : itemData.EnterPrice / vm.lastStick.Price[3]) - 1) * 100, 2),
                                     Duration = vm.lastStick.Time.Subtract(itemData.EnterTime).ToString(TimeSpanFormat),
-                                    BeforeGap = itemData.EnterTime.Subtract(itemData.BeforeExitTime).ToString(TimeSpanFormat)
+                                    BeforeGap = itemData.EnterTime.Subtract(itemData.BeforeExitTime).ToString(TimeSpanFormat),
+                                    LorS = itemData.EnterPositionIsLong
                                 };
+
                                 itemData.BeforeExitTime = resultData.ExitTime;
 
-                                var enterIndex = simulDays.IndexOfKey(resultData.EnterTime.Date);
-                                for (int i = simulDays.IndexOfKey(resultData.ExitTime.Date); i >= 0; i--)
+                                if (run)
                                 {
-                                    if (i < enterIndex)
-                                        break;
+                                    var enterIndex = simulDays.IndexOfKey(resultData.EnterTime.Date);
+                                    for (int i = simulDays.IndexOfKey(resultData.ExitTime.Date); i >= 0; i--)
+                                    {
+                                        if (i < enterIndex)
+                                            break;
 
-                                    simulDays.Values[i].resultDatas.Add(resultData);
+                                        simulDays.Values[i].resultDatas.Add(resultData);
+                                    }
                                 }
 
                                 var BeforeGap = TimeSpan.ParseExact(resultData.BeforeGap, TimeSpanFormat, null);
                                 if (BeforeGap < itemData.ShortestBeforeGap)
+                                {
                                     itemData.ShortestBeforeGap = BeforeGap;
+                                    itemData.ShortestBeforeGapText = BeforeGap.ToString();
+                                }
 
                                 result = itemData.EnterFoundList[1];
+                                fixedFoundList = itemData.EnterFoundList;
                                 foreach (var found in itemData.EnterFoundList)
                                 {
                                     var v2 = itemData.listDic[found.chartValues];
@@ -1308,12 +1595,17 @@ namespace BackTestingFinal
                     }
 
                     if (vm.currentIndex == vm.list.Count - 1 && itemData.Enter && vm.lastStick.Time.AddMinutes(1) == vm.lastStick.Time.Date.AddDays(1))
+                    {
+                        var to = vm.lastStick.Time.Date.AddDays(2);
                         for (int i = minIndex; i <= dayIndex; i++)
                         {
                             var v = itemData.listDic.Values[i];
                             var vc = itemData.listDic.Keys[i];
-                            v.list.AddRange(LoadSticks(itemData, vc, vm.lastStick.Time.AddMinutes(1), minituesInADay / (vc.seconds / vmc.seconds), false));
+                            var from2 = v.list[v.list.Count - 1].Time.AddSeconds(vc.seconds);
+                            if (from2 < to)
+                                v.list.AddRange(LoadSticks(itemData, vc, from2, minituesInADay / (vc.seconds / vmc.seconds), false));
                         }
+                    }
                 }
 
                 if (run)
@@ -1324,12 +1616,19 @@ namespace BackTestingFinal
                     {
                         var v = itemData.listDic.Values[i];
                         var vc = itemData.listDic.Keys[i];
+
+                        foreach (var cv in fixedFoundList)
+                            if (cv.chartValues == vc)
+                                v.found = true;
+
                         for (int j = v.startIndex; j < v.list.Count; j++)
                         {
                             var stick = v.list[j] as BackTradeStick;
+                            v.list[j].RSIA = CalRSIA(v.list, v.list[j], j - 1);
                             if (CheckSuddenBurst(isJoo, v.list, v.list[j], vc, j - 1))
                                 stick.suddenBurst = true;
                         }
+
                         v.list.RemoveRange(0, v.startIndex);
                         v.startIndex = 0;
                     }
@@ -1361,8 +1660,7 @@ namespace BackTestingFinal
 
             var multiplier = toPast ? -1 : 1;
 
-            var conn = new SQLiteConnection("Data Source =" + sticksDBpath + sticksDBbaseName + chartValues.Text + ".db");
-            conn.Open();
+            var conn = DBDic[chartValues];
 
             if (from == default)
                 from = GetFirstOrLastTime(!toPast, itemData, chartValues).time;
@@ -1475,8 +1773,7 @@ namespace BackTestingFinal
             if (chartValues == default)
                 chartValues = mainChart.Tag as ChartValues;
 
-            var conn = new SQLiteConnection("Data Source =" + sticksDBpath + sticksDBbaseName + chartValues.Text + ".db");
-            conn.Open();
+            var conn = DBDic[chartValues];
 
             var time = first ? DateTime.MaxValue : DateTime.MinValue;
             if (itemData == default)
@@ -1501,8 +1798,6 @@ namespace BackTestingFinal
                 if (first ? stick.Time < time : stick.Time > time)
                     time = stick.Time;
             }
-
-            conn.Close();
 
             return (time, itemData);
         }
@@ -1686,6 +1981,123 @@ namespace BackTestingFinal
 
                 list[index].RSI = totalSum > 0 ? (double)(plusSum / totalSum * 100) : double.NaN;
                 list[index].RSI2 = totalSum2 > 0 ? (double)(plusSum2 / totalSum2 * 100) : double.NaN;
+            }
+        }
+        double CalRSIA(List<TradeStick> list, TradeStick lastStick, int lastIndex = int.MinValue, int checkSize = int.MinValue)
+        {
+            if (lastIndex == int.MinValue)
+                lastIndex = list.Count - 1;
+
+            if (checkSize == int.MinValue)
+                checkSize = suddenNeedDays;
+
+            if (lastIndex + 1 < checkSize - 1)
+                return double.NaN;
+            else
+            {
+                var priceUpSum = 0m;
+                var priceUpDownSum = 0m;
+                if (lastStick.Price[3] > lastStick.Price[2])
+                {
+                    var priceUp = lastStick.Price[3] - lastStick.Price[2];
+                    priceUpSum += priceUp;
+                    priceUpDownSum += priceUp;
+                }
+                else
+                    priceUpDownSum += lastStick.Price[2] - lastStick.Price[3];
+
+                var priceCloseLineDiffSum = 0m;
+                var priceCloseLineDiffHighest = 0m;
+                var priceCloseLineDiffLowest = 0m;
+                var priceCloseLineDiff = lastStick.Price[3] - lastStick.Price[2];
+                priceCloseLineDiffSum += priceCloseLineDiff;
+                if (priceCloseLineDiff > priceCloseLineDiffHighest)
+                    priceCloseLineDiffHighest = priceCloseLineDiff;
+                if (priceCloseLineDiff < priceCloseLineDiffLowest)
+                    priceCloseLineDiffLowest = priceCloseLineDiff;
+
+                var quanUpSum = 0m;
+                var quanUpDownSum = 0m;
+                if (checkSize > 1)
+                {
+                    if (lastStick.Ms + lastStick.Md > list[lastIndex].Ms + list[lastIndex].Md)
+                    {
+                        var quanUp = lastStick.Ms + lastStick.Md - list[lastIndex].Ms - list[lastIndex].Md;
+                        quanUpSum += quanUp;
+                        quanUpDownSum += quanUp;
+                    }
+                    else
+                        quanUpDownSum += list[lastIndex].Ms + list[lastIndex].Md - lastStick.Ms - lastStick.Md;
+                }
+
+                var quanCloseLineDiffSum = 0m;
+                var quanCloseLineDiffHighest = 0m;
+                var quanCloseLineDiffLowest = 0m;
+
+                for (int i = lastIndex; i > lastIndex - checkSize + 1; i--)
+                {
+                    if (list[i].Price[3] > list[i].Price[2])
+                    {
+                        var priceUp = list[i].Price[3] - list[i].Price[2];
+                        priceUpSum += priceUp;
+                        priceUpDownSum += priceUp;
+                    }
+                    else
+                        priceUpDownSum += list[i].Price[2] - list[i].Price[3];
+
+                    priceCloseLineDiff = lastStick.Price[3] - list[i].Price[3];
+                    priceCloseLineDiffSum += priceCloseLineDiff;
+                    if (priceCloseLineDiff > priceCloseLineDiffHighest)
+                        priceCloseLineDiffHighest = priceCloseLineDiff;
+                    if (priceCloseLineDiff < priceCloseLineDiffLowest)
+                        priceCloseLineDiffLowest = priceCloseLineDiff; 
+                    
+                    priceCloseLineDiff = lastStick.Price[3] - list[i].Price[2];
+                    priceCloseLineDiffSum += priceCloseLineDiff;
+                    if (priceCloseLineDiff > priceCloseLineDiffHighest)
+                        priceCloseLineDiffHighest = priceCloseLineDiff;
+                    if (priceCloseLineDiff < priceCloseLineDiffLowest)
+                        priceCloseLineDiffLowest = priceCloseLineDiff;
+
+                    if (i > lastIndex - checkSize + 2)
+                    {
+                        if (list[i].Ms + list[i].Md > list[i - 1].Ms + list[i - 1].Md)
+                        {
+                            var quanUp = list[i].Ms + list[i].Md - list[i - 1].Ms - list[i - 1].Md;
+                            quanUpSum += quanUp;
+                            quanUpDownSum += quanUp;
+                        }
+                        else
+                            quanUpDownSum += list[i - 1].Ms + list[i - 1].Md - list[i].Ms - list[i].Md;
+                    }
+
+                    var quanCloseLineDiff = lastStick.Ms + lastStick.Md - list[i].Ms - list[i].Md;
+                    quanCloseLineDiffSum += quanCloseLineDiff;
+                    if (quanCloseLineDiff > quanCloseLineDiffHighest)
+                        quanCloseLineDiffHighest = quanCloseLineDiff;
+                    if (quanCloseLineDiff < quanCloseLineDiffLowest)
+                        quanCloseLineDiffLowest = quanCloseLineDiff;
+                }
+
+                var priceRSI = priceUpDownSum == 0m ? double.NaN : (double)(priceUpSum / priceUpDownSum * 100);
+
+                var baseForPriceA = (priceCloseLineDiffHighest - priceCloseLineDiffLowest) * (2 * checkSize - 1);
+                var priceA = baseForPriceA == 0m ? double.NaN : 
+                    (double)((lastStick.Price[3] > list[lastIndex - checkSize + 2].Price[2] ? 
+                        (priceCloseLineDiffSum - priceCloseLineDiffLowest * 2 * checkSize) : 
+                        -(priceCloseLineDiffSum - priceCloseLineDiffHighest * 2 * checkSize)) / baseForPriceA);
+
+                var quanRSI = quanUpDownSum == 0m ? double.NaN : (double)(quanUpSum / quanUpDownSum * 100);
+
+                var baseForQuanA = (quanCloseLineDiffHighest - quanCloseLineDiffLowest) * (checkSize - 1);
+                var quanA = baseForQuanA == 0m ? double.NaN : (double)((quanCloseLineDiffSum - quanCloseLineDiffLowest * checkSize) / baseForQuanA);
+
+                if (double.IsNaN(priceRSI) || double.IsNaN(priceA) || double.IsNaN(quanRSI) || double.IsNaN(quanA))
+                    return double.NaN;
+
+                var priceRSIA = (priceRSI - 50) * priceA + 50;
+                var quanRSIA = (quanRSI - 50) * quanA + 50;
+                return (priceRSIA - 50) * (quanRSIA / 100) + 50;
             }
         }
     }
