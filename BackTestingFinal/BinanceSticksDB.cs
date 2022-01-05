@@ -64,12 +64,16 @@ namespace BackTestingFinal
                 var doneCode = 0;
                 foreach (var code in codeList)
                 {
-                    BaseFunctions.AddOrChangeLoadingText("Saving (" + doneTime + "/" + BaseFunctions.ChartValuesDic.Count + ")DB...(" + doneCode + "/" + codeList.Count + ")", doneCode == 0);
+                    BaseFunctions.AddOrChangeLoadingText("Saving (" + doneTime + "/" + BaseFunctions.ChartValuesDic.Count + ")DB...(" + doneCode + "/" + codeList.Count + ")", doneTime == 0 && doneCode == 0);
 
                     new SQLiteCommand("Begin", conn).ExecuteNonQuery();
 
                     new SQLiteCommand("CREATE TABLE IF NOT EXISTS '" + code + "' " +
-                        "('date' TEXT, 'time' TEXT, 'open' REAL, 'high' REAL, 'low' REAL, 'close' REAL, 'baseVolume' REAL, 'takerBuyBaseVolume' REAL, 'quoteVolume' REAL, 'takerBuyQuoteVolume' REAL, 'tradeCount' INTEGER)", conn).ExecuteNonQuery();
+                        "('" + DBTimeColumnName + "' INTEGER, '" + DBOpenColumnName + "' REAL, '" + DBHighColumnName + "' REAL, '" +
+                        DBLowColumnName + "' REAL, '" + DBCloseColumnName + "' REAL, '" + DBBaseVolumeColumnName + "' REAL, '" + DBTakerBuyBaseVolumeColumnName + "' REAL, '" +
+                        DBQuoteVolumeColumnName + "' REAL, '" + DBTakerBuyQuoteVolumeColumnName + "' REAL, '" + DBTradeCountColumnName + "' INTEGER)", conn).ExecuteNonQuery();
+
+                    new SQLiteCommand("CREATE UNIQUE INDEX IF NOT EXISTS '" + code + "_index' ON '" + code + "' ('" + DBTimeColumnName + "')", conn).ExecuteNonQuery();
 
                     var startTime = DateTime.Parse("2000-01-01");
 
@@ -78,7 +82,7 @@ namespace BackTestingFinal
                     if (reader.HasRows)
                     {
                         reader.Read();
-                        startTime = DateTime.Parse(reader["date"].ToString().Insert(4, "-").Insert(7, "-") + " " + reader["time"].ToString().Insert(2, ":").Insert(5, ":"));
+                        startTime = DateTime.ParseExact(reader[DBTimeColumnName].ToString(), BaseFunctions.DBTimeFormat, null);
                         var rowid = reader["rowid"].ToString();
 
                         new SQLiteCommand("DELETE FROM '" + code + "' WHERE rowid='" + rowid + "'", conn).ExecuteNonQuery();
@@ -117,8 +121,10 @@ namespace BackTestingFinal
                                 }
 
                                 new SQLiteCommand("INSERT INTO '" + code + "' " +
-                                    "('date', 'time', 'open', 'high', 'low', 'close', 'baseVolume', 'takerBuyBaseVolume', 'quoteVolume', 'takerBuyQuoteVolume', 'tradeCount') values " +
-                                    "('" + kline.OpenTime.ToString("yyyyMMdd") + "', '" + kline.OpenTime.ToString("HHmmss") + "', '" + kline.Open + "', '" + kline.High + "', '" + kline.Low + "', '" + kline.Close
+                                    "('" + DBTimeColumnName + "', '" + DBOpenColumnName + "', '" + DBHighColumnName + "', '" +
+                                        DBLowColumnName + "', '" + DBCloseColumnName + "', '" + DBBaseVolumeColumnName + "', '" + DBTakerBuyBaseVolumeColumnName + "', '" +
+                                        DBQuoteVolumeColumnName + "', '" + DBTakerBuyQuoteVolumeColumnName + "', '" + DBTradeCountColumnName + "') values " +
+                                    "('" + kline.OpenTime.ToString(BaseFunctions.DBTimeFormat) + "', '" + kline.Open + "', '" + kline.High + "', '" + kline.Low + "', '" + kline.Close
                                      + "', '" + kline.BaseVolume + "', '" + kline.TakerBuyBaseVolume + "', '" + kline.QuoteVolume + "', '" + kline.TakerBuyQuoteVolume + "', '" + kline.TradeCount + "')", conn).ExecuteNonQuery();
                             }
 

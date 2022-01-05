@@ -47,21 +47,21 @@ namespace BackTestingFinal
             BackTesting.instance = new BackTesting(this, BaseFunctions.isJoo);
         }
 
-        protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
-        {
-            switch (keyData)
-            {
-                case Keys.Left:
-                    BackTesting.instance.beforeButton.PerformClick();
-                    return true;
+        //protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
+        //{
+        //    switch (keyData)
+        //    {
+        //        case Keys.Left:
+        //            BackTesting.instance.beforeButton.PerformClick();
+        //            return true;
 
-                case Keys.Right:
-                    BackTesting.instance.afterButton.PerformClick();
-                    return true;
+        //        case Keys.Right:
+        //            BackTesting.instance.afterButton.PerformClick();
+        //            return true;
 
-                default:
-                    return base.ProcessCmdKey(ref msg, keyData);
-            }
-        }
+        //        default:
+        //            return base.ProcessCmdKey(ref msg, keyData);
+        //    }
+        //}
     }
 }

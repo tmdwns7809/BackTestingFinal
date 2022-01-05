@@ -19,6 +19,20 @@ namespace BackTestingFinal
         public static string path;
         public static string BaseName;
 
+        public string DBTimeColumnName = "time";
+
+        public string DBOpenColumnName = "open";
+        public string DBHighColumnName = "high";
+        public string DBLowColumnName = "low";
+        public string DBCloseColumnName = "close";
+        
+        public string DBBaseVolumeColumnName = "baseVolume";
+        public string DBTakerBuyBaseVolumeColumnName = "takerBuyBaseVolume";
+        public string DBQuoteVolumeColumnName = "quoteVolume";
+        public string DBTakerBuyQuoteVolumeColumnName = "takerBuyQuoteVolume";
+
+        public string DBTradeCountColumnName = "tradeCount";
+
         protected BaseSticksDB(Form f, string p, string b, bool update, bool check)
         {
             form = f;
@@ -86,7 +100,7 @@ namespace BackTestingFinal
                     DateTime lastTime = default;
                     while (reader.Read())
                     {
-                        var time = DateTime.Parse(reader["date"].ToString().Insert(4, "-").Insert(7, "-") + " " + reader["time"].ToString().Insert(2, ":").Insert(5, ":"));
+                        var time = DateTime.ParseExact(reader[DBTimeColumnName].ToString(), BaseFunctions.DBTimeFormat, null);
 
                         if (lastTime != default 
                             && (pair.Value != BaseChartTimeSet.OneMonth ? lastTime.AddSeconds(pair.Value.seconds) : lastTime.AddMonths(1) ) != time
@@ -128,9 +142,12 @@ namespace BackTestingFinal
             var doneTime = 0;
             foreach (var pair in BaseFunctions.ChartValuesDic)
             {
-                SQLiteConnection conn = new SQLiteConnection("Data Source =" + path + BaseName + pair.Value.Text + ".db");
+                var oldPath = path + BaseName + pair.Value.Text + ".db";
+                var newPath = path + BaseName + pair.Value.Text + "_new.db";
+
+                SQLiteConnection conn = new SQLiteConnection("Data Source =" + oldPath);
                 conn.Open();
-                SQLiteConnection conn2 = new SQLiteConnection("Data Source =" + path + BaseName + pair.Value.Text + "_new.db");
+                SQLiteConnection conn2 = new SQLiteConnection("Data Source =" + newPath);
                 conn2.Open();
 
                 var codeList = new List<string>();
@@ -148,7 +165,9 @@ namespace BackTestingFinal
                     new SQLiteCommand("Begin", conn2).ExecuteNonQuery();
 
                     new SQLiteCommand("CREATE TABLE IF NOT EXISTS '" + code + "' " +
-                        "('time' INTEGER, 'open' REAL, 'high' REAL, 'low' REAL, 'close' REAL, 'baseVolume' REAL, 'takerBuyBaseVolume' REAL, 'quoteVolume' REAL, 'takerBuyQuoteVolume' REAL, 'tradeCount' INTEGER)", conn2).ExecuteNonQuery();
+                        "('" + DBTimeColumnName + "' INTEGER, '" + DBOpenColumnName + "' REAL, '" + DBHighColumnName + "' REAL, '" + 
+                        DBLowColumnName + "' REAL, '" + DBCloseColumnName + "' REAL, '" + DBBaseVolumeColumnName + "' REAL, '" + DBTakerBuyBaseVolumeColumnName + "' REAL, '" + 
+                        DBQuoteVolumeColumnName + "' REAL, '" + DBTakerBuyQuoteVolumeColumnName + "' REAL, '" + DBTradeCountColumnName + "' INTEGER)", conn2).ExecuteNonQuery();
 
                     var firstRowID = "";
                     var lastRowID = "";
@@ -168,7 +187,9 @@ namespace BackTestingFinal
                     var lastRowIDAll = "";
                     while (reader.Read())
                     {
-                        new SQLiteCommand("INSERT INTO '" + code + "' ('time', 'open', 'high', 'low', 'close', 'baseVolume', 'takerBuyBaseVolume', 'quoteVolume', 'takerBuyQuoteVolume', 'tradeCount') values " +
+                        new SQLiteCommand("INSERT INTO '" + code + "' ('" + DBTimeColumnName + "', '" + DBOpenColumnName + "', '" + DBHighColumnName + "', '" +
+                        DBLowColumnName + "', '" + DBCloseColumnName + "', '" + DBBaseVolumeColumnName + "', '" + DBTakerBuyBaseVolumeColumnName + "', '" +
+                        DBQuoteVolumeColumnName + "', '" + DBTakerBuyQuoteVolumeColumnName + "', '" + DBTradeCountColumnName + "') values " +
                             "('" + reader["date"].ToString() + reader["time"].ToString() + "', '" + reader["open"].ToString() + "', '" + reader["high"].ToString() + "', '" + reader["low"].ToString() + "', '" + reader["close"].ToString()
                              + "', '" + reader["baseVolume"].ToString() + "', '" + reader["takerBuyBaseVolume"].ToString() + "', '" + reader["quoteVolume"].ToString() + "', '" + reader["takerBuyQuoteVolume"].ToString() + "', '" + reader["tradeCount"].ToString() + "')", conn2).ExecuteNonQuery();
 
@@ -228,7 +249,7 @@ namespace BackTestingFinal
 
                     new SQLiteCommand("Begin", conn).ExecuteNonQuery();
 
-                    new SQLiteCommand("CREATE UNIQUE INDEX IF NOT EXISTS '" + code + "_index' ON '" + code + "' ('time')", conn).ExecuteNonQuery();
+                    new SQLiteCommand("CREATE UNIQUE INDEX IF NOT EXISTS '" + code + "_index' ON '" + code + "' ('" + DBTimeColumnName + "')", conn).ExecuteNonQuery();
 
                     new SQLiteCommand("Commit", conn).ExecuteNonQuery();
 

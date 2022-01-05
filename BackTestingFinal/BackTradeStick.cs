@@ -10,31 +10,22 @@ namespace BackTestingFinal
 {
     class BackTradeStick : TradeStick
     {
-        public BackTradeStick(BackTradeStick stick = default) : base(stick)
-        {
-            if (stick == default)
-                return;
-
-            suddenBurst = stick.suddenBurst;
-            resultData = stick.resultData;
-        }
-
         public bool suddenBurst = false;
         public BackResultData resultData = default;
 
-        public bool isEqual(BackTradeStick stick)
+        public static bool isEqual(BackTradeStick stick0, BackTradeStick stick1)
         {
             var limit = 0.001m;
             return 
-                (stick.Price[0] == stick.Price[2] || Price[0] == Price[2] || Price[0] == stick.Price[0] || Math.Abs(1 - Price[0] / stick.Price[0]) < limit) &&
-                (stick.Price[1] == stick.Price[2] || Price[1] == Price[2] || Price[1] == stick.Price[1] || Math.Abs(1 - Price[1] / stick.Price[1]) < limit) &&
+                (stick1.Price[0] == stick1.Price[2] || stick0.Price[0] == stick0.Price[2] || stick0.Price[0] == stick1.Price[0] || Math.Abs(1 - stick0.Price[0] / stick1.Price[0]) < limit) &&
+                (stick1.Price[1] == stick1.Price[2] || stick0.Price[1] == stick0.Price[2] || stick0.Price[1] == stick1.Price[1] || Math.Abs(1 - stick0.Price[1] / stick1.Price[1]) < limit) &&
                 //(Price[2] == stick.Price[2] || Math.Abs(1 - Price[2] / stick.Price[2]) < limit) &&    open이 안맞는 경우가 많음
-                (Price[3] == stick.Price[3] || Math.Abs(1 - Price[3] / stick.Price[3]) < limit) &&
-                (Ms == stick.Ms || Math.Abs(1 - Ms / stick.Ms) < limit) &&
-                (Md == stick.Md || Math.Abs(1 - Md / stick.Md) < limit) &&
-                (TCount == stick.TCount || (TCount != 0 && stick.TCount != 0 && Math.Abs(1 - TCount / stick.TCount) < limit)) &&
-                Time == stick.Time &&
-                suddenBurst == stick.suddenBurst;
+                (stick0.Price[3] == stick1.Price[3] || Math.Abs(1 - stick0.Price[3] / stick1.Price[3]) < limit) &&
+                (stick0.Ms == 0 || stick1.Ms == 0 || stick0.Ms == stick1.Ms || Math.Abs(1 - stick0.Ms / stick1.Ms) < limit) &&
+                (stick0.Md == 0 || stick1.Md == 0 || stick0.Md == stick1.Md || Math.Abs(1 - stick0.Md / stick1.Md) < limit) &&
+                (stick0.TCount == stick1.TCount || (stick0.TCount != 0 && stick1.TCount != 0 && Math.Abs(1 - stick0.TCount / stick1.TCount) < limit)) &&
+                stick0.Time == stick1.Time &&
+                stick0.suddenBurst == stick1.suddenBurst;
         }
     }
 }

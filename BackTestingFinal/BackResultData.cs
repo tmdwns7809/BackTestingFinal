@@ -18,5 +18,6 @@ namespace BackTestingFinal
         public string Duration;
         public string BeforeGap;
         public bool LorS;
+        public bool showNow;
     }
 }
