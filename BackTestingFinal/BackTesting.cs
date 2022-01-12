@@ -1,19 +1,17 @@
-﻿using System;
+﻿using BrightIdeasSoftware;
+using System;
 using System.Collections.Generic;
+using System.Data.SQLite;
+using System.Diagnostics;
+using System.Drawing;
+using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using System.Threading.Tasks.Dataflow;
-using System.Windows.Forms.DataVisualization.Charting;
 using System.Windows.Forms;
-using System.Drawing;
-using System.Data.SQLite;
-using BrightIdeasSoftware;
-using System.IO;
+using System.Windows.Forms.DataVisualization.Charting;
 using TradingLibrary;
-using TradingLibrary.Trading;
 using TradingLibrary.Base;
-using System.Diagnostics;
 
 namespace BackTestingFinal
 {
@@ -205,7 +203,7 @@ namespace BackTestingFinal
             chartArea6.AxisY2.LabelStyle.ForeColor = ColorSet.FormText;
             chartArea6.AxisY2.IntervalAutoMode = IntervalAutoMode.FixedCount;
             chartArea6.AxisY2.LineColor = ColorSet.Border;
-            chartArea6.AxisY2.StripLines.Add(new StripLine() { IntervalOffset = 0, BackColor = ColorSet.Border, StripWidth = 0.5 });
+            //chartArea6.AxisY2.StripLines.Add(new StripLine() { IntervalOffset = 0, BackColor = ColorSet.Border, StripWidth = 0.5 });
 
             var series1 = totalChart.Series.Add("Simulation");
             series1.ChartType = SeriesChartType.Line;
@@ -367,8 +365,18 @@ namespace BackTestingFinal
                     DateTime.TryParseExact(toTextBox.Text, DateTimeFormat, null, System.Globalization.DateTimeStyles.None, out DateTime to) && from <= to)
                     Task.Run(new Action(() => {
                         var first = GetFirstOrLastTime(true, default, BaseChartTimeSet.OneDay).time;
+                        if (from < first)
+                        {
+                            from = first;
+                            form.BeginInvoke(new Action(() => { fromTextBox.Text = from.ToString(DateTimeFormat); }));
+                        }
                         var last = GetFirstOrLastTime(false, default, BaseChartTimeSet.OneDay).time;
-                        RunMain(from < first ? first : from, to > last ? last : to, isALS);
+                        if (to > last)
+                        {
+                            to = last;
+                            form.BeginInvoke(new Action(() => { toTextBox.Text = to.ToString(DateTimeFormat); }));
+                        }
+                        RunMain(from, to, isALS);
                     }));
                 else
                     ShowError(form);
@@ -620,7 +628,7 @@ namespace BackTestingFinal
 
         void RunMain(DateTime start, DateTime end, int isAllLongShort)
         {
-            form.Invoke(new Action(() => { ClearChart(totalChart); }));
+            form.BeginInvoke(new Action(() => { ClearChart(totalChart, true); }));
 
             if (simulDays.Count == 0 || start < simulDays.Keys[0] || end > simulDays.Keys[simulDays.Keys.Count - 1])
             {
@@ -647,8 +655,8 @@ namespace BackTestingFinal
                 AlertStart("done : " + sw.Elapsed.ToString(TimeSpanFormat));
             }
 
-            form.Invoke(new Action(() => {
-                CalculateMetric(start, end, isAllLongShort);
+            form.BeginInvoke(new Action(() => {
+                CalculateMetric(start, end, isAllLongShort); 
                 totalButton.PerformClick();
             }));
         }
@@ -1379,7 +1387,7 @@ namespace BackTestingFinal
                 for (int i = startIndex; i < list.Count; i++)
                 {
                     SetRSIAandDiff(list, list[i], i - 1);
-                    if (OneChartFindCondition(list[i]))
+                    if (SuddenBurst(list[i]).found)
                     {
                         (list[i] as BackTradeStick).suddenBurst = true;
                         if (toPast || result.foundTime == DateTime.MinValue)
@@ -1476,9 +1484,8 @@ namespace BackTestingFinal
                 {
                     vm.lastStick = vm.list[vm.currentIndex] as BackTradeStick;
                     itemData.foundList = (new List<(DateTime foundTime, ChartValues chartValues)>(), new List<(DateTime foundTime, ChartValues chartValues)>());
-
-                    if (itemData.Code == "PEOPLEUSDT" && vm.lastStick.Time.ToString(TimeFormat) == "2022-01-03 03:52:00")
-                        itemData.Code = itemData.Code;
+                    itemData.longFound = false;
+                    itemData.shortFound = false;
 
                     for (int j = minIndex; j <= dayIndex; j++)
                     {
@@ -1540,7 +1547,7 @@ namespace BackTestingFinal
 
                         // st2
                         if (toPast ? vm.lastStick.Time <= checkStartTime : vm.lastStick.Time >= checkStartTime)
-                            OneChartFindConditionAndAdd(itemData, vc);
+                            OneChartFindConditionAndAdd(st, itemData, vc, v.currentIndex - 1);
 
                         //// st3 안 좋음
                         //if ((run || (toPast ? vm.lastStick.Time <= checkStartTime : vm.lastStick.Time >= checkStartTime)) && v.currentIndex >= 2)
@@ -1574,9 +1581,12 @@ namespace BackTestingFinal
 
                     if (!itemData.Enter)
                     {
-                        var conditionResult = AllChartFindCondition(itemData.foundList);
-                        if (conditionResult.found && (toPast || result.foundTime == DateTime.MinValue))
-                            EnterSetting(itemData, vm.lastStick, conditionResult.isLong ? itemData.foundList.Long : itemData.foundList.Short, conditionResult.isLong);
+                        if ((itemData.longFound || itemData.shortFound) && (toPast || result.foundTime == DateTime.MinValue))
+                        {
+                            if (itemData.longFound && itemData.shortFound)
+                                ShowError(form);
+                            EnterSetting(itemData, vm.lastStick, itemData.longFound ? itemData.foundList.Long : itemData.foundList.Short, itemData.longFound);
+                        }
                     }
                     else
                     {
@@ -1651,7 +1661,7 @@ namespace BackTestingFinal
                         for (int j = 0; j < v.list.Count; j++)
                         {
                             SetRSIAandDiff(v.list, v.list[j], j - 1);
-                            if (OneChartFindCondition(v.list[j]))
+                            if (SuddenBurst(v.list[j]).found)
                                 (v.list[j] as BackTradeStick).suddenBurst = true;
                         }
 
@@ -1690,15 +1700,14 @@ namespace BackTestingFinal
 
             var action = new Action<BackItemData, int, DateTime>((iD, i, from2) =>
             {
-                if (iD.Code == "PEOPLEUSDT" && from2.ToString(TimeFormat) == "2022-01-03 03:52:00")
-                    iD.Code = iD.Code;
-
                 if (iD.firstLastMin.lastMin < from2)
                     return;
 
                 var vm = iD.listDic.Values[minIndex];
                 var vmc = iD.listDic.Keys[minIndex];
-                iD.foundList = (new List <(DateTime foundTime, ChartValues chartValues)>(), new List<(DateTime foundTime, ChartValues chartValues)>());
+                iD.foundList = (new List<(DateTime foundTime, ChartValues chartValues)>(), new List<(DateTime foundTime, ChartValues chartValues)>());
+                iD.longFound = false;
+                iD.shortFound = false;
 
                 for (int j = minIndex; j <= dayIndex; j++)
                 {
@@ -1807,7 +1816,7 @@ namespace BackTestingFinal
                     //}
 
                     // st2
-                    OneChartFindConditionAndAdd(iD, vc);
+                    OneChartFindConditionAndAdd(st, iD, vc, v.currentIndex - 1);
 
                     //// st3 안 좋음
                     //if ((run || (toPast ? vm.lastStick.Time <= checkStartTime : vm.lastStick.Time >= checkStartTime)) && v.currentIndex >= 2)
@@ -1841,17 +1850,18 @@ namespace BackTestingFinal
 
                 if (!iD.Enter)
                 {
-                    var conditionResult = AllChartFindCondition(iD.foundList);
-                    if (conditionResult.found)
+                    if (iD.longFound || iD.shortFound)
                     {
-                        EnterSetting(iD, iD.listDic.Values[minIndex].lastStick, conditionResult.isLong ? iD.foundList.Long : iD.foundList.Short, conditionResult.isLong);
-                        //lock (foundLocker)
-                        //{
-                        //    if (conditionResult.isLong)
-                        //        foundItemList.Long.Add((iD, iD.foundList.Long));
-                        //    else
-                        //        foundItemList.Short.Add((iD, iD.foundList.Short));
-                        //}
+                        if (iD.longFound && iD.shortFound)
+                            ShowError(form);
+                        //EnterSetting(iD, iD.listDic.Values[minIndex].lastStick, conditionResult.isLong ? iD.foundList.Long : iD.foundList.Short, conditionResult.isLong);
+                        lock (foundLocker)
+                        {
+                            if (iD.longFound)
+                                foundItemList.Long.Add((iD, iD.foundList.Long));
+                            else
+                                foundItemList.Short.Add((iD, iD.foundList.Short));
+                        }
                     }
 
                     //if (shortFoundList.Count >= 3 || longFoundList.Count >= 3)
@@ -1950,9 +1960,12 @@ namespace BackTestingFinal
                 var conditionResult = AllItemFindCondition();
                 if (conditionResult.found)
                 {
-                    var fixedFoundItemList = conditionResult.isLong ? foundItemList.Long : foundItemList.Short;
-                    foreach (var foundItem in fixedFoundItemList)
-                        EnterSetting(foundItem.itemData, foundItem.itemData.listDic.Values[minIndex].lastStick, foundItem.foundList, conditionResult.isLong);
+                    if (conditionResult.isLong)
+                        foreach (var foundItem in foundItemList.Long)
+                            EnterSetting(foundItem.itemData, foundItem.itemData.listDic.Values[minIndex].lastStick, foundItem.foundList, true);
+                    if (conditionResult.isShort)
+                        foreach (var foundItem in foundItemList.Short)
+                            EnterSetting(foundItem.itemData, foundItem.itemData.listDic.Values[minIndex].lastStick, foundItem.foundList, false);
                 }
             }
 
