@@ -25,8 +25,6 @@ namespace BackTestingFinal
         SortedList<DateTime, DayData> marketDays = new SortedList<DateTime, DayData>();
 
         int st = 0;
-        static int RSINumber = 7;
-        int searchDay = RSINumber + 1;
 
         Action<DayData> clickResultAction;
         FastObjectListView dayResultListView = new FastObjectListView();
@@ -131,9 +129,17 @@ namespace BackTestingFinal
                 var RSIA3Diff = RSIA3 - CalRSIA(list, list[i - 1], i - 2, 3);
                 var RSIA4 = CalRSIA(list, list[i], i - 1, 4);
                 var RSIA4Diff = RSIA4 - CalRSIA(list, list[i - 1], i - 2, 4);
+                var RSIA10 = CalRSIA(list, list[i], i - 1, 10);
+                var RSIA10Diff = RSIA10 - CalRSIA(list, list[i - 1], i - 2, 10);
+                var RSIA15 = CalRSIA(list, list[i], i - 1, 15);
+                var RSIA15Diff = RSIA15 - CalRSIA(list, list[i - 1], i - 2, 15);
+                var RSIA20 = CalRSIA(list, list[i], i - 1, 20);
+                var RSIA20Diff = RSIA20 - CalRSIA(list, list[i - 1], i - 2, 20);
                 //CheckSuddenBurst(isJoo, list, list[i], chartValues, i - 1);
                 form.Text = showingItemData.Code + "     H:" + list[i].Price[0] + "  L:" + list[i].Price[1] + "  O:" + list[i].Price[2] + "  C:" + list[i].Price[3] + "  Ms:" + list[i].Ms + "  Md:" + list[i].Md +
-                    "  RSIA2:" + Math.Round(RSIA2, 0) + "  RSIA2Diff:" + Math.Round(RSIA2Diff, 0) + "  RSIA3:" + Math.Round(RSIA3, 0) + "  RSIA3Diff:" + Math.Round(RSIA3Diff, 0) + "  RSIA4:" + Math.Round(RSIA4, 0) + "  RSIA4Diff:" + Math.Round(RSIA4Diff, 0);
+                    "  RSIA2:" + Math.Round(RSIA2, 0) + "  RSIA2Diff:" + Math.Round(RSIA2Diff, 0) + "  RSIA3:" + Math.Round(RSIA3, 0) + "  RSIA3Diff:" + Math.Round(RSIA3Diff, 0) + 
+                    "  RSIA4:" + Math.Round(RSIA4, 0) + "  RSIA4Diff:" + Math.Round(RSIA4Diff, 0) + "  RSIA10:" + Math.Round(RSIA10, 0) + "  RSIA10Diff:" + Math.Round(RSIA10Diff, 0) +
+                    "  RSIA15:" + Math.Round(RSIA15, 0) + "  RSIA15Diff:" + Math.Round(RSIA15Diff, 0) + "  RSIA20:" + Math.Round(RSIA20, 0) + "  RSIA20Diff:" + Math.Round(RSIA20Diff, 0);
             };
 
             clickResultAction = new Action<DayData>((date) =>
@@ -2187,17 +2193,6 @@ namespace BackTestingFinal
             {
                 case 0:
                 case 1:
-                case 2:
-                    for (int i = index; i > index - searchDay; i--)
-                    {
-                        if (i < 0)
-                            break;
-
-                        if (list[i].Ms + list[i].Md < 50000)
-                            return false;
-                    }
-
-                    return true;
 
                 default:
                     return false;
@@ -2259,52 +2254,6 @@ namespace BackTestingFinal
 
                 default:
                     return false;
-            }
-        }
-
-        void CalRSI(List<DayStick> list, int index)
-        {
-            if (index < searchDay - 1)
-            {
-                list[index].RSI = double.NaN;
-                list[index].RSI2 = double.NaN;
-            }
-            else
-            {
-                var plusSum = 0m;
-                var totalSum = 0m;
-                var plusSum2 = 0m;
-                var totalSum2 = 0m;
-                for (int i = index; i > index - RSINumber; i--)
-                {
-                    if (list[i].Price[3] > list[i - 1].Price[3])
-                    {
-                        plusSum += list[i].Price[3] - list[i - 1].Price[3];
-                        totalSum += list[i].Price[3] - list[i - 1].Price[3];
-                    }
-                    else
-                        totalSum += list[i - 1].Price[3] - list[i].Price[3];
-
-                    if (list[i].Price[3] > list[i].Price[2])
-                    {
-                        plusSum2 += list[i].Price[3] - list[i].Price[2];
-                        totalSum2 += list[i].Price[3] - list[i].Price[2];
-                    }
-                    else
-                        totalSum2 += list[i].Price[2] - list[i].Price[3];
-
-                    if (list[i].Price[0] == list[i].Price[1])
-                    {
-                        totalSum = 0;
-                        break;
-                    }
-                }
-
-                if (list[index - RSINumber].Price[0] == list[index - RSINumber].Price[1])
-                    totalSum = 0;
-
-                list[index].RSI = totalSum > 0 ? (double)(plusSum / totalSum * 100) : double.NaN;
-                list[index].RSI2 = totalSum2 > 0 ? (double)(plusSum2 / totalSum2 * 100) : double.NaN;
             }
         }
     }

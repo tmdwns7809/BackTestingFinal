@@ -79,7 +79,7 @@ namespace BackTestingFinal
                 var doneCode = 0;
                 foreach (var code in codeList)
                 {
-                    BaseFunctions.AddOrChangeLoadingText("Checking (" + doneTime + "/" + BaseFunctions.ChartValuesDic.Count + ")DB duplicate...(" + doneCode + "/" + codeList.Count + ")", doneCode == 0);
+                    BaseFunctions.AddOrChangeLoadingText("Checking (" + doneTime + "/" + BaseFunctions.ChartValuesDic.Count + ")DB duplicate...(" + doneCode + "/" + codeList.Count + ")", doneCode == 0 && doneTime == 0);
 
                     var firstRowID = "";
                     var lastRowID = "";
