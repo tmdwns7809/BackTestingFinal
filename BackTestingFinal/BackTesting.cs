@@ -24,8 +24,6 @@ namespace BackTestingFinal
         SortedList<DateTime, DayData> simulDays = new SortedList<DateTime, DayData>();
         SortedList<DateTime, DayData> marketDays = new SortedList<DateTime, DayData>();
 
-        int st = 0;
-
         Action<DayData> clickResultAction;
         FastObjectListView dayResultListView = new FastObjectListView();
 
@@ -97,7 +95,7 @@ namespace BackTestingFinal
 
         Dictionary<ChartValues, SQLiteConnection> DBDic = new Dictionary<ChartValues, SQLiteConnection>();
 
-        public BackTesting(Form form, bool isJoo) : base(form, isJoo)
+        public BackTesting(Form form, bool isJoo) : base(form, isJoo, 11)
         {
             sticksDBpath = BaseSticksDB.path;
             sticksDBbaseName = BaseSticksDB.BaseName;
@@ -1553,7 +1551,7 @@ namespace BackTestingFinal
 
                         // st2
                         if (toPast ? vm.lastStick.Time <= checkStartTime : vm.lastStick.Time >= checkStartTime)
-                            OneChartFindConditionAndAdd(st, itemData, vc, v.currentIndex - 1);
+                            OneChartFindConditionAndAdd(itemData, vc, v.currentIndex - 1);
 
                         //// st3 안 좋음
                         //if ((run || (toPast ? vm.lastStick.Time <= checkStartTime : vm.lastStick.Time >= checkStartTime)) && v.currentIndex >= 2)
@@ -1731,6 +1729,8 @@ namespace BackTestingFinal
                                 v.currentIndex = GetStartIndex(v.list, from2);
                                 v.startIndex = v.currentIndex;
                                 v.lastStick = new BackTradeStick() { Time = v.list[v.currentIndex].Time };
+
+
                             }
                         }
                         else if (v.currentIndex == v.list.Count - 1)
@@ -1822,7 +1822,7 @@ namespace BackTestingFinal
                     //}
 
                     // st2
-                    OneChartFindConditionAndAdd(st, iD, vc, v.currentIndex - 1);
+                    OneChartFindConditionAndAdd(iD, vc, v.currentIndex - 1);
 
                     //// st3 안 좋음
                     //if ((run || (toPast ? vm.lastStick.Time <= checkStartTime : vm.lastStick.Time >= checkStartTime)) && v.currentIndex >= 2)
