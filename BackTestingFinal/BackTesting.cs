@@ -95,7 +95,7 @@ namespace BackTestingFinal
 
         Dictionary<ChartValues, SQLiteConnection> DBDic = new Dictionary<ChartValues, SQLiteConnection>();
 
-        public BackTesting(Form form, bool isJoo) : base(form, isJoo, 11)
+        public BackTesting(Form form, bool isJoo) : base(form, isJoo, 7)
         {
             sticksDBpath = BaseSticksDB.path;
             sticksDBbaseName = BaseSticksDB.BaseName;
