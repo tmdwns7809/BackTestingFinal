@@ -95,7 +95,7 @@ namespace BackTestingFinal
 
         Dictionary<ChartValues, SQLiteConnection> DBDic = new Dictionary<ChartValues, SQLiteConnection>();
 
-        public BackTesting(Form form, bool isJoo) : base(form, isJoo, 7)
+        public BackTesting(Form form, bool isJoo) : base(form, isJoo, 15)
         {
             sticksDBpath = BaseSticksDB.path;
             sticksDBbaseName = BaseSticksDB.BaseName;
@@ -121,18 +121,18 @@ namespace BackTestingFinal
             {
                 var chartValues = mainChart.Tag as ChartValues;
                 var list = showingItemData.listDic[chartValues].list;
-                var RSIA2 = CalRSIA(list, list[i], i - 1, 2);
-                var RSIA2Diff = RSIA2 - CalRSIA(list, list[i - 1], i - 2, 2);
-                var RSIA3 = CalRSIA(list, list[i], i - 1, 3);
-                var RSIA3Diff = RSIA3 - CalRSIA(list, list[i - 1], i - 2, 3);
-                var RSIA4 = CalRSIA(list, list[i], i - 1, 4);
-                var RSIA4Diff = RSIA4 - CalRSIA(list, list[i - 1], i - 2, 4);
-                var RSIA10 = CalRSIA(list, list[i], i - 1, 10);
-                var RSIA10Diff = RSIA10 - CalRSIA(list, list[i - 1], i - 2, 10);
-                var RSIA15 = CalRSIA(list, list[i], i - 1, 15);
-                var RSIA15Diff = RSIA15 - CalRSIA(list, list[i - 1], i - 2, 15);
-                var RSIA20 = CalRSIA(list, list[i], i - 1, 20);
-                var RSIA20Diff = RSIA20 - CalRSIA(list, list[i - 1], i - 2, 20);
+                var RSIA2 = CalIndicator(list, list[i], i - 1, 2).RSIA;
+                var RSIA2Diff = RSIA2 - CalIndicator(list, list[i - 1], i - 2, 2).RSIA;
+                var RSIA3 = CalIndicator(list, list[i], i - 1, 3).RSIA;
+                var RSIA3Diff = RSIA3 - CalIndicator(list, list[i - 1], i - 2, 3).RSIA;
+                var RSIA4 = CalIndicator(list, list[i], i - 1, 4).RSIA;
+                var RSIA4Diff = RSIA4 - CalIndicator(list, list[i - 1], i - 2, 4).RSIA;
+                var RSIA10 = CalIndicator(list, list[i], i - 1, 10).RSIA;
+                var RSIA10Diff = RSIA10 - CalIndicator(list, list[i - 1], i - 2, 10).RSIA;
+                var RSIA15 = CalIndicator(list, list[i], i - 1, 15).RSIA;
+                var RSIA15Diff = RSIA15 - CalIndicator(list, list[i - 1], i - 2, 15).RSIA;
+                var RSIA20 = CalIndicator(list, list[i], i - 1, 20).RSIA;
+                var RSIA20Diff = RSIA20 - CalIndicator(list, list[i - 1], i - 2, 20).RSIA;
                 //CheckSuddenBurst(isJoo, list, list[i], chartValues, i - 1);
                 form.Text = showingItemData.Code + "     H:" + list[i].Price[0] + "  L:" + list[i].Price[1] + "  O:" + list[i].Price[2] + "  C:" + list[i].Price[3] + "  Ms:" + list[i].Ms + "  Md:" + list[i].Md +
                     "  RSIA2:" + Math.Round(RSIA2, 0) + "  RSIA2Diff:" + Math.Round(RSIA2Diff, 0) + "  RSIA3:" + Math.Round(RSIA3, 0) + "  RSIA3Diff:" + Math.Round(RSIA3Diff, 0) + 
@@ -379,6 +379,11 @@ namespace BackTestingFinal
                         {
                             to = last;
                             form.BeginInvoke(new Action(() => { toTextBox.Text = to.ToString(DateTimeFormat); }));
+                        }
+                        if (from > to)
+                        {
+                            ShowError(form, "input error");
+                            return;
                         }
                         RunMain(from, to, isALS);
                     }));
@@ -644,7 +649,15 @@ namespace BackTestingFinal
                 simulDays.Clear();
                 openDaysPerYear.Clear();
 
-                Run(start, end);
+                try
+                {
+                    Run(start, end);
+                }
+                catch (Exception e)
+                {
+
+                    throw;
+                }
 
                 if (openDaysPerYear.Values.Count > 2)
                 {
@@ -1164,7 +1177,8 @@ namespace BackTestingFinal
             if (from < firstTime)
                 from = firstTime;
 
-            ShowChart(showingItemData, (from, (int)position, true), showingItemData.listDic[mainChart.Tag as ChartValues].list.Count != 0);
+            var list = showingItemData.listDic[mainChart.Tag as ChartValues].list;
+            ShowChart(showingItemData, (from, (int)position, true), list.Count != 0 && from >= list[0].Time && from <= list[list.Count - 1].Time);
         }
         void ShowChart(BackItemData itemData, (DateTime time, int position, bool on) cursor, bool loaded = false)
         {
@@ -1858,8 +1872,9 @@ namespace BackTestingFinal
                 {
                     if (iD.longFound || iD.shortFound)
                     {
-                        if (iD.longFound && iD.shortFound)
-                            ShowError(form);
+                        //if (iD.longFound && iD.shortFound)
+                        //    ShowError(form);
+
                         //EnterSetting(iD, iD.listDic.Values[minIndex].lastStick, conditionResult.isLong ? iD.foundList.Long : iD.foundList.Short, conditionResult.isLong);
                         lock (foundLocker)
                         {
@@ -2130,131 +2145,6 @@ namespace BackTestingFinal
             }
 
             return (time, itemData);
-        }
-
-        bool BaseCondition(BackItemData itemData, List<TradeStick> list, int index, int ST)
-        {
-            if (index < 0)
-                return false;
-
-            switch (ST)
-            {
-                default:
-                    return true;
-            }
-        }
-        bool EnterCondition(BackItemData itemData, List<TradeStick> list, int index, int ST)
-        {
-            switch (ST)
-            {
-                case 0:
-                    if (index < 0)
-                        return false;
-
-                    if (list[index].RSI < 10 &&
-                        EnterConditionLast(list, index, ST))
-                        return true;
-                    else
-                        return false;
-
-                case 1:
-                    if (index - 3 < 0)
-                        return false;
-
-                    if (list[index].RSI < 20 &&
-                        list[index].RSI - list[index - 2].RSI > 8 && list[index - 1].RSI - list[index - 3].RSI > -3 &&
-                        Math.Abs(2 * list[index - 1].RSI - list[index - 2].RSI - list[index].RSI) / Math.Sqrt(4 + Math.Pow(list[index].RSI - list[index - 2].RSI, 2)) < 2 &&
-                        Math.Abs(2 * list[index - 2].RSI - list[index - 3].RSI - list[index - 1].RSI) / Math.Sqrt(4 + Math.Pow(list[index - 1].RSI - list[index - 3].RSI, 2)) < 2 &&
-                        EnterConditionLast(list, index, ST))
-                        return true;
-                    else
-                        return false;
-
-                case 2:
-                    if (index - 3 < 0)
-                        return false;
-
-                    if (list[index].RSI < 20 &&
-                        list[index].RSI - list[index - 2].RSI > 8 && list[index - 1].RSI - list[index - 3].RSI > -3 &&
-                        Math.Abs(2 * list[index - 1].RSI - list[index - 2].RSI - list[index].RSI) / Math.Sqrt(4 + Math.Pow(list[index].RSI - list[index - 2].RSI, 2)) < 2 &&
-                        Math.Abs(2 * list[index - 2].RSI - list[index - 3].RSI - list[index - 1].RSI) / Math.Sqrt(4 + Math.Pow(list[index - 1].RSI - list[index - 3].RSI, 2)) < 2 &&
-                        EnterConditionLast(list, index, ST))
-                        return true;
-                    else
-                        return false;
-
-                default:
-                    return false;
-            }
-        }
-        bool EnterConditionLast(List<TradeStick> list, int index, int ST)
-        {
-            switch (ST)
-            {
-                case 0:
-                case 1:
-
-                default:
-                    return false;
-            }
-        }
-        bool ExitCondition(BackItemData itemData, List<TradeStick> list, int index, int ST)
-        {
-            if (ExitConditionException(list, index, ST))
-            {
-                itemData.ExitException = true;
-                return true;
-            }
-
-            switch (ST)
-            {
-                case 0:
-                    if (list[index].RSI > 30 && list[index].RSI - list[index - 1].RSI < list[index - 1].RSI - list[index - 2].RSI)
-                    {
-                        itemData.ExitException = false;
-                        return true;
-                    }
-                    else
-                        return false;
-
-                case 1:
-                    if (list[index].RSI - list[index - 2].RSI < -5 ||
-                        Math.Abs(2 * list[index - 1].RSI - list[index - 2].RSI - list[index].RSI) / Math.Sqrt(4 + Math.Pow(list[index].RSI - list[index - 2].RSI, 2)) > 3)
-                    {
-                        itemData.ExitException = false;
-                        return true;
-                    }
-                    else
-                        return false;
-
-                case 2:
-                    if (list[index].RSI > 30 && list[index].RSI - list[index - 1].RSI < list[index - 1].RSI - list[index - 2].RSI)
-                    {
-                        itemData.ExitException = false;
-                        return true;
-                    }
-                    else
-                        return false;
-
-                default:
-                    return false;
-            }
-        }
-        bool ExitConditionException(List<TradeStick> list, int index, int ST)
-        {
-            switch (ST)
-            {
-                case 0:
-                case 1:
-                case 2:
-                    if (list[index].Price[0] == list[index].Price[1])
-                        return true;
-                    else
-                        return false;
-
-                default:
-                    return false;
-            }
         }
     }
 }
