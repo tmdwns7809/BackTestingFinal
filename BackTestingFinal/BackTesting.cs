@@ -95,7 +95,7 @@ namespace BackTestingFinal
 
         Dictionary<ChartValues, SQLiteConnection> DBDic = new Dictionary<ChartValues, SQLiteConnection>();
 
-        public BackTesting(Form form, bool isJoo) : base(form, isJoo, 15)
+        public BackTesting(Form form, bool isJoo) : base(form, isJoo, 19)
         {
             sticksDBpath = BaseSticksDB.path;
             sticksDBbaseName = BaseSticksDB.BaseName;
@@ -388,7 +388,7 @@ namespace BackTestingFinal
                         RunMain(from, to, isALS);
                     }));
                 else
-                    ShowError(form);
+                    ShowError(form, "input error");
             });
 
             #region From_To_Run
