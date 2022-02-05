@@ -23,6 +23,8 @@ namespace BackTestingFinal
         public DateTime BeforeExitTime;
         public (DateTime firstMin, DateTime lastMin) firstLastMin;
 
+        public BackResultData resultDataForMetric;
+
         public BackItemData(string c, int n) : base (c, n)
         {
         }

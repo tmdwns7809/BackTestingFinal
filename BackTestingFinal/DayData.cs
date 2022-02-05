@@ -23,6 +23,7 @@ namespace BackTestingFinal
         public double WinProfitRateAvg;
         public double LoseProfitRateAvg;
 
-        public DayStick KOSPIstick;
+        public List<BackResultData> ResultDatasForMetric = new List<BackResultData>();
+
     }
 }
