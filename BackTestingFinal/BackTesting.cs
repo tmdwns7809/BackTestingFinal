@@ -182,7 +182,7 @@ namespace BackTestingFinal
             var chartAreaCR = totalChart.ChartAreas.Add("ChartAreaCumulativeReturn");
             SetChartAreaFirst(chartAreaCR);
             chartAreaCR.Position = new ElementPosition(mainChartArea.Position.X, mainChartArea.Position.Y, mainChartArea.Position.Width, 
-                (100 - mainChartArea.Position.Y - (int)mainChart.Tag) / 3f);
+                (100 - mainChartArea.Position.Y - (int)mainChartArea.Tag) / 3f);
             chartAreaCR.InnerPlotPosition = new ElementPosition(mainChartArea.InnerPlotPosition.X, mainChartArea.InnerPlotPosition.Y, mainChartArea.InnerPlotPosition.Width, mainChartArea.InnerPlotPosition.Height);
             chartAreaCR.AxisX.IntervalAutoMode = IntervalAutoMode.FixedCount;
             chartAreaCR.AxisY.Enabled = AxisEnabled.False;
@@ -200,30 +200,30 @@ namespace BackTestingFinal
             chartAreaPR.AxisY2.IntervalAutoMode = IntervalAutoMode.FixedCount;
 
             var chartAreaHas = totalChart.ChartAreas.Add("ChartAreaHas");
-            SetChartAreaFirst(chartAreaHas);
+            SetChartAreaLast(chartAreaHas);
             chartAreaHas.Position = new ElementPosition(chartAreaPR.Position.X, chartAreaPR.Position.Y + chartAreaPR.Position.Height, chartAreaPR.Position.Width, 100 - (chartAreaPR.Position.Y + chartAreaPR.Position.Height));
             chartAreaHas.InnerPlotPosition = new ElementPosition(chartAreaPR.InnerPlotPosition.X, chartAreaPR.InnerPlotPosition.Y, chartAreaPR.InnerPlotPosition.Width, 
-                100 - chartAreaPR.InnerPlotPosition.Y - (int)mainChart.Tag / 100f * chartAreaHas.Position.Height);
+                100 - chartAreaPR.InnerPlotPosition.Y - (int)mainChartArea.Tag / chartAreaHas.Position.Height * 100f);
             chartAreaHas.AxisX.IntervalAutoMode = IntervalAutoMode.FixedCount;
             chartAreaHas.AxisY.Enabled = AxisEnabled.False;
             chartAreaHas.AxisY2.IntervalAutoMode = IntervalAutoMode.FixedCount;
 
             var seriesLCR = totalChart.Series.Add("LongCR");
-            seriesLCR.ChartType = SeriesChartType.Spline;
+            seriesLCR.ChartType = SeriesChartType.Line;
             seriesLCR.XValueType = ChartValueType.Time;
-            seriesLCR.Color = Color.FromArgb(50, ColorSet.PlusPrice);
+            seriesLCR.Color = Color.FromArgb(200, ColorSet.PlusPrice);
             seriesLCR.YAxisType = AxisType.Secondary;
             seriesLCR.ChartArea = chartAreaCR.Name;
 
             var seriesLPR = totalChart.Series.Add("LongProfitRate");
-            seriesLPR.ChartType = SeriesChartType.Spline;
+            seriesLPR.ChartType = SeriesChartType.Line;
             seriesLPR.XValueType = seriesLCR.XValueType;
             seriesLPR.Color = seriesLCR.Color;
             seriesLPR.YAxisType = seriesLCR.YAxisType;
             seriesLPR.ChartArea = chartAreaPR.Name;
 
             var seriesLH = totalChart.Series.Add("LongHas");
-            seriesLH.ChartType = SeriesChartType.Spline;
+            seriesLH.ChartType = SeriesChartType.Line;
             seriesLH.XValueType = seriesLCR.XValueType;
             seriesLH.Color = seriesLCR.Color;
             seriesLH.YAxisType = seriesLCR.YAxisType;
@@ -232,7 +232,7 @@ namespace BackTestingFinal
             var seriesSCR = totalChart.Series.Add("ShortCR");
             seriesSCR.ChartType = seriesLCR.ChartType;
             seriesSCR.XValueType = seriesLCR.XValueType;
-            seriesSCR.Color = Color.FromArgb(50, ColorSet.MinusPrice);
+            seriesSCR.Color = Color.FromArgb(200, ColorSet.MinusPrice);
             seriesSCR.YAxisType = seriesLCR.YAxisType;
             seriesSCR.ChartArea = seriesLCR.ChartArea;
 
