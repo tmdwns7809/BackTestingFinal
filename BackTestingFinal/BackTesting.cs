@@ -6,12 +6,14 @@ using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Threading.Tasks.Dataflow;
 using System.Windows.Forms;
 using System.Windows.Forms.DataVisualization.Charting;
 using TradingLibrary;
 using TradingLibrary.Base;
+using System.Runtime.InteropServices;
 
 namespace BackTestingFinal
 {
@@ -65,11 +67,12 @@ namespace BackTestingFinal
         string MetricCompoundAnnualGrowthRate = "CAGR";
         string MetricMDD = "MDD";
         string MetricMDDStart = "MDDStart";
+        string MetricMDDLow = "MDDLow";
         string MetricMDDEnd = "MDDEnd";
-        string MetricLDDD = "LDD Days";
-        string MetricLDDDStart = "LDDDStart";
-        string MetricLDDDEnd = "LDDDEnd";
+        string MetricMDDDays = "MDDDays";
+        string MetricDays = "    Days";
         string MetricStart = "    Start";
+        string MetricLow = "    Low";
         string MetricEnd = "    End";
         string MetricWinRate = "Win Rate";
         string MetricWinRateYearStandardDeviation = "    WRYSD";
@@ -77,10 +80,11 @@ namespace BackTestingFinal
         string MetricAvgProfitRate = "    APR";
         string MetricWinAvgProfitRate = "    WAPR";
         string MetricLoseAvgProfitRate = "    LAPR";
-        string MetricMaxHas = "Max Has";
-        string MetricMaxHasTime = "    Date";
-        string MetricLongestHasDays = "LH Days";
-        string MetricLongestHasDaysCode = "    Code";
+        string MetricDayMaxHas = "Day Max Has";
+        string MetricDayMaxHasDay = "    Date";
+        string MetricLongestHasTime = "LH Days";
+        string MetricLongestHasTimeCode = "    Code";
+        string MetricLongestHasTimeStart = "    Start";
         string MetricAverageHasDays = "AVGH Days";
 
         string sticksDBpath;
@@ -94,6 +98,10 @@ namespace BackTestingFinal
         Stopwatch sw = new Stopwatch();
 
         Dictionary<ChartValues, SQLiteConnection> DBDic = new Dictionary<ChartValues, SQLiteConnection>();
+
+        bool TestAll = MessageBox.Show("TestAll?", "caption", MessageBoxButtons.YesNo) == DialogResult.Yes;
+        bool AlertOn = MessageBox.Show("AlertOn?", "caption", MessageBoxButtons.YesNo) == DialogResult.Yes;
+        int threadN;
 
         public BackTesting(Form form, bool isJoo) : base(form, isJoo, 0)
         {
@@ -145,9 +153,8 @@ namespace BackTestingFinal
                 dayResultListView.ClearObjects();
 
                 var n = 0;
-                foreach (var sd in simulDays)
                     foreach (var data in date.resultDatas)
-                        if (data.showNow && data.EnterTime.Date == date.Date && data.ExitTime.Date <= sd.Keys[sd.Count - 1])
+                        if (data.EnterTime.Date == date.Date && data.ExitTime.Date <= simulDays[0].Keys[simulDays[0].Count - 1])
                         {
                             data.NumberForClick = ++n;
                             dayResultListView.AddObject(data);
@@ -174,7 +181,8 @@ namespace BackTestingFinal
                     form.Text = totalChart.Series[0].Points[result.Xindex].AxisLabel + "    " + totalChart.Series[0].Points[result.Xindex].YValues[0]
                         + "    " + totalChart.Series[1].Points[result.Xindex].YValues[0];
 
-                    clickResultAction(simulDays[0][DateTime.Parse(totalChart.Series[0].Points[result.Xindex].AxisLabel)]);
+
+                    clickResultAction(simulDays[0][DateTime.Parse(totalChart.Series[(totalChart.Series[0].Points.Count == totalChart.Series[3].Points.Count || totalChart.Series[3].Points.Count == 0) ? 0 : 1].Points[result.Xindex].AxisLabel)]);
                 }
             };
 
@@ -183,7 +191,7 @@ namespace BackTestingFinal
             SetChartAreaFirst(chartAreaCR);
             chartAreaCR.Position = new ElementPosition(mainChartArea.Position.X, mainChartArea.Position.Y, mainChartArea.Position.Width, 
                 (100 - mainChartArea.Position.Y - (int)mainChartArea.Tag) / 3f);
-            chartAreaCR.InnerPlotPosition = new ElementPosition(mainChartArea.InnerPlotPosition.X, mainChartArea.InnerPlotPosition.Y, mainChartArea.InnerPlotPosition.Width, mainChartArea.InnerPlotPosition.Height);
+            chartAreaCR.InnerPlotPosition = new ElementPosition(mainChartArea.InnerPlotPosition.X, mainChartArea.InnerPlotPosition.Y, mainChartArea.InnerPlotPosition.Width, mainChartArea.InnerPlotPosition.Height - 7);
             chartAreaCR.AxisX.IntervalAutoMode = IntervalAutoMode.FixedCount;
             chartAreaCR.AxisY.Enabled = AxisEnabled.False;
             chartAreaCR.AxisY2.LabelStyle.Format = "{0:0.00}%";
@@ -203,7 +211,7 @@ namespace BackTestingFinal
             SetChartAreaLast(chartAreaHas);
             chartAreaHas.Position = new ElementPosition(chartAreaPR.Position.X, chartAreaPR.Position.Y + chartAreaPR.Position.Height, chartAreaPR.Position.Width, 100 - (chartAreaPR.Position.Y + chartAreaPR.Position.Height));
             chartAreaHas.InnerPlotPosition = new ElementPosition(chartAreaPR.InnerPlotPosition.X, chartAreaPR.InnerPlotPosition.Y, chartAreaPR.InnerPlotPosition.Width, 
-                100 - chartAreaPR.InnerPlotPosition.Y - (int)mainChartArea.Tag / chartAreaHas.Position.Height * 100f);
+                100 - chartAreaPR.InnerPlotPosition.Y - (int)mainChartArea.Tag / chartAreaHas.Position.Height * 100f - 7);
             chartAreaHas.AxisX.IntervalAutoMode = IntervalAutoMode.FixedCount;
             chartAreaHas.AxisY.Enabled = AxisEnabled.False;
             chartAreaHas.AxisY2.IntervalAutoMode = IntervalAutoMode.FixedCount;
@@ -384,7 +392,7 @@ namespace BackTestingFinal
         }
         protected override void SetRestView()
         {
-            var runAction = new Action<int>((isALS) =>
+            var runAction = new Action<Position>((isALS) =>
             {
                 if (DateTime.TryParseExact(fromTextBox.Text, DateTimeFormat, null, System.Globalization.DateTimeStyles.None, out DateTime from) &&
                     DateTime.TryParseExact(toTextBox.Text, DateTimeFormat, null, System.Globalization.DateTimeStyles.None, out DateTime to) && from <= to)
@@ -430,17 +438,17 @@ namespace BackTestingFinal
             toTextBox.Size = new Size(fromTextBox.Width, fromTextBox.Height);
             toTextBox.Location = new Point(midTextBox.Location.X + midTextBox.Width + 10, midTextBox.Location.Y);
 
-            SetButton(runButton, "Run", (sender, e) => { runAction(0); });
+            SetButton(runButton, "Run", (sender, e) => { runAction(Position.All); });
             runButton.Size = new Size((GetFormWidth(form) - toTextBox.Location.X - toTextBox.Width - 10) / 2 - 2, toTextBox.Height);
             runButton.Location = new Point(toTextBox.Location.X + toTextBox.Width + 5, toTextBox.Location.Y);
 
-            SetButton(runLongButton, "L", (sender, e) => { runAction(1); });
+            SetButton(runLongButton, "L", (sender, e) => { runAction(Position.Long); });
             runLongButton.Size = new Size(runButton.Width / 2 - 2, toTextBox.Height);
             runLongButton.Location = new Point(runButton.Location.X + runButton.Width + 4, toTextBox.Location.Y);
             //runLongButton.Font = new Font(runLongButton.Font.FontFamily, 5);
             runLongButton.BackColor = ColorSet.PlusPrice;
 
-            SetButton(runShortButton, "S", (sender, e) => { runAction(2); });
+            SetButton(runShortButton, "S", (sender, e) => { runAction(Position.Short); });
             runShortButton.Size = new Size(runLongButton.Width, toTextBox.Height);
             runShortButton.Location = new Point(runLongButton.Location.X + runLongButton.Width + 4, toTextBox.Location.Y);
             //runShortButton.Font = new Font(runShortButton.Font.FontFamily, runShortButton.Font.Size);
@@ -508,6 +516,7 @@ namespace BackTestingFinal
                 {
                     ("No.", "Number", 2),
                     ("Date", "Date", 7),
+                    ("L", "isL", 2),
                     ("C", "Count", 2),
                     ("WR(%)", "WinRate", 3),
                     ("PRA(%)", "ProfitRateAvg", 3),
@@ -613,8 +622,6 @@ namespace BackTestingFinal
 
             metricDic.Add(MetricCR, new MetricData() { MetricName = MetricCR });
             metricListView.AddObject(metricDic[MetricCR]);
-            metricDic.Add(MetricCompoundAnnualGrowthRate, new MetricData() { MetricName = MetricCompoundAnnualGrowthRate });
-            metricListView.AddObject(metricDic[MetricCompoundAnnualGrowthRate]);
             metricListView.AddObject(new MetricData());
 
             metricDic.Add(MetricWinRate, new MetricData() { MetricName = MetricWinRate });
@@ -633,31 +640,31 @@ namespace BackTestingFinal
 
             metricDic.Add(MetricMDD, new MetricData() { MetricName = MetricMDD });
             metricListView.AddObject(metricDic[MetricMDD]);
+            metricDic.Add(MetricMDDDays, new MetricData() { MetricName = MetricDays });
+            metricListView.AddObject(metricDic[MetricMDDDays]);
             metricDic.Add(MetricMDDStart, new MetricData() { MetricName = MetricStart });
             metricListView.AddObject(metricDic[MetricMDDStart]);
+            metricDic.Add(MetricMDDLow, new MetricData() { MetricName = MetricLow });
+            metricListView.AddObject(metricDic[MetricMDDLow]);
             metricDic.Add(MetricMDDEnd, new MetricData() { MetricName = MetricEnd });
             metricListView.AddObject(metricDic[MetricMDDEnd]);
-            metricDic.Add(MetricLDDD, new MetricData() { MetricName = MetricLDDD });
-            metricListView.AddObject(metricDic[MetricLDDD]);
-            metricDic.Add(MetricLDDDStart, new MetricData() { MetricName = MetricStart });
-            metricListView.AddObject(metricDic[MetricLDDDStart]);
-            metricDic.Add(MetricLDDDEnd, new MetricData() { MetricName = MetricEnd });
-            metricListView.AddObject(metricDic[MetricLDDDEnd]);
             metricListView.AddObject(new MetricData());
 
-            metricDic.Add(MetricMaxHas, new MetricData() { MetricName = MetricMaxHas });
-            metricListView.AddObject(metricDic[MetricMaxHas]);
-            metricDic.Add(MetricMaxHasTime, new MetricData() { MetricName = MetricMaxHasTime });
-            metricListView.AddObject(metricDic[MetricMaxHasTime]);
-            metricDic.Add(MetricLongestHasDays, new MetricData() { MetricName = MetricLongestHasDays });
-            metricListView.AddObject(metricDic[MetricLongestHasDays]);
-            metricDic.Add(MetricLongestHasDaysCode, new MetricData() { MetricName = MetricLongestHasDaysCode });
-            metricListView.AddObject(metricDic[MetricLongestHasDaysCode]);
-            metricDic.Add(MetricAverageHasDays, new MetricData() { MetricName = MetricAverageHasDays });
-            metricListView.AddObject(metricDic[MetricAverageHasDays]);
+            metricDic.Add(MetricDayMaxHas, new MetricData() { MetricName = MetricDayMaxHas });
+            metricListView.AddObject(metricDic[MetricDayMaxHas]);
+            metricDic.Add(MetricDayMaxHasDay, new MetricData() { MetricName = MetricDayMaxHasDay });
+            metricListView.AddObject(metricDic[MetricDayMaxHasDay]);
+            metricListView.AddObject(new MetricData());
+
+            metricDic.Add(MetricLongestHasTime, new MetricData() { MetricName = MetricLongestHasTime });
+            metricListView.AddObject(metricDic[MetricLongestHasTime]);
+            metricDic.Add(MetricLongestHasTimeCode, new MetricData() { MetricName = MetricLongestHasTimeCode });
+            metricListView.AddObject(metricDic[MetricLongestHasTimeCode]);
+            metricDic.Add(MetricLongestHasTimeStart, new MetricData() { MetricName = MetricLongestHasTimeStart });
+            metricListView.AddObject(metricDic[MetricLongestHasTimeStart]);
         }
 
-        void RunMain(DateTime start, DateTime end, int isAllLongShort)
+        void RunMain(DateTime start, DateTime end, Position isAllLongShort)
         {
             form.BeginInvoke(new Action(() => { ClearChart(totalChart, true); }));
 
@@ -667,10 +674,7 @@ namespace BackTestingFinal
                 sw.Reset();
                 sw.Start();
 
-                marketDays.Clear();
-                foreach (var sd in simulDays)
-                    sd.Clear();
-                openDaysPerYear.Clear();
+                ClearBeforeRun();
 
                 try
                 {
@@ -691,7 +695,8 @@ namespace BackTestingFinal
 
                 sw.Stop();
                 HideLoading();
-                AlertStart("done : " + sw.Elapsed.ToString(TimeSpanFormat));
+                if (AlertOn)
+                    AlertStart("done : " + sw.Elapsed.ToString(TimeSpanFormat));
             }
 
             form.BeginInvoke(new Action(() =>
@@ -700,8 +705,15 @@ namespace BackTestingFinal
                 totalButton.PerformClick();
             }));
         }
+        void ClearBeforeRun()
+        {
+            marketDays.Clear();
+            foreach (var sd in simulDays)
+                sd.Clear();
+            openDaysPerYear.Clear();
+        }
 
-        void CalculateMetric(DateTime start, DateTime end, int isAllLongShort)
+        void CalculateMetric(DateTime start, DateTime end, Position isAllLongShort)
         {
             #region First Setting
             var startIndex = marketDays.IndexOfKey(start);
@@ -717,28 +729,26 @@ namespace BackTestingFinal
             foreach (var itemData in itemDataDic.Values)
                 itemData.Reset();
 
-            for (int j = 0; j < 2; j++)
-                for (int i = startIndex; i <= endIndex; i++)
-                {
-                    MetricVars[j].HasItemsAtADay = 0;
+            for (int j = (int)Position.Long; j <= (int)Position.Short; j++)
+                if (isAllLongShort == Position.All || isAllLongShort == (Position)j)
+                    for (int i = startIndex; i <= endIndex; i++)
+                    {
+                        MetricVars[j].HasItemsAtADay = 0;
 
-                    simulDays[j].Values[i].Count = 0;
-                    simulDays[j].Values[i].Win = 0;
-                    simulDays[j].Values[i].WinProfitRateSum = 0;
-                    simulDays[j].Values[i].ProfitRateSum = 0;
+                        simulDays[j].Values[i].Count = 0;
+                        simulDays[j].Values[i].Win = 0;
+                        simulDays[j].Values[i].WinProfitRateSum = 0;
+                        simulDays[j].Values[i].ProfitRateSum = 0;
 
-                    foreach (var resultData in simulDays[j].Values[i].resultDatas)
-                        if (resultData.EnterTime.Date == simulDays[j].Keys[i] && resultData.ExitTime.Date <= end)
-                        {
-                            if (isAllLongShort == 0 || (isAllLongShort != 1 ^ resultData.LorS == 0))
+                        foreach (var resultData in simulDays[j].Values[i].resultDatas)
+                            if (resultData.EnterTime.Date == simulDays[j].Keys[i] && resultData.ExitTime.Date <= end)
                             {
-                                resultData.showNow = true;
-
                                 var hasTime = resultData.ExitTime.Subtract(resultData.EnterTime);
                                 if (hasTime > MetricVars[resultData.LorS].longestHasTime)
                                 {
                                     MetricVars[resultData.LorS].longestHasTime = hasTime;
                                     MetricVars[resultData.LorS].longestHasCode = resultData.Code;
+                                    MetricVars[resultData.LorS].longestHasTimeStart = resultData.EnterTime;
                                 }
 
                                 var itemData = itemDataDic[resultData.Code];
@@ -758,52 +768,24 @@ namespace BackTestingFinal
                                     MetricVars[resultData.LorS].ProfitWinRateSum += resultData.ProfitRate;
                                 }
                             }
-                            else
-                                resultData.showNow = false;
+
+                        if (MetricVars[j].HasItemsAtADay > MetricVars[j].highestHasItemsAtADay)
+                        {
+                            MetricVars[j].highestHasItemsAtADay = MetricVars[j].HasItemsAtADay;
+                            MetricVars[j].highestHasItemsDate = simulDays[j].Keys[i];
                         }
 
-                    if (MetricVars[j].HasItemsAtADay > MetricVars[j].highestHasItemsAtADay)
-                    {
-                        MetricVars[j].highestHasItemsAtADay = MetricVars[j].HasItemsAtADay;
-                        MetricVars[j].highestHasItemsDate = simulDays[j].Keys[i];
-                    }
+                        var Kelly = CalculateKelly(MetricVars[j].ProfitRates);
+                        foreach (var resultData in simulDays[j].Values[i].ResultDatasForMetric)
+                            if (resultData.EnterTime.Date == simulDays[j].Keys[i] && resultData.ExitTime.Date <= end)
+                            {
+                                var avgPR = resultData.ProfitRate / resultData.Count - commisionRate;
+                                MetricVars[j].CR *= 1 + avgPR * Kelly / 100;
+                                MetricVars[j].ProfitRates.Add(avgPR);
+                            }
 
-                    var Kelly = CalculateKelly(MetricVars[j].ProfitRates);
-                    foreach (var resultData in simulDays[j].Values[i].ResultDatasForMetric)
-                        if (resultData.EnterTime.Date == simulDays[j].Keys[i] && resultData.ExitTime.Date <= end)
+                        if (MetricVars[j].DD == default)
                         {
-                            var avgPR = resultData.ProfitRate / resultData.Count;
-                            MetricVars[j].CR *= 1 + avgPR * Kelly / 100;
-                            MetricVars[j].ProfitRates.Add(avgPR);
-                        }
-
-                    if (MetricVars[j].DD == default)
-                    {
-                        MetricVars[j].DD = new DrawDownData()
-                        {
-                            HighestCumulativeReturn = MetricVars[j].CR,
-                            HighestCumulativeReturnIndex = i,
-                            LowestCumulativeReturn = MetricVars[j].CR,
-                            LowestCumulativeReturnIndex = i,
-                            LastCumulativeReturnIndex = i,
-                        };
-                    }
-                    else
-                    {
-                        if (MetricVars[j].CR <= MetricVars[j].DD.LowestCumulativeReturn && i != endIndex)
-                        {
-                            MetricVars[j].DD.LowestCumulativeReturn = MetricVars[j].CR;
-                            MetricVars[j].DD.LowestCumulativeReturnIndex = i;
-                        }
-                        else if (MetricVars[j].CR > MetricVars[j].DD.HighestCumulativeReturn || i == endIndex)
-                        {
-                            MetricVars[j].DD.LastCumulativeReturnIndex = i;
-
-                            if (MetricVars[j].MDD == default || MetricVars[j].DD.LowestCumulativeReturn / MetricVars[j].DD.HighestCumulativeReturn < MetricVars[j].MDD.LowestCumulativeReturn / MetricVars[j].MDD.HighestCumulativeReturn
-                                || (MetricVars[j].DD.LowestCumulativeReturn / MetricVars[j].DD.HighestCumulativeReturn == MetricVars[j].MDD.LowestCumulativeReturn / MetricVars[j].MDD.HighestCumulativeReturn &&
-                                    MetricVars[j].DD.LastCumulativeReturnIndex - MetricVars[j].DD.HighestCumulativeReturnIndex > MetricVars[j].MDD.LastCumulativeReturnIndex - MetricVars[j].MDD.HighestCumulativeReturnIndex))
-                                MetricVars[j].MDD = MetricVars[j].DD;
-
                             MetricVars[j].DD = new DrawDownData()
                             {
                                 HighestCumulativeReturn = MetricVars[j].CR,
@@ -813,35 +795,60 @@ namespace BackTestingFinal
                                 LastCumulativeReturnIndex = i,
                             };
                         }
-                    }
+                        else
+                        {
+                            if (MetricVars[j].CR <= MetricVars[j].DD.LowestCumulativeReturn && i != endIndex)
+                            {
+                                MetricVars[j].DD.LowestCumulativeReturn = MetricVars[j].CR;
+                                MetricVars[j].DD.LowestCumulativeReturnIndex = i;
+                            }
+                            else if (MetricVars[j].CR > MetricVars[j].DD.HighestCumulativeReturn || i == endIndex)
+                            {
+                                MetricVars[j].DD.LastCumulativeReturnIndex = i;
 
-                    if (simulDays[j].Values[i].Count != 0)
-                    {
-                        simulDays[j].Values[i].WinRate = Math.Round((double)simulDays[j].Values[i].Win / simulDays[j].Values[i].Count * 100, 2);
-                        simulDays[j].Values[i].ProfitRateAvg = Math.Round(simulDays[j].Values[i].ProfitRateSum / simulDays[j].Values[i].Count, 2);
-                        simulDays[j].Values[i].WinProfitRateAvg = simulDays[j].Values[i].Win == 0 ? 0 : Math.Round(simulDays[j].Values[i].WinProfitRateSum / simulDays[j].Values[i].Win, 2);
-                        simulDays[j].Values[i].LoseProfitRateAvg = simulDays[j].Values[i].Count == simulDays[j].Values[i].Win ? 0 :
-                            Math.Round((simulDays[j].Values[i].ProfitRateSum - simulDays[j].Values[i].WinProfitRateSum) / (simulDays[j].Values[i].Count - simulDays[j].Values[i].Win), 2);
-                    }
-                    else
-                    {
-                        simulDays[j].Values[i].WinRate = 0;
-                        simulDays[j].Values[i].ProfitRateAvg = 0;
-                        simulDays[j].Values[i].WinProfitRateAvg = 0;
-                        simulDays[j].Values[i].LoseProfitRateAvg = 0;
-                    }
+                                if (MetricVars[j].MDD == default || MetricVars[j].DD.LowestCumulativeReturn / MetricVars[j].DD.HighestCumulativeReturn < MetricVars[j].MDD.LowestCumulativeReturn / MetricVars[j].MDD.HighestCumulativeReturn
+                                    || (MetricVars[j].DD.LowestCumulativeReturn / MetricVars[j].DD.HighestCumulativeReturn == MetricVars[j].MDD.LowestCumulativeReturn / MetricVars[j].MDD.HighestCumulativeReturn &&
+                                        MetricVars[j].DD.LastCumulativeReturnIndex - MetricVars[j].DD.HighestCumulativeReturnIndex > MetricVars[j].MDD.LastCumulativeReturnIndex - MetricVars[j].MDD.HighestCumulativeReturnIndex))
+                                    MetricVars[j].MDD = MetricVars[j].DD;
 
-                    if (simulDays[j].Values[i].Count != 0)
-                    {
-                        simulDays[j].Values[i].Number = ++n;
-                        metricResultListView.AddObject(simulDays[j].Values[i]);
-                    }
+                                MetricVars[j].DD = new DrawDownData()
+                                {
+                                    HighestCumulativeReturn = MetricVars[j].CR,
+                                    HighestCumulativeReturnIndex = i,
+                                    LowestCumulativeReturn = MetricVars[j].CR,
+                                    LowestCumulativeReturnIndex = i,
+                                    LastCumulativeReturnIndex = i,
+                                };
+                            }
+                        }
 
-                    var axisLabel = simulDays[j].Keys[i].ToString(DateTimeFormat);
-                    totalChart.Series[3 * j].Points.AddXY(axisLabel, Math.Round((MetricVars[j].CR - 1) * 100, 0));
-                    totalChart.Series[3 * j + 1].Points.AddXY(axisLabel, simulDays[j].Values[i].ProfitRateAvg);
-                    totalChart.Series[3 * j + 2].Points.AddXY(axisLabel, MetricVars[j].HasItemsAtADay);
-                }
+                        if (simulDays[j].Values[i].Count != 0)
+                        {
+                            simulDays[j].Values[i].WinRate = Math.Round((double)simulDays[j].Values[i].Win / simulDays[j].Values[i].Count * 100, 2);
+                            simulDays[j].Values[i].ProfitRateAvg = Math.Round(simulDays[j].Values[i].ProfitRateSum / simulDays[j].Values[i].Count, 2);
+                            simulDays[j].Values[i].WinProfitRateAvg = simulDays[j].Values[i].Win == 0 ? 0 : Math.Round(simulDays[j].Values[i].WinProfitRateSum / simulDays[j].Values[i].Win, 2);
+                            simulDays[j].Values[i].LoseProfitRateAvg = simulDays[j].Values[i].Count == simulDays[j].Values[i].Win ? 0 :
+                                Math.Round((simulDays[j].Values[i].ProfitRateSum - simulDays[j].Values[i].WinProfitRateSum) / (simulDays[j].Values[i].Count - simulDays[j].Values[i].Win), 2);
+                        }
+                        else
+                        {
+                            simulDays[j].Values[i].WinRate = 0;
+                            simulDays[j].Values[i].ProfitRateAvg = 0;
+                            simulDays[j].Values[i].WinProfitRateAvg = 0;
+                            simulDays[j].Values[i].LoseProfitRateAvg = 0;
+                        }
+
+                        if (simulDays[j].Values[i].Count != 0)
+                        {
+                            simulDays[j].Values[i].Number = ++n;
+                            metricResultListView.AddObject(simulDays[j].Values[i]);
+                        }
+
+                        var axisLabel = simulDays[j].Keys[i].ToString(DateTimeFormat);
+                        totalChart.Series[3 * j].Points.AddXY(axisLabel, Math.Round((MetricVars[j].CR - 1) * 100, 0));
+                        totalChart.Series[3 * j + 1].Points.AddXY(axisLabel, simulDays[j].Values[i].ProfitRateAvg);
+                        totalChart.Series[3 * j + 2].Points.AddXY(axisLabel, MetricVars[j].HasItemsAtADay);
+                    }
 
             foreach (var itemData in itemDataDic.Values)
                 itemData.WinRate = itemData.Count == 0 ? -1 : Math.Round((double)itemData.Win / itemData.Count * 100, 2);
@@ -853,46 +860,172 @@ namespace BackTestingFinal
             //metricResultListView.Sort(metricResultListView.GetColumn("No."), SortOrder.Descending);
 
             #region Print Result
-            for (int i = 0; i < 2; i++)
+            var que = new Queue<Task>();
+
+            for (int i = (int)Position.Long; i <= (int)Position.Short; i++)
             {
+                var isLong = Enum.GetName(typeof(Position), i);
+                var CR = "";
+                var WinRate = "";
+                var AllCount = "";
+                var AvgProfitRate = "";
+                var WinAvgProfitRate = "";
+                var LoseAvgProfitRate = "";
+                var MDD = "";
+                var MDDDays = "";
+                var MDDStart = "";
+                var MDDLow = "";
+                var MDDEnd = "";
+                var DayMaxHas = "";
+                var DayMaxHasDay = "";
+                var LongestHasTime = "";
+                var LongestHasTimeCode = "";
+                var LongestHasTimeStart = "";
                 if (MetricVars[i].Count != 0)
                 {
-                    metricDic[MetricWinRate].SetText(i, Math.Round((double)MetricVars[i].Win / MetricVars[i].Count * 100, 2) + "%");
-                    metricDic[MetricAvgProfitRate].SetText(i, Math.Round(MetricVars[i].ProfitRateSum / MetricVars[i].Count, 2) + "%");
-                    metricDic[MetricWinAvgProfitRate].SetText(i, MetricVars[i].Win == 0 ? "0%" : (Math.Round(MetricVars[i].ProfitWinRateSum / MetricVars[i].Win, 2) + "%"));
-                    metricDic[MetricLoseAvgProfitRate].SetText(i, MetricVars[i].Count == MetricVars[i].Win ? "0%" : (Math.Round((MetricVars[i].ProfitRateSum - MetricVars[i].ProfitWinRateSum) / (MetricVars[i].Count - MetricVars[i].Win), 2) + "%"));
-                    metricDic[MetricMaxHasTime].SetText(i, MetricVars[i].highestHasItemsDate.ToString(DateTimeFormat));
-                    metricDic[MetricLongestHasDays].SetText(i, MetricVars[i].longestHasTime.ToString(TimeSpanFormat));
+                    CR = Math.Round((MetricVars[i].CR - 1) * 100, 0) + "%";
 
-                    metricDic[MetricCR].SetText(i, Math.Round((MetricVars[i].CR - 1) * 100, 0) + "%");
-                    metricDic[MetricMDD].SetText(i, Math.Round((MetricVars[i].MDD.LowestCumulativeReturn / MetricVars[i].MDD.HighestCumulativeReturn - 1) * 100, 0) + "%");
-                    metricDic[MetricMDDStart].SetText(i, simulDays[i].Keys[MetricVars[i].MDD.HighestCumulativeReturnIndex].ToString(DateTimeFormat));
-                    metricDic[MetricMDDEnd].SetText(i, simulDays[i].Keys[MetricVars[i].MDD.LowestCumulativeReturnIndex].ToString(DateTimeFormat));
-                    metricDic[MetricLDDD].SetText(i, MetricVars[i].MDD.LastCumulativeReturnIndex - MetricVars[i].MDD.HighestCumulativeReturnIndex + "days");
-                    metricDic[MetricLDDDStart].SetText(i, simulDays[i].Keys[MetricVars[i].MDD.HighestCumulativeReturnIndex].ToString(DateTimeFormat));
-                    metricDic[MetricLDDDEnd].SetText(i, simulDays[i].Keys[MetricVars[i].MDD.LastCumulativeReturnIndex].ToString(DateTimeFormat));
+                    WinRate = Math.Round((double)MetricVars[i].Win / MetricVars[i].Count * 100, 1) + "%";
+                    AllCount = MetricVars[i].Count.ToString();
+                    AvgProfitRate = Math.Round(MetricVars[i].ProfitRateSum / MetricVars[i].Count, 2) + "%";
+                    WinAvgProfitRate = MetricVars[i].Win == 0 ? "0%" : (Math.Round(MetricVars[i].ProfitWinRateSum / MetricVars[i].Win, 2) + "%");
+                    LoseAvgProfitRate = MetricVars[i].Count == MetricVars[i].Win ? "0%" : (Math.Round((MetricVars[i].ProfitRateSum - MetricVars[i].ProfitWinRateSum) / (MetricVars[i].Count - MetricVars[i].Win), 2) + "%");
+
+                    MDD = Math.Round((MetricVars[i].MDD.LowestCumulativeReturn / MetricVars[i].MDD.HighestCumulativeReturn - 1) * 100, 0) + "%";
+                    MDDDays = MetricVars[i].MDD.LastCumulativeReturnIndex - MetricVars[i].MDD.HighestCumulativeReturnIndex + " days";
+                    MDDStart = simulDays[i].Keys[MetricVars[i].MDD.HighestCumulativeReturnIndex].ToString(DateTimeFormat);
+                    MDDLow = simulDays[i].Keys[MetricVars[i].MDD.LastCumulativeReturnIndex].ToString(DateTimeFormat);
+                    MDDEnd = simulDays[i].Keys[MetricVars[i].MDD.LowestCumulativeReturnIndex].ToString(DateTimeFormat);
+
+                    DayMaxHas = MetricVars[i].highestHasItemsAtADay.ToString();
+                    DayMaxHasDay = MetricVars[i].highestHasItemsDate.ToString(DateTimeFormat);
+
+                    LongestHasTime = MetricVars[i].longestHasTime.ToString(TimeSpanFormat);
+                    LongestHasTimeCode = MetricVars[i].longestHasCode;
+                    LongestHasTimeStart = MetricVars[i].longestHasTimeStart.ToString(TimeFormat);
+                }
+
+                if (isAllLongShort == Position.All)
+                {
+                    que.Enqueue(new Task(() =>
+                    {
+                        try
+                        {
+                            var path = @"C:\Users\tmdwn\source\repos\BackTestingFinal\전략결과\";
+                            var conn = new SQLiteConnection(@"Data Source=" + path + "strategy_result.db");
+                            conn.Open();
+
+                            new SQLiteCommand("CREATE TABLE IF NOT EXISTS 'result' " +
+                                "('isJoo' TEXT, 'isFutures' TEXT, 'strategy' INTEGER, 'isLong' TEXT, 'start_day' TEXT, 'end_day' TEXT, 'days' TEXT, " +
+                                "'Cumulative_Return' TEXT, 'Win_Rate' TEXT, 'Count' INTEGER, 'Average_Profit_Rate' TEXT, 'Win_APR' TEXT, 'Lose_APR' TEXT, " +
+                                "'Max_Draw_Down' TEXT, 'MDD_Days' TEXT, 'MDD_Start_Day' TEXT, 'MDD_Low_Day' TEXT, 'MDD_End_Day' TEXT, " +
+                                "'Day_Max_Has' INTEGER, 'DMH_Day' TEXT, 'Longest_Has_Time' TEXT, 'LHT_Code' TEXT, 'LHT_Start' INTEGER, 'Image' BLOB, 'test_time' TEXT, 'thread' INTEGER, 'test_spend_time' TEXT)", conn).ExecuteNonQuery();
+
+                            var isJ = isJoo.ToString();
+                            var isF = isFutures.ToString();
+                            var startDay = start.ToString(DateTimeFormat);
+                            var endDay = end.ToString(DateTimeFormat);
+                            var days = Math.Round(end.Subtract(start).TotalDays, 0) + " days";
+                            var testTime = DateTime.Now.ToString(TimeFormat);
+                            var testSpendTime = sw.Elapsed.ToString(TimeSpanFormat);
+
+                            ////Total Screen Capture
+                            var image = new Bitmap(Screen.PrimaryScreen.Bounds.Width,
+                                                Screen.PrimaryScreen.Bounds.Height);
+                            using (Graphics g = Graphics.FromImage(image))
+                            {
+                                g.CopyFromScreen(Screen.PrimaryScreen.Bounds.X,
+                                                    Screen.PrimaryScreen.Bounds.Y,
+                                                    0, 0,
+                                                    image.Size,
+                                                    CopyPixelOperation.SourceCopy);
+                            }
+                            var bytes = (byte[])new ImageConverter().ConvertTo(image, typeof(byte[]));
+
+                            var reader = new SQLiteCommand("SELECT *, rowid FROM 'result' where isJoo='" + isJ + "' and isFutures='" + isF + "' and strategy='" + ST + "' and " +
+                                "isLong='" + isLong + "' and start_day='" + startDay + "' and end_day='" + endDay + "' and thread='" + threadN + "'", conn).ExecuteReader();
+
+                            var command = reader.Read() ? (new SQLiteCommand("update 'result' set days='" + days + "', 'Cumulative_Return'='" + CR + "', 'Win_Rate'='" + WinRate + "', 'Count'='" + AllCount + "', " +
+                                "'Average_Profit_Rate'='" + AvgProfitRate + "', 'Win_APR'='" + WinAvgProfitRate + "', 'Lose_APR'='" + LoseAvgProfitRate + "', 'Max_Draw_Down'='" + MDD + "', 'MDD_Days'='" + MDDDays + "', " +
+                                "'MDD_Start_Day'='" + MDDStart + "', 'MDD_Low_Day'='" + MDDLow + "', 'MDD_End_Day'='" + MDDEnd + "', 'Day_Max_Has'='" + DayMaxHas + "', 'DMH_Day'='" + DayMaxHasDay + "', " +
+                                "'Longest_Has_Time'='" + LongestHasTime + "', 'LHT_Code'='" + LongestHasTimeCode + "', 'LHT_Start'='" + LongestHasTimeStart + "', 'Image'=@image, " +
+                                "'test_time'='" + testTime + "', 'thread'='" + threadN + "', 'test_spend_time'='" + testSpendTime + "' where rowid='" + reader["rowid"] + "'", conn)) :
+                                new SQLiteCommand("INSERT INTO 'result' ('isJoo', 'isFutures', 'strategy', 'isLong', 'start_day', 'end_day', 'days', " +
+                                "'Cumulative_Return', 'Win_Rate', 'Count', 'Average_Profit_Rate', 'Win_APR', 'Lose_APR', 'Max_Draw_Down', 'MDD_Days', 'MDD_Start_Day', 'MDD_Low_Day', 'MDD_End_Day', " +
+                                "'Day_Max_Has', 'DMH_Day', 'Longest_Has_Time', 'LHT_Code', 'LHT_Start', 'Image', 'test_time', 'thread', 'test_spend_time') values ('" + isJ + "', '" + isF + "', '" + ST + "', '" + isLong + "', " +
+                                "'" + startDay + "', '" + endDay + "', '" + days + "', '" + CR + "', '" + WinRate + "', '" + AllCount + "', '" + AvgProfitRate + "', '" + WinAvgProfitRate + "', " +
+                                "'" + LoseAvgProfitRate + "', '" + MDD + "', '" + MDDDays + "', '" + MDDStart + "', '" + MDDLow + "', '" + MDDEnd + "', '" + DayMaxHas + "', '" + DayMaxHasDay + "'" +
+                                ", '" + LongestHasTime + "', '" + LongestHasTimeCode + "', '" + LongestHasTimeStart + "', @image, '" + testTime + "', '" + threadN + "', '" + testSpendTime + "')", conn);
+                            command.Parameters.AddWithValue("@image", bytes);
+                            command.ExecuteNonQuery();
+
+                            var imageName = "isJoo=" + isJ + "~isFutures=" + isF + "~strategy=" + ST + "~" +
+                                "isLong=" + isLong + "~start_day=" + startDay + "~end_day=" + endDay + "~thread=" + threadN;
+                            image.Save(path + imageName + ".jpg", System.Drawing.Imaging.ImageFormat.Jpeg);
+
+                            conn.Close();
+                        }
+                        catch (Exception e)
+                        {
+                            throw;
+                        }
+                    }));
+                }
+
+                metricDic[MetricCR].SetText(i, CR);
+
+                metricDic[MetricWinRate].SetText(i, WinRate);
+                metricDic[MetricAllCount].SetText(i, AllCount);
+                metricDic[MetricAvgProfitRate].SetText(i, AvgProfitRate);
+                metricDic[MetricWinAvgProfitRate].SetText(i, WinAvgProfitRate);
+                metricDic[MetricLoseAvgProfitRate].SetText(i, LoseAvgProfitRate);
+
+                metricDic[MetricMDD].SetText(i, MDD);
+                metricDic[MetricMDDDays].SetText(i, MDDDays);
+                metricDic[MetricMDDStart].SetText(i, MDDStart);
+                metricDic[MetricMDDLow].SetText(i, MDDLow);
+                metricDic[MetricMDDEnd].SetText(i, MDDEnd);
+
+                metricDic[MetricDayMaxHas].SetText(i, DayMaxHas);
+                metricDic[MetricDayMaxHasDay].SetText(i, DayMaxHasDay);
+
+                metricDic[MetricLongestHasTime].SetText(i, LongestHasTime);
+                metricDic[MetricLongestHasTimeCode].SetText(i, LongestHasTimeCode);
+                metricDic[MetricLongestHasTimeStart].SetText(i, LongestHasTimeStart);
+            }
+
+            Task.Run(new Action(() => {
+                //form.Cursor = new System.Windows.Forms.Cursor(System.Windows.Forms.Cursor.Current.Handle);
+                //var x = System.Windows.Forms.Cursor.Position.X;
+                //var y = System.Windows.Forms.Cursor.Position.Y;
+                //System.Windows.Forms.Cursor.Position = new Point(GetFormWidth(form) / 2, GetFormHeight(form));
+                ////System.Windows.Forms.Cursor.Clip = new Rectangle(this.Location, this.Size);
+
+                var proc = Process.GetCurrentProcess();
+                SetForegroundWindow(proc.MainWindowHandle);
+                ShowWindow(proc.MainWindowHandle, SW_MAXIMIZE);
+
+                Thread.Sleep(1000);
+
+                while (que.Count != 0)
+                    que.Dequeue().RunSynchronously();
+
+                ShowWindow(proc.MainWindowHandle, SW_MINIMIZE);
+                //System.Windows.Forms.Cursor.Position = new Point(x, y);
+
+                if (TestAll && ST < STList.Keys[STList.Count - 1])
+                {
+                    Thread.Sleep(180000);
+
+                    while (!STList.ContainsKey(ST + 1))
+                        ST++;
+                    SetST(ST + 1);
+                    ClearBeforeRun();
+                    RunMain(start, end, Position.All);
                 }
                 else
-                {
-                    metricDic[MetricWinRate].SetText(i, "0%");
-                    metricDic[MetricAvgProfitRate].SetText(i, "0%");
-                    metricDic[MetricWinAvgProfitRate].SetText(i, "0%");
-                    metricDic[MetricLoseAvgProfitRate].SetText(i, "0%");
-                    metricDic[MetricMaxHasTime].SetText(i, "");
-                    metricDic[MetricLongestHasDays].SetText(i, "");
-
-                    metricDic[MetricCR].SetText(i, "");
-                    metricDic[MetricMDD].SetText(i, "");
-                    metricDic[MetricMDDStart].SetText(i, "");
-                    metricDic[MetricMDDEnd].SetText(i, "");
-                    metricDic[MetricLDDD].SetText(i, "");
-                    metricDic[MetricLDDDStart].SetText(i, "");
-                    metricDic[MetricLDDDEnd].SetText(i, "");
-                }
-                metricDic[MetricAllCount].SetText(i, MetricVars[i].Count.ToString());
-                metricDic[MetricMaxHas].SetText(i, MetricVars[i].highestHasItemsAtADay.ToString());
-                metricDic[MetricLongestHasDaysCode].SetText(i, MetricVars[i].longestHasCode);
-            }
+                    form.BeginInvoke(new Action(() => { form.Text += "done"; }));
+            }));
             #endregion
         }
         double CalculateKelly(List<double> list)
@@ -927,6 +1060,15 @@ namespace BackTestingFinal
                     return beforeKelly / 2;
             }
         }
+
+        [DllImport("user32.dll")]
+        private static extern int SetForegroundWindow(IntPtr hWnd);
+        
+        private const int SW_MAXIMIZE = 3;
+        private const int SW_MINIMIZE = 6;
+
+        [DllImport("user32.dll")]
+        private static extern IntPtr ShowWindow(IntPtr hWnd, int nCmdShow);
 
         void FindSimulAndShow(bool toPast, bool oneChart = true)
         {
@@ -1566,10 +1708,15 @@ namespace BackTestingFinal
         }
         void Run(DateTime start, DateTime end)
         {
+            if (TestAll)
+                threadN = 3;
+            else
+                threadN = 6;
+
             var from = start;
             var size = (int)end.AddDays(1).Subtract(start).TotalSeconds / BaseChartTimeSet.OneMinute.seconds;
 
-            AddOrChangeLoadingText("Simulating...(" + from.ToString(DateTimeFormat) + ")", true);
+            AddOrChangeLoadingText("Simulating ST" + ST + " ...(" + from.ToString(DateTimeFormat) + ")", true);
 
             var minIndex = int.MinValue;
             var dayIndex = int.MinValue;
@@ -1797,8 +1944,8 @@ namespace BackTestingFinal
                 var from2 = from.AddMinutes(i);
                 if (!simulDays[0].ContainsKey(from2.Date))
                 {
-                    foreach (var sd in simulDays)
-                        sd.Add(from2.Date, new DayData() { Date = from2.Date });
+                    for (int j = 0; j < 2; j++)
+                        simulDays[j].Add(from2.Date, new DayData() { Date = from2.Date, isL = j });
                     marketDays.Add(from2.Date, new DayData() { Date = from2.Date });
 
                     var year = from2.Year;
@@ -1806,10 +1953,10 @@ namespace BackTestingFinal
                         openDaysPerYear.Add(year, 0);
                     openDaysPerYear[year]++;
 
-                    AddOrChangeLoadingText("Simulating...(" + from2.ToString(DateTimeFormat) + ")   " + sw.Elapsed.ToString(TimeSpanFormat), false);
+                    AddOrChangeLoadingText("Simulating ST" + ST + " ...(" + from2.ToString(DateTimeFormat) + ")   " + sw.Elapsed.ToString(TimeSpanFormat), false);
                 }
 
-                var block = new ActionBlock<BackItemData>(iD => { action(iD, i, from2); }, new ExecutionDataflowBlockOptions { MaxDegreeOfParallelism = 6 });
+                var block = new ActionBlock<BackItemData>(iD => { action(iD, i, from2); }, new ExecutionDataflowBlockOptions { MaxDegreeOfParallelism = threadN });
 
                 foundItemList = new List<(BaseItemData itemData, List<(DateTime foundTime, ChartValues chartValues)>)>[] 
                     { new List<(BaseItemData itemData, List<(DateTime foundTime, ChartValues chartValues)>)>(), 
@@ -2011,6 +2158,7 @@ namespace BackTestingFinal
         public int highestHasItemsAtADay = int.MinValue;
         public DateTime highestHasItemsDate = default;
         public TimeSpan longestHasTime = TimeSpan.MinValue;
+        public DateTime longestHasTimeStart = default;
         public string longestHasCode = "";
         public int Count = 0;
         public int Win = 0;

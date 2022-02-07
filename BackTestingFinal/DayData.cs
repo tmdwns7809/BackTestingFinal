@@ -13,6 +13,7 @@ namespace BackTestingFinal
         public List<BackResultData> resultDatas = new List<BackResultData>();
         public List<TradeStick> day_sticks_for_market = new List<TradeStick>();
 
+        public int isL;
         public int Number;
         public int Count;
         public int Win;
