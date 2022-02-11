@@ -23,15 +23,13 @@ namespace BackTestingFinal
         public DateTime BeforeExitTime;
         public (DateTime firstMin, DateTime lastMin) firstLastMin;
 
-        public BackResultData resultDataForMetric;
+        public BackResultData[] resultDataForMetric = new BackResultData[2];
 
-        public BackItemData(string c, int n) : base (c, n)
-        {
-        }
+        public BackItemData(string c, int n) : base (c, n) {}
 
         public void Reset()
         {
-            Enter = false;
+            positionData = new PositionData[] { new PositionData(), new PositionData() };
             BaseReady = false;
             ShortestBeforeGap = TimeSpan.MaxValue;
             ShortestBeforeGapText = "";
