@@ -101,9 +101,13 @@ namespace BackTestingFinal
 
         bool TestAll = MessageBox.Show("TestAll?", "caption", MessageBoxButtons.YesNo) == DialogResult.Yes;
         bool AlertOn = MessageBox.Show("AlertOn?", "caption", MessageBoxButtons.YesNo) == DialogResult.Yes;
+        bool isItemLimitAverage = MessageBox.Show("isItemLimitAverage?", "caption", MessageBoxButtons.YesNo) == DialogResult.Yes;
         int threadN;
 
-        public BackTesting(Form form, bool isJoo) : base(form, isJoo, 0)
+        static string STResultDBPath = @"C:\Users\tmdwn\source\repos\BackTestingFinal\전략결과\";
+        SQLiteConnection STResultDB = new SQLiteConnection(@"Data Source=" + STResultDBPath + "strategy_result.db");
+
+        public BackTesting(Form form, bool isJoo) : base(form, isJoo, 4)
         {
             sticksDBpath = BaseSticksDB.path;
             sticksDBbaseName = BaseSticksDB.BaseName;
@@ -910,25 +914,113 @@ namespace BackTestingFinal
                     {
                         try
                         {
-                            var path = @"C:\Users\tmdwn\source\repos\BackTestingFinal\전략결과\";
-                            var conn = new SQLiteConnection(@"Data Source=" + path + "strategy_result.db");
-                            conn.Open();
+                            var columnDic = new Dictionary<string, string>();
+                            var isJooName = "isJoo";
+                            var isFuturesName = "isFutures";
+                            var strategyName = "strategy";
+                            var isItemLimitAverageName = "isItemLimitAverage";
+                            var isLongName = "isLong";
+                            var start_dayName = "start_day";
+                            var end_dayName = "end_day";
+                            var daysName = "days";
+                            var Cumulative_ReturnName = "Cumulative_Return";
+                            var Win_RateName = "Win_Rate";
+                            var CountName = "Count";
+                            var Average_Profit_RateName = "Average_Profit_Rate";
+                            var Win_APRName = "Win_APR";
+                            var Lose_APRName = "Lose_APR";
+                            var Max_Draw_DownName = "Max_Draw_Down";
+                            var MDD_DaysName = "MDD_Days";
+                            var MDD_Start_DayName = "MDD_Start_Day";
+                            var MDD_Low_DayName = "MDD_Low_Day";
+                            var MDD_End_DayName = "MDD_End_Day";
+                            var Day_Max_HasName = "Day_Max_Has";
+                            var DMH_DayName = "DMH_Day";
+                            var Longest_Has_TimeName = "Longest_Has_Time";
+                            var LHT_CodeName = "LHT_Code";
+                            var LHT_StartName = "LHT_Start";
+                            var ImageName = "Image";
+                            var test_timeName = "test_time";
+                            var threadName = "thread";
+                            var test_spend_timeName = "test_spend_time";
 
-                            new SQLiteCommand("Begin", conn).ExecuteNonQuery();
+                            columnDic.Add(isJooName, "TEXT");
+                            columnDic.Add(isFuturesName, "TEXT");
+                            columnDic.Add(strategyName, "INTEGER");
+                            columnDic.Add(isItemLimitAverageName, "TEXT");
+                            columnDic.Add(isLongName, "TEXT");
+                            columnDic.Add(start_dayName, "TEXT");
+                            columnDic.Add(end_dayName, "TEXT");
+                            columnDic.Add(daysName, "TEXT");
+                            columnDic.Add(Cumulative_ReturnName, "TEXT");
+                            columnDic.Add(Win_RateName, "TEXT");
+                            columnDic.Add(CountName, "INTEGER");
+                            columnDic.Add(Average_Profit_RateName, "TEXT");
+                            columnDic.Add(Win_APRName, "TEXT");
+                            columnDic.Add(Lose_APRName, "TEXT");
+                            columnDic.Add(Max_Draw_DownName, "TEXT");
+                            columnDic.Add(MDD_DaysName, "TEXT");
+                            columnDic.Add(MDD_Start_DayName, "TEXT");
+                            columnDic.Add(MDD_Low_DayName, "TEXT");
+                            columnDic.Add(MDD_End_DayName, "TEXT");
+                            columnDic.Add(Day_Max_HasName, "INTEGER");
+                            columnDic.Add(DMH_DayName, "TEXT");
+                            columnDic.Add(Longest_Has_TimeName, "TEXT");
+                            columnDic.Add(LHT_CodeName, "TEXT");
+                            columnDic.Add(LHT_StartName, "TEXT");
+                            columnDic.Add(ImageName, "BLOB");
+                            columnDic.Add(test_timeName, "TEXT");
+                            columnDic.Add(threadName, "INTEGER");
+                            columnDic.Add(test_spend_timeName, "TEXT");
 
-                            new SQLiteCommand("CREATE TABLE IF NOT EXISTS 'result' " +
-                                "('isJoo' TEXT, 'isFutures' TEXT, 'strategy' INTEGER, 'isLong' TEXT, 'start_day' TEXT, 'end_day' TEXT, 'days' TEXT, " +
-                                "'Cumulative_Return' TEXT, 'Win_Rate' TEXT, 'Count' INTEGER, 'Average_Profit_Rate' TEXT, 'Win_APR' TEXT, 'Lose_APR' TEXT, " +
-                                "'Max_Draw_Down' TEXT, 'MDD_Days' TEXT, 'MDD_Start_Day' TEXT, 'MDD_Low_Day' TEXT, 'MDD_End_Day' TEXT, " +
-                                "'Day_Max_Has' INTEGER, 'DMH_Day' TEXT, 'Longest_Has_Time' TEXT, 'LHT_Code' TEXT, 'LHT_Start' INTEGER, 'Image' BLOB, 'test_time' TEXT, 'thread' INTEGER, 'test_spend_time' TEXT)", conn).ExecuteNonQuery();
+                            var statement = "";
 
-                            var isJ = isJoo.ToString();
-                            var isF = isFutures.ToString();
-                            var startDay = start.ToString(DateTimeFormat);
-                            var endDay = end.ToString(DateTimeFormat);
-                            var days = Math.Round(end.Subtract(start).TotalDays, 0) + " days";
-                            var testTime = DateTime.Now.ToString(TimeFormat);
-                            var testSpendTime = sw.Elapsed.ToString(TimeSpanFormat);
+                            var count = 0;
+                            foreach (var column in columnDic)
+                            {
+                                if (count == 0)
+                                    statement = "CREATE TABLE IF NOT EXISTS 'result' (";
+                                else
+                                    statement += ", ";
+
+                                statement += "'" + column.Key + "' " + column.Value;
+
+                                if (count == columnDic.Count - 1)
+                                    statement += ")";
+
+                                count++;
+                            }
+
+                            new SQLiteCommand(statement, STResultDB).ExecuteNonQuery();
+
+                            columnDic[isJooName] = "'" + isJoo.ToString() + "'";
+                            columnDic[isFuturesName] = "'" + isFutures.ToString() + "'";
+                            columnDic[strategyName] = "'" + ST.ToString() + "'";
+                            columnDic[isItemLimitAverageName] = "'" + isItemLimitAverage.ToString() + "'";
+                            columnDic[isLongName] = "'" + isLong.ToString() + "'";
+                            columnDic[start_dayName] = "'" + start.ToString(DateTimeFormat) + "'";
+                            columnDic[end_dayName] = "'" + end.ToString(DateTimeFormat) + "'";
+                            columnDic[daysName] = "'" + Math.Round(end.Subtract(start).TotalDays, 0) + " days'";
+                            columnDic[Cumulative_ReturnName] = "'" + CR + "'";
+                            columnDic[Win_RateName] = "'" + WinRate + "'";
+                            columnDic[CountName] = "'" + AllCount + "'";
+                            columnDic[Average_Profit_RateName] = "'" + AvgProfitRate + "'";
+                            columnDic[Win_APRName] = "'" + WinAvgProfitRate + "'";
+                            columnDic[Lose_APRName] = "'" + LoseAvgProfitRate + "'";
+                            columnDic[Max_Draw_DownName] = "'" + MDD + "'";
+                            columnDic[MDD_DaysName] = "'" + MDDDays + "'";
+                            columnDic[MDD_Start_DayName] = "'" + MDDStart + "'";
+                            columnDic[MDD_Low_DayName] = "'" + MDDLow + "'";
+                            columnDic[MDD_End_DayName] = "'" + MDDEnd + "'";
+                            columnDic[Day_Max_HasName] = "'" + DayMaxHas + "'";
+                            columnDic[DMH_DayName] = "'" + DayMaxHasDay + "'";
+                            columnDic[Longest_Has_TimeName] = "'" + LongestHasTime + "'";
+                            columnDic[LHT_CodeName] = "'" + LongestHasTimeCode + "'";
+                            columnDic[LHT_StartName] = "'" + LongestHasTimeStart + "'";
+                            columnDic[ImageName] = "@image";
+                            columnDic[test_timeName] = "'" + DateTime.Now.ToString(TimeFormat) + "'";
+                            columnDic[threadName] = "'" + threadN.ToString() + "'";
+                            columnDic[test_spend_timeName] = "'" + sw.Elapsed.ToString(TimeSpanFormat) + "'";
 
                             ////Total Screen Capture
                             var image = new Bitmap(Screen.PrimaryScreen.Bounds.Width,
@@ -943,30 +1035,97 @@ namespace BackTestingFinal
                             }
                             var bytes = (byte[])new ImageConverter().ConvertTo(image, typeof(byte[]));
 
-                            var reader = new SQLiteCommand("SELECT *, rowid FROM 'result' where isJoo='" + isJ + "' and isFutures='" + isF + "' and strategy='" + ST + "' and " +
-                                "isLong='" + isLong + "' and start_day='" + startDay + "' and end_day='" + endDay + "' and thread='" + threadN + "'", conn).ExecuteReader();
+                            var columnDic2 = new Dictionary<string, string>();
+                            columnDic2.Add(isJooName, columnDic[isJooName]);
+                            columnDic2.Add(isFuturesName, columnDic[isFuturesName]);
+                            columnDic2.Add(strategyName, columnDic[strategyName]);
+                            columnDic2.Add(isItemLimitAverageName, columnDic[isItemLimitAverageName]);
+                            columnDic2.Add(isLongName, columnDic[isLongName]);
+                            columnDic2.Add(start_dayName, columnDic[start_dayName]);
+                            columnDic2.Add(end_dayName, columnDic[end_dayName]);
+                            columnDic2.Add(threadName, columnDic[threadName]);
 
-                            var command = reader.Read() ? (new SQLiteCommand("update 'result' set days='" + days + "', 'Cumulative_Return'='" + CR + "', 'Win_Rate'='" + WinRate + "', 'Count'='" + AllCount + "', " +
-                                "'Average_Profit_Rate'='" + AvgProfitRate + "', 'Win_APR'='" + WinAvgProfitRate + "', 'Lose_APR'='" + LoseAvgProfitRate + "', 'Max_Draw_Down'='" + MDD + "', 'MDD_Days'='" + MDDDays + "', " +
-                                "'MDD_Start_Day'='" + MDDStart + "', 'MDD_Low_Day'='" + MDDLow + "', 'MDD_End_Day'='" + MDDEnd + "', 'Day_Max_Has'='" + DayMaxHas + "', 'DMH_Day'='" + DayMaxHasDay + "', " +
-                                "'Longest_Has_Time'='" + LongestHasTime + "', 'LHT_Code'='" + LongestHasTimeCode + "', 'LHT_Start'='" + LongestHasTimeStart + "', 'Image'=@image, " +
-                                "'test_time'='" + testTime + "', 'thread'='" + threadN + "', 'test_spend_time'='" + testSpendTime + "' where rowid='" + reader["rowid"] + "'", conn)) :
-                                new SQLiteCommand("INSERT INTO 'result' ('isJoo', 'isFutures', 'strategy', 'isLong', 'start_day', 'end_day', 'days', " +
-                                "'Cumulative_Return', 'Win_Rate', 'Count', 'Average_Profit_Rate', 'Win_APR', 'Lose_APR', 'Max_Draw_Down', 'MDD_Days', 'MDD_Start_Day', 'MDD_Low_Day', 'MDD_End_Day', " +
-                                "'Day_Max_Has', 'DMH_Day', 'Longest_Has_Time', 'LHT_Code', 'LHT_Start', 'Image', 'test_time', 'thread', 'test_spend_time') values ('" + isJ + "', '" + isF + "', '" + ST + "', '" + isLong + "', " +
-                                "'" + startDay + "', '" + endDay + "', '" + days + "', '" + CR + "', '" + WinRate + "', '" + AllCount + "', '" + AvgProfitRate + "', '" + WinAvgProfitRate + "', " +
-                                "'" + LoseAvgProfitRate + "', '" + MDD + "', '" + MDDDays + "', '" + MDDStart + "', '" + MDDLow + "', '" + MDDEnd + "', '" + DayMaxHas + "', '" + DayMaxHasDay + "'" +
-                                ", '" + LongestHasTime + "', '" + LongestHasTimeCode + "', '" + LongestHasTimeStart + "', @image, '" + testTime + "', '" + threadN + "', '" + testSpendTime + "')", conn);
+                            count = 0;
+                            foreach (var column in columnDic2)
+                            {
+                                if (count == 0)
+                                    statement = "SELECT *, rowid FROM 'result' where ";
+                                else
+                                    statement += " and ";
+
+                                statement += column.Key + "=" + column.Value;
+
+                                count++;
+                            }
+
+                            var reader = new SQLiteCommand(statement, STResultDB).ExecuteReader();
+                            if (reader.Read())
+                            {
+                                count = 0;
+                                foreach (var column in columnDic)
+                                {
+                                    if (count == 0)
+                                        statement = "update 'result' set ";
+                                    else
+                                        statement += ", ";
+
+                                    statement += "'" + column.Key + "'=" + column.Value;
+
+                                    if (count == columnDic.Count - 1)
+                                        statement += " where rowid='" + reader["rowid"] + "'";
+
+                                    count++;
+                                }
+                            }
+                            else
+                            {
+                                count = 0;
+                                foreach (var column in columnDic)
+                                {
+                                    if (count == 0)
+                                        statement = "INSERT INTO 'result' (";
+                                    else
+                                        statement += ", ";
+
+                                    statement += "'" + column.Key + "'";
+
+                                    count++;
+                                }
+                                count = 0;
+                                foreach (var column in columnDic)
+                                {
+                                    if (count == 0)
+                                        statement += ") values (";
+                                    else
+                                        statement += ", ";
+
+                                    statement += column.Value;
+
+                                    if (count == columnDic.Count - 1)
+                                        statement += ")";
+
+                                    count++;
+                                }
+                            }
+
+                            var command = new SQLiteCommand(statement, STResultDB);
                             command.Parameters.AddWithValue("@image", bytes);
                             command.ExecuteNonQuery();
 
-                            var imageName = "isJoo=" + isJ + "~isFutures=" + isF + "~strategy=" + ST + "~" +
-                                "isLong=" + isLong + "~start_day=" + startDay + "~end_day=" + endDay + "~thread=" + threadN;
-                            image.Save(path + imageName + ".jpg", System.Drawing.Imaging.ImageFormat.Jpeg);
+                            count = 0;
+                            foreach (var column in columnDic2)
+                            {
+                                if (count == 0)
+                                    statement = "";
+                                else
+                                    statement += ", ";
 
-                            new SQLiteCommand("Commit", conn).ExecuteNonQuery();
+                                statement += column.Key + "=" + column.Value;
 
-                            conn.Close();
+                                count++;
+                            }
+
+                            image.Save(STResultDBPath + statement + ".jpg", System.Drawing.Imaging.ImageFormat.Jpeg);
                         }
                         catch (Exception e)
                         {
@@ -1009,8 +1168,14 @@ namespace BackTestingFinal
 
                 Thread.Sleep(1000);
 
+                STResultDB.Open();
+                new SQLiteCommand("Begin", STResultDB).ExecuteNonQuery();
+
                 while (que.Count != 0)
                     que.Dequeue().RunSynchronously();
+
+                new SQLiteCommand("Commit", STResultDB).ExecuteNonQuery();
+                STResultDB.Close();
 
                 ShowWindow(proc.MainWindowHandle, SW_MINIMIZE);
                 //System.Windows.Forms.Cursor.Position = new Point(x, y);
@@ -1901,13 +2066,14 @@ namespace BackTestingFinal
                 for (int j = (int)Position.Long; j <= (int)Position.Short; j++)
                 {
                     var positionData = itemData.positionData[j];
-                    if (!itemData.positionData[(int)Position.Long].Enter && !itemData.positionData[(int)Position.Short].Enter)
-                    {
+                    //if (positionData.found)
+                    //    lock (foundLocker)
+                    //        foundItemList[j].Add((itemData, positionData.foundList));
+                    if (!itemData.positionData[(int)Position.Long].Enter && !itemData.positionData[(int)Position.Short].Enter && positionData.found)
                         lock (foundLocker)
-                            if (positionData.found)
-                                foundItemList[j].Add((itemData, positionData.foundList));
-                    }
-                    else if (positionData.Enter && ExitConditionFinal(itemData, (Position)j))
+                            foundItemList[j].Add((itemData, positionData.foundList));
+                    else
+                    if (positionData.Enter && ExitConditionFinal(itemData, (Position)j))
                     {
                         positionData.Enter = false;
                         var resultData = new BackResultData()
@@ -1921,9 +2087,13 @@ namespace BackTestingFinal
                             LorS = (Position)j
                         };
 
-                        if (itemData.resultDataForMetric[j].Code == itemData.Code)
-                            itemData.resultDataForMetric[j].ExitTime = resultData.ExitTime;
-                        itemData.resultDataForMetric[j].ProfitRate += resultData.ProfitRate;
+                        if (itemData.resultDataForMetric[j] != null)
+                        {
+                            if (itemData.resultDataForMetric[j].Code == itemData.Code)
+                                itemData.resultDataForMetric[j].ExitTime = resultData.ExitTime;
+                            itemData.resultDataForMetric[j].ProfitRate += resultData.ProfitRate;
+                            itemData.resultDataForMetric[j] = null;
+                        }
 
                         itemData.BeforeExitTime = resultData.ExitTime;
 
@@ -1985,13 +2155,20 @@ namespace BackTestingFinal
                         var simulDay = simulDays[j][from2.Date];
                         if (conditionResult.position[j])
                             foreach (var foundItem in foundItemList[j])
+                            //if (!foundItem.itemData.positionData[(int)Position.Long].Enter && !foundItem.itemData.positionData[(int)Position.Short].Enter)
+                            //if (!foundItem.itemData.positionData[j].Enter)
                             {
                                 EnterSetting(foundItem.itemData.positionData[j], foundItem.itemData.listDic.Values[minIndex].lastStick);
+
                                 if (simulDay.ResultDatasForMetric.Count == 0 || simulDay.ResultDatasForMetric[simulDay.ResultDatasForMetric.Count - 1].ExitTime != default)
                                     simulDay.ResultDatasForMetric.Add(new BackResultData() { EnterTime = from2, Code = foundItem.itemData.Code });
+
                                 var resultData = simulDay.ResultDatasForMetric[simulDay.ResultDatasForMetric.Count - 1];
-                                resultData.Count++;
-                                (foundItem.itemData as BackItemData).resultDataForMetric[j] = resultData;
+                                if (isItemLimitAverage || resultData.Count < ItemLimit)
+                                {
+                                    resultData.Count++;
+                                    (foundItem.itemData as BackItemData).resultDataForMetric[j] = resultData;
+                                }
                             }
                     }
             }
