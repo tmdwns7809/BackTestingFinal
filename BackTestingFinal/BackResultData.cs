@@ -20,5 +20,6 @@ namespace BackTestingFinal
         public string Duration;
         public string BeforeGap;
         public Position LorS;    // 0 L 1 S
+        public List<BackResultData> listForAvg = new List<BackResultData>();
     }
 }
