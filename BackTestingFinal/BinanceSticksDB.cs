@@ -31,6 +31,8 @@ namespace BackTestingFinal
         {
             BaseFunctions.SetChartValuesDic(false);
 
+
+
             client = new BinanceClient(new BinanceClientOptions { ApiCredentials = new ApiCredentials(BinanceBase.future2_API_Key, BinanceBase.future2_Secret_Key) });
 
             var result = client.FuturesUsdt.System.GetExchangeInfoAsync().Result;
@@ -59,6 +61,9 @@ namespace BackTestingFinal
             foreach (var pair in BaseFunctions.ChartValuesDic)
             {
                 SQLiteConnection conn = new SQLiteConnection("Data Source =" + path + BaseName + pair.Value.Text + ".db");
+                conn.Close();
+                GC.Collect();
+                GC.WaitForPendingFinalizers();
                 conn.Open();
 
                 var doneCode = 0;

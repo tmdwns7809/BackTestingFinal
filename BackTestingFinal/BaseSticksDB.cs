@@ -39,7 +39,8 @@ namespace BackTestingFinal
             path = p;
             BaseName = b;
 
-            ConnectAndGetCodeList();
+            if (update)
+                ConnectAndGetCodeList();
 
             form.Shown += (sender, e) => { Task.Run(new Action(() => 
             { 

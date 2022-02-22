@@ -37,7 +37,6 @@ namespace BackTestingFinal
                 check = bool.Parse(settingsList[0].data.Split(new string[] { "check:" }, StringSplitOptions.None)[1].Split(',')[0]);
             }
 
-
             if (BaseFunctions.isJoo)
                 new JooSticksDB(this, update, check);
             else
