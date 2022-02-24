@@ -99,6 +99,7 @@
     </Compile>
     <Compile Include="JooSticksDB.cs" />
     <Compile Include="MetricData.cs" />
+    <Compile Include="MetricVar.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <EmbeddedResource Include="Form1.resx">

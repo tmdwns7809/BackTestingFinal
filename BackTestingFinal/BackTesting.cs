@@ -130,7 +130,7 @@ namespace BackTestingFinal
 
             fromTextBox.Text = DateTime.MinValue.ToString(DateTimeFormat);
             toTextBox.Text = DateTime.MaxValue.ToString(DateTimeFormat);
-            toTextBox.Text = "2022-01-22";
+            //toTextBox.Text = "2022-01-22";
         }
         void SetAdditionalMainView()
         {
@@ -206,6 +206,8 @@ namespace BackTestingFinal
             chartAreaCR.AxisY2.LabelStyle.Format = "{0:0.00}%";
             chartAreaCR.AxisY2.IntervalAutoMode = IntervalAutoMode.FixedCount;
             //chartArea6.AxisY2.StripLines.Add(new StripLine() { IntervalOffset = 0, BackColor = ColorSet.Border, StripWidth = 0.5 });
+            chartAreaCR.AxisY.Maximum = double.NaN;
+            chartAreaCR.AxisY.Minimum = double.NaN;
 
             var chartAreaPR = totalChart.ChartAreas.Add("ChartAreaProfitRate");
             SetChartAreaFirst(chartAreaPR);
@@ -215,6 +217,9 @@ namespace BackTestingFinal
             chartAreaPR.AxisY.Enabled = AxisEnabled.False;
             chartAreaPR.AxisY2.LabelStyle.Format = "{0:0.00}%";
             chartAreaPR.AxisY2.IntervalAutoMode = IntervalAutoMode.FixedCount;
+            chartAreaPR.AxisY.Maximum = double.NaN;
+            chartAreaPR.AxisY.Minimum = double.NaN;
+            chartAreaPR.AlignWithChartArea = chartAreaCR.Name;
 
             var chartAreaHas = totalChart.ChartAreas.Add("ChartAreaHas");
             SetChartAreaLast(chartAreaHas);
@@ -224,6 +229,9 @@ namespace BackTestingFinal
             chartAreaHas.AxisX.IntervalAutoMode = IntervalAutoMode.FixedCount;
             chartAreaHas.AxisY.Enabled = AxisEnabled.False;
             chartAreaHas.AxisY2.IntervalAutoMode = IntervalAutoMode.FixedCount;
+            chartAreaHas.AxisY.Maximum = double.NaN;
+            chartAreaHas.AxisY.Minimum = double.NaN;
+            chartAreaHas.AlignWithChartArea = chartAreaCR.Name;
 
             var seriesLCR = totalChart.Series.Add("LongCR");
             seriesLCR.ChartType = SeriesChartType.Line;
@@ -1388,7 +1396,7 @@ namespace BackTestingFinal
 
                     form.BeginInvoke(new Action(() =>
                     {
-                        ClearMainChartAndSet(result.chartValues);
+                        ClearMainChartAndSet(result.chartValues, itemData);
                         ShowChart(itemData, (result.foundTime, baseChartViewSticksSize / 2, true), true);
                     }));
                 }
@@ -1415,7 +1423,7 @@ namespace BackTestingFinal
             var position = double.IsNaN(mainChart.ChartAreas[0].CursorX.Position) ? baseChartViewSticksSize / 2
                 : mainChart.ChartAreas[0].CursorX.Position - mainChart.ChartAreas[0].AxisX.ScaleView.ViewMinimum - 1;
 
-            ClearMainChartAndSet(chartValues);
+            ClearMainChartAndSet(chartValues, showingItemData);
 
             if (showingItemData == default)
                 return;
@@ -1503,7 +1511,7 @@ namespace BackTestingFinal
             }
 
             //if (mainChart.Series[0].Points.Count != 0)
-            ClearMainChartAndSet(chartValues);
+            ClearMainChartAndSet(chartValues, itemData);
 
             var cursorIndex = v.list.Count - 1;
             for (int i = 0; i < v.list.Count; i++)
@@ -1523,10 +1531,6 @@ namespace BackTestingFinal
             }
             else
                 cursorTimeTextBox.Text = "";
-
-            foreach (var p in itemData.listDic)
-                if (p.Value.found)
-                    buttonDic[p.Key].BackColor = p.Key == chartValues ? ColorSet.ButtonSelectedFound : ColorSet.ButtonFound;
         }
 
         void AddNewChartPoint(Chart chart, BackItemData itemData, int index, bool insert)
@@ -1542,7 +1546,7 @@ namespace BackTestingFinal
                 foreach (var ca in mainChart.ChartAreas)
                     ca.AxisX.StripLines.Add(new StripLine()
                     {
-                        BackColor = ColorSet.Losing,
+                        BackColor = ColorSet.SimulLosing,
                         ForeColor = ColorSet.FormText,
                         IntervalOffset = index + 1,
                         StripWidth = 1,
@@ -1563,7 +1567,7 @@ namespace BackTestingFinal
                 foreach (var ca in mainChart.ChartAreas)
                     ca.AxisX.StripLines.Add(new StripLine()
                     {
-                        BackColor = ColorSet.Winning,
+                        BackColor = ColorSet.SimulWinning,
                         ForeColor = ColorSet.FormText,
                         IntervalOffset = index - width + 1,
                         StripWidth = width,
@@ -2315,29 +2319,5 @@ namespace BackTestingFinal
 
             return (time, itemData);
         }
-    }
-
-    public class MetricVar
-    {
-        public bool isLong;
-
-        public double CR = 1D;
-        public double Kelly = 1D;
-        public List<double> ProfitRates = new List<double>();
-
-        public DrawDownData DD = default;
-        public DrawDownData MDD = default;
-
-        public int highestHasItemsAtADay = int.MinValue;
-        public DateTime highestHasItemsDate = default;
-        public TimeSpan longestHasTime = TimeSpan.MinValue;
-        public DateTime longestHasTimeStart = default;
-        public string longestHasCode = "";
-        public int Count = 0;
-        public int Win = 0;
-        public double ProfitRateSum = 0;
-        public double ProfitWinRateSum = 0;
-
-        public int HasItemsAtADay = 0;
     }
 }
