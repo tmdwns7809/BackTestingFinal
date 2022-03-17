@@ -13,6 +13,7 @@ namespace BackTestingFinal
         public int NumberForClick;
         public string Code;
         public DateTime EnterTime;
+        public DateTime OutEnterTime;
         public DateTime ExitTime;
         public double ProfitRate = 0;
         public int Count = 0;

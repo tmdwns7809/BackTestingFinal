@@ -12,6 +12,7 @@ namespace BackTestingFinal
     {
         public bool suddenBurst = false;
         public BackResultData resultData = default;
+        public BackResultData resultData2 = default;
 
         public static bool isEqual(BackTradeStick stick0, BackTradeStick stick1)
         {

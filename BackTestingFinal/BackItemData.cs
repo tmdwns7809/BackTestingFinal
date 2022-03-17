@@ -30,6 +30,7 @@ namespace BackTestingFinal
         public void Reset()
         {
             positionData = new PositionData[] { new PositionData(Position.Long), new PositionData(Position.Short) };
+            positionData2 = new PositionData[] { new PositionData(Position.Long), new PositionData(Position.Short) };
             BaseReady = false;
             ShortestBeforeGap = TimeSpan.MaxValue;
             ShortestBeforeGapText = "";
