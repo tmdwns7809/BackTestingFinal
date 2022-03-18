@@ -111,7 +111,7 @@ namespace BackTestingFinal
         static string STResultDBPath = @"C:\Users\tmdwn\source\repos\BackTestingFinal\전략결과\";
         SQLiteConnection STResultDB = new SQLiteConnection(@"Data Source=" + STResultDBPath + "strategy_result.db");
 
-        public BackTesting(Form form, bool isJoo) : base(form, isJoo, 18.1m)
+        public BackTesting(Form form, bool isJoo) : base(form, isJoo, 34)
         {
             sticksDBpath = BaseSticksDB.path;
             sticksDBbaseName = BaseSticksDB.BaseName;
@@ -1290,7 +1290,6 @@ namespace BackTestingFinal
 
             return activeProcId == procId;
         }
-
 
         [DllImport("user32.dll", CharSet = CharSet.Auto, ExactSpelling = true)]
         private static extern IntPtr GetForegroundWindow();
