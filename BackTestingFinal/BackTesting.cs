@@ -111,7 +111,7 @@ namespace BackTestingFinal
         static string STResultDBPath = @"C:\Users\tmdwn\source\repos\BackTestingFinal\전략결과\";
         SQLiteConnection STResultDB = new SQLiteConnection(@"Data Source=" + STResultDBPath + "strategy_result.db");
 
-        public BackTesting(Form form, bool isJoo) : base(form, isJoo, 0)
+        public BackTesting(Form form, bool isJoo) : base(form, isJoo, 0.03m)
         {
             sticksDBpath = BaseSticksDB.path;
             sticksDBbaseName = BaseSticksDB.BaseName;
