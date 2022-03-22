@@ -111,7 +111,7 @@ namespace BackTestingFinal
         static string STResultDBPath = @"C:\Users\tmdwn\source\repos\BackTestingFinal\전략결과\";
         SQLiteConnection STResultDB = new SQLiteConnection(@"Data Source=" + STResultDBPath + "strategy_result.db");
 
-        public BackTesting(Form form, bool isJoo) : base(form, isJoo, 0.811m)
+        public BackTesting(Form form, bool isJoo) : base(form, isJoo, 0.032m)
         {
             sticksDBpath = BaseSticksDB.path;
             sticksDBbaseName = BaseSticksDB.BaseName;
@@ -139,9 +139,11 @@ namespace BackTestingFinal
                 var chartValues = mainChart.Tag as ChartValues;
                 var list = showingItemData.listDic[chartValues].list;
                 var Ind3 = CalIndicator(list, list[i], i - 1, 3);
-                var Ind5 = CalIndicator(list, list[i], i - 1, 5);
-                var Ind10 = CalIndicator(list, list[i], i - 1, 10);
-                var Ind50 = CalIndicator(list, list[i], i - 1, 50);
+                var Ind20 = CalIndicator(list, list[i - 3], i - 4, 20);
+
+                //var text = "   ind20-3(priceAmp:" + Math.Round(Ind20.priceAmp, 3) + ", pricePR:" + Math.Round(Ind20.pricePR, 2) + ", priceA:" + Math.Round(Ind20.priceA, 2) +
+                //    ") ind3(priceAmp:" + Math.Round(Ind3.priceAmp, 3) + ", priceA:" + Math.Round(Ind3.priceA, 2) + ")";
+
                 form.Text = showingItemData.Code + "     H:" + list[i].Price[0] + "  L:" + list[i].Price[1] + "  O:" + list[i].Price[2] + "  C:" + list[i].Price[3] + "  Ms:" + list[i].Ms + "  Md:" + list[i].Md;
             };
 
@@ -1875,7 +1877,8 @@ namespace BackTestingFinal
                             v.lastStick.TCount += vm.lastStick.TCount;
                         }
 
-                        SetRSIAandDiff(v.list, v.lastStick, v.currentIndex - 1);
+                        if (!calOnlyFullStick)
+                            SetRSIAandDiff(v.list, v.lastStick, v.currentIndex - 1);
 
                         if (toPast ? vm.lastStick.Time <= checkStartTime : vm.lastStick.Time >= checkStartTime)
                             OneChartFindConditionAndAdd(itemData, vc, v.currentIndex - 1);
@@ -2088,7 +2091,8 @@ namespace BackTestingFinal
                             {
                                 if (itemData.firstLastMin.lastMin >= from2)
                                 {
-                                    v.list.RemoveRange(0, v.list.Count - (TotalNeedDays - 1));
+                                    if (v.list.Count - (TotalNeedDays - 1) > 0)
+                                        v.list.RemoveRange(0, v.list.Count - (TotalNeedDays - 1));
                                     v.currentIndex = v.list.Count - 1;
                                     v.list.AddRange(LoadSticks(itemData, vc, from2, minituesInADay * BaseChartTimeSet.OneMinute.seconds / vc.seconds * (j - minCV.index + 1), false));
                                 }
@@ -2152,7 +2156,8 @@ namespace BackTestingFinal
                             v.lastStick = v.list[v.currentIndex] as BackTradeStick;
                         }
 
-                        SetRSIAandDiff(v.list, v.lastStick, v.currentIndex - 1);
+                        if (!calOnlyFullStick)
+                            SetRSIAandDiff(v.list, v.lastStick, v.currentIndex - 1);
 
                         OneChartFindConditionAndAdd(itemData, vc, v.currentIndex - 1);
                     }
