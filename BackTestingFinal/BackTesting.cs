@@ -111,7 +111,7 @@ namespace BackTestingFinal
         static string STResultDBPath = @"C:\Users\tmdwn\source\repos\BackTestingFinal\전략결과\";
         SQLiteConnection STResultDB = new SQLiteConnection(@"Data Source=" + STResultDBPath + "strategy_result.db");
 
-        public BackTesting(Form form, bool isJoo) : base(form, isJoo, 0.03211231m)
+        public BackTesting(Form form, bool isJoo) : base(form, isJoo, 10.1m)
         {
             sticksDBpath = BaseSticksDB.path;
             sticksDBbaseName = BaseSticksDB.BaseName;
@@ -716,7 +716,7 @@ namespace BackTestingFinal
 
             form.BeginInvoke(new Action(() =>
             {
-                form.Text += "done : " + sw.Elapsed.ToString(TimeSpanFormat);
+                form.Text += ST + " done : " + sw.Elapsed.ToString(TimeSpanFormat);
                 CalculateMetric(start, end, isAllLongShort);
                 totalButton.PerformClick();
             }));
