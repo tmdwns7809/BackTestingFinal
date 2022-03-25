@@ -1,0 +1,13 @@
+
+Long
+price>days=tail>cv=RSIA
+
+priceRSIA * quanRSIA
+RSIADiff
+oldCal
+
+
+
+
+Short
+priceRSIA * quanRSIA

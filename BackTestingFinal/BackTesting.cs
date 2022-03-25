@@ -111,7 +111,7 @@ namespace BackTestingFinal
         static string STResultDBPath = @"C:\Users\tmdwn\source\repos\BackTestingFinal\전략결과\";
         SQLiteConnection STResultDB = new SQLiteConnection(@"Data Source=" + STResultDBPath + "strategy_result.db");
 
-        public BackTesting(Form form, bool isJoo) : base(form, isJoo, 10.1m)
+        public BackTesting(Form form, bool isJoo) : base(form, isJoo, 0.8132m)
         {
             sticksDBpath = BaseSticksDB.path;
             sticksDBbaseName = BaseSticksDB.BaseName;
@@ -895,7 +895,6 @@ namespace BackTestingFinal
 
             for (int i = (int)Position.Long; i <= (int)Position.Short; i++)
             {
-                var isLong = Enum.GetName(typeof(Position), i);
                 var CR = "";
                 var WinRate = "";
                 var AllCount = "";
@@ -936,7 +935,7 @@ namespace BackTestingFinal
                     LongestHasTimeStart = MetricVars[i].longestHasTimeStart.ToString(TimeFormat);
                 }
 
-                if (isAllLongShort == Position.All)
+                if (isAllLongShort == Position.All ? i == (int)Position.Long : i == (int)isAllLongShort)
                     que.Enqueue(new Task(() =>
                     {
                         try
@@ -1024,7 +1023,7 @@ namespace BackTestingFinal
                             columnDic[isFuturesName] = "'" + isFutures.ToString() + "'";
                             columnDic[strategyName] = "'" + ST.ToString() + "'";
                             columnDic[isItemLimitAverageName] = "'" + isItemLimitAverage.ToString() + "'";
-                            columnDic[isLongName] = "'" + isLong.ToString() + "'";
+                            columnDic[isLongName] = "'" + Enum.GetName(typeof(Position), isAllLongShort).ToString() + "'";
                             columnDic[start_dayName] = "'" + start.ToString(DateTimeFormat) + "'";
                             columnDic[end_dayName] = "'" + end.ToString(DateTimeFormat) + "'";
                             columnDic[daysName] = "'" + Math.Round(end.Subtract(start).TotalDays, 0) + " days'";
@@ -1063,13 +1062,13 @@ namespace BackTestingFinal
                             var bytes = (byte[])new ImageConverter().ConvertTo(image, typeof(byte[]));
 
                             var columnDic2 = new Dictionary<string, string>();
-                            columnDic2.Add(isJooName, columnDic[isJooName]);
-                            columnDic2.Add(isFuturesName, columnDic[isFuturesName]);
                             columnDic2.Add(strategyName, columnDic[strategyName]);
-                            columnDic2.Add(isItemLimitAverageName, columnDic[isItemLimitAverageName]);
-                            columnDic2.Add(isLongName, columnDic[isLongName]);
                             columnDic2.Add(start_dayName, columnDic[start_dayName]);
                             columnDic2.Add(end_dayName, columnDic[end_dayName]);
+                            columnDic2.Add(isLongName, columnDic[isLongName]);
+                            columnDic2.Add(isJooName, columnDic[isJooName]);
+                            columnDic2.Add(isFuturesName, columnDic[isFuturesName]);
+                            columnDic2.Add(isItemLimitAverageName, columnDic[isItemLimitAverageName]);
                             columnDic2.Add(threadName, columnDic[threadName]);
 
                             count = 0;
