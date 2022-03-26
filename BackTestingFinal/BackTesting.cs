@@ -111,7 +111,7 @@ namespace BackTestingFinal
         static string STResultDBPath = @"C:\Users\tmdwn\source\repos\BackTestingFinal\전략결과\";
         SQLiteConnection STResultDB = new SQLiteConnection(@"Data Source=" + STResultDBPath + "strategy_result.db");
 
-        public BackTesting(Form form, bool isJoo) : base(form, isJoo, 0.8132m)
+        public BackTesting(Form form, bool isJoo) : base(form, isJoo, 0.813234m)
         {
             sticksDBpath = BaseSticksDB.path;
             sticksDBbaseName = BaseSticksDB.BaseName;
@@ -1240,6 +1240,15 @@ namespace BackTestingFinal
                     }
                     else
                         form.BeginInvoke(new Action(() => { form.Text += "done"; }));
+                }
+
+                if (isAllLongShort == Position.All)
+                {
+                    form.BeginInvoke(new Action(() => { runLongButton.PerformClick(); }));
+
+                    Thread.Sleep(3000);
+
+                    form.BeginInvoke(new Action(() => { runShortButton.PerformClick(); }));
                 }
             }));
             #endregion
