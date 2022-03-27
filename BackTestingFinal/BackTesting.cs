@@ -111,7 +111,7 @@ namespace BackTestingFinal
         static string STResultDBPath = @"C:\Users\tmdwn\source\repos\BackTestingFinal\전략결과\";
         SQLiteConnection STResultDB = new SQLiteConnection(@"Data Source=" + STResultDBPath + "strategy_result.db");
 
-        public BackTesting(Form form, bool isJoo) : base(form, isJoo, 0.813234m)
+        public BackTesting(Form form, bool isJoo) : base(form, isJoo, 1)
         {
             sticksDBpath = BaseSticksDB.path;
             sticksDBbaseName = BaseSticksDB.BaseName;
@@ -130,7 +130,7 @@ namespace BackTestingFinal
 
             fromTextBox.Text = DateTime.MinValue.ToString(DateTimeFormat);
             toTextBox.Text = DateTime.MaxValue.ToString(DateTimeFormat);
-            toTextBox.Text = "2022-01-22";
+            //toTextBox.Text = "2022-01-22";
         }
         void SetAdditionalMainView()
         {
@@ -1181,6 +1181,8 @@ namespace BackTestingFinal
                 metricDic[MetricLongestHasTimeStart].SetText(i, LongestHasTimeStart);
             }
 
+            metricListView.Refresh();
+
             Task.Run(new Action(() => {
                 //form.Cursor = new System.Windows.Forms.Cursor(System.Windows.Forms.Cursor.Current.Handle);
                 //var x = System.Windows.Forms.Cursor.Position.X;
@@ -1249,6 +1251,22 @@ namespace BackTestingFinal
                     Thread.Sleep(3000);
 
                     form.BeginInvoke(new Action(() => { runShortButton.PerformClick(); }));
+
+                    Thread.Sleep(3000);
+
+                    form.BeginInvoke(new Action(() => {
+                        fromTextBox.Text = DateTime.MinValue.ToString(DateTimeFormat);
+                        toTextBox.Text = "2021-04-29";
+                        runShortButton.PerformClick(); 
+                    }));
+
+                    Thread.Sleep(3000);
+
+                    form.BeginInvoke(new Action(() => {
+                        fromTextBox.Text = "2021-04-29";
+                        toTextBox.Text = "2022-01-22";
+                        runShortButton.PerformClick();
+                    }));
                 }
             }));
             #endregion
