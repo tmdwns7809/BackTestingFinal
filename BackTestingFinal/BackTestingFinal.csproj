@@ -88,6 +88,7 @@
     <Compile Include="BackTradeStick.cs" />
     <Compile Include="BaseSticksDB.cs" />
     <Compile Include="BinanceSticksDB.cs" />
+    <Compile Include="CR.cs" />
     <Compile Include="DayData.cs" />
     <Compile Include="DayStick.cs" />
     <Compile Include="DrawDownData.cs" />
