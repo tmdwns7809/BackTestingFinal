@@ -82,6 +82,8 @@ namespace BackTestingFinal
         string MetricWinRate = "Win Rate";
         string MetricWinRateYearStandardDeviation = "    WRYSD";
         string MetricAllCount = "    Count";
+        string MetricDisappear = "    Dis";
+        string MetricLastDisappear = "    LDis";
         string MetricAvgProfitRate = "    APR";
         string MetricWinAvgProfitRate = "    WAPR";
         string MetricLoseAvgProfitRate = "    LAPR";
@@ -719,6 +721,10 @@ namespace BackTestingFinal
             metricListView.AddObject(metricDic[MetricWinRateYearStandardDeviation]);
             metricDic.Add(MetricAllCount, new MetricData() { MetricName = MetricAllCount });
             metricListView.AddObject(metricDic[MetricAllCount]);
+            metricDic.Add(MetricDisappear, new MetricData() { MetricName = MetricDisappear });
+            metricListView.AddObject(metricDic[MetricDisappear]);
+            metricDic.Add(MetricLastDisappear, new MetricData() { MetricName = MetricLastDisappear });
+            metricListView.AddObject(metricDic[MetricLastDisappear]);
             metricDic.Add(MetricAvgProfitRate, new MetricData() { MetricName = MetricAvgProfitRate });
             metricListView.AddObject(metricDic[MetricAvgProfitRate]);
             metricDic.Add(MetricWinAvgProfitRate, new MetricData() { MetricName = MetricWinAvgProfitRate });
@@ -824,7 +830,7 @@ namespace BackTestingFinal
             foreach (var itemData in itemDataDic.Values)
                 itemData.Reset();
 
-            var beforeCR = new decimal[2];
+            var beforeCR = new double[2];
 
             var CRType = (CR)Enum.Parse(typeof(CR), CRComboBox.Text);
 
@@ -832,6 +838,8 @@ namespace BackTestingFinal
             var market2 = LoadSticks(itemDataDic["ETHUSDT"], BaseChartTimeSet.OneDay, start.Date, (int)end.Date.AddDays(1).Subtract(start.Date).TotalDays, false);
             var m1I = 0;
             var m2I = 0;
+            var disappearCount = new int[2];
+            var lastDisappearCount = new int[2];
 
             for (int j = (int)Position.Long; j <= (int)Position.Short; j++)
                 if (isAllLongShort == Position.All || isAllLongShort == (Position)j)
@@ -859,17 +867,17 @@ namespace BackTestingFinal
 
                                 simulDays[j].Values[i].Count++;
                                 itemData.Count++;
-                                simulDays[j].Values[i].ProfitRateSum += (double)resultData.ProfitRate;
+                                simulDays[j].Values[i].ProfitRateSum += resultData.ProfitRate;
                                 MetricVars[(int)resultData.LorS].HasItemsAtADay++;
                                 MetricVars[(int)resultData.LorS].Count++;
-                                MetricVars[(int)resultData.LorS].ProfitRateSum += (double)resultData.ProfitRate;
-                                if ((double)resultData.ProfitRate > commisionRate)
+                                MetricVars[(int)resultData.LorS].ProfitRateSum += resultData.ProfitRate;
+                                if (resultData.ProfitRate > commisionRate)
                                 {
                                     simulDays[j].Values[i].Win++;
                                     itemData.Win++;
-                                    simulDays[j].Values[i].WinProfitRateSum += (double)resultData.ProfitRate;
+                                    simulDays[j].Values[i].WinProfitRateSum += resultData.ProfitRate;
                                     MetricVars[(int)resultData.LorS].Win++;
-                                    MetricVars[(int)resultData.LorS].ProfitWinRateSum += (double)resultData.ProfitRate;
+                                    MetricVars[(int)resultData.LorS].ProfitWinRateSum += resultData.ProfitRate;
                                 }
                             }
 
@@ -883,10 +891,13 @@ namespace BackTestingFinal
                         foreach (var resultData in simulDays[j].Values[i].ResultDatasForMetric)
                             if (resultData.EnterTime.Date == simulDays[j].Keys[i] && resultData.ExitTime.Date <= end)
                             {
+                                if (resultData.Count == 0)
+                                    continue;
+                                    
                                 if (beforeCR[j] != default && beforeCR[j] != MetricVars[j].CR)
                                     ShowError(form, "CR Error");
 
-                                var avgPR = (resultData.ProfitRate / resultData.Count - 1) * 100 - (decimal)commisionRate;
+                                var avgPR = (resultData.ProfitRate / resultData.Count - 1) * 100 - commisionRate;
 
                                 if (CRType != CR.AllWithMinimum)
                                     MetricVars[j].CR *= 1 + avgPR * Kelly / 100;
@@ -899,13 +910,21 @@ namespace BackTestingFinal
                                 //resultList1[j].Add((MetricVars[j].CR, avgPR, Kelly));
                             }
 
+                        foreach (var resultData in simulDays[j].Values[i].disResultDatas)
+                            if (resultData.EnterTime.Date == simulDays[j].Keys[i] && resultData.ExitTime.Date <= end)
+                                disappearCount[j]++;
+
+                        foreach (var resultData in simulDays[j].Values[i].lastResultDatas)
+                            if (resultData.EnterTime.Date == simulDays[j].Keys[i] && resultData.ExitTime.Date <= end)
+                                lastDisappearCount[j]++;
+
                         if (MetricVars[j].DD == default)
                         {
                             MetricVars[j].DD = new DrawDownData()
                             {
-                                HighestCumulativeReturn = (double)MetricVars[j].CR,
+                                HighestCumulativeReturn = MetricVars[j].CR,
                                 HighestCumulativeReturnIndex = i,
-                                LowestCumulativeReturn = (double)MetricVars[j].CR,
+                                LowestCumulativeReturn = MetricVars[j].CR,
                                 LowestCumulativeReturnIndex = i,
                                 LastCumulativeReturnIndex = i,
                             };
@@ -913,12 +932,12 @@ namespace BackTestingFinal
                         }
                         else
                         {
-                            if ((double)MetricVars[j].CR <= MetricVars[j].DD.LowestCumulativeReturn && i != endIndex)
+                            if (MetricVars[j].CR <= MetricVars[j].DD.LowestCumulativeReturn && i != endIndex)
                             {
-                                MetricVars[j].DD.LowestCumulativeReturn = (double)MetricVars[j].CR;
+                                MetricVars[j].DD.LowestCumulativeReturn = MetricVars[j].CR;
                                 MetricVars[j].DD.LowestCumulativeReturnIndex = i;
                             }
-                            else if ((double)MetricVars[j].CR > MetricVars[j].DD.HighestCumulativeReturn || i == endIndex)
+                            else if (MetricVars[j].CR > MetricVars[j].DD.HighestCumulativeReturn || i == endIndex)
                             {
                                 MetricVars[j].DD.LastCumulativeReturnIndex = i;
 
@@ -929,9 +948,9 @@ namespace BackTestingFinal
 
                                 MetricVars[j].DD = new DrawDownData()
                                 {
-                                    HighestCumulativeReturn = (double)MetricVars[j].CR,
+                                    HighestCumulativeReturn = MetricVars[j].CR,
                                     HighestCumulativeReturnIndex = i,
-                                    LowestCumulativeReturn = (double)MetricVars[j].CR,
+                                    LowestCumulativeReturn = MetricVars[j].CR,
                                     LowestCumulativeReturnIndex = i,
                                     LastCumulativeReturnIndex = i,
                                 };
@@ -1044,234 +1063,243 @@ namespace BackTestingFinal
                     LongestHasTimeStart = MetricVars[i].longestHasTimeStart.ToString(TimeFormat);
                 }
 
-                if (isAllLongShort == Position.All ? i == (int)Position.Long : i == (int)isAllLongShort)
-                    que.Enqueue(new Task(() =>
+                var i2 = i;
+                que.Enqueue(new Task(() =>
+                {
+                    try
                     {
-                        try
+                        var columnDic = new Dictionary<string, string>();
+                        var isJooName = "isJoo";
+                        var isFuturesName = "isFutures";
+                        var strategyName = "strategy";
+                        var CRName = "CR";
+                        var isLongName = "isLong";
+                        var start_dayName = "start_day";
+                        var end_dayName = "end_day";
+                        var daysName = "days";
+                        var Cumulative_ReturnName = "Cumulative_Return";
+                        var Win_RateName = "Win_Rate";
+                        var CountName = "Count";
+                        var DisappearName = "Disappear";
+                        var LastDisappearName = "LastDisappear";
+                        var Average_Profit_RateName = "Average_Profit_Rate";
+                        var Win_APRName = "Win_APR";
+                        var Lose_APRName = "Lose_APR";
+                        var Max_Draw_DownName = "Max_Draw_Down";
+                        var MDD_DaysName = "MDD_Days";
+                        var MDD_Start_DayName = "MDD_Start_Day";
+                        var MDD_Low_DayName = "MDD_Low_Day";
+                        var MDD_End_DayName = "MDD_End_Day";
+                        var Day_Max_HasName = "Day_Max_Has";
+                        var DMH_DayName = "DMH_Day";
+                        var Longest_Has_TimeName = "Longest_Has_Time";
+                        var LHT_CodeName = "LHT_Code";
+                        var LHT_StartName = "LHT_Start";
+                        var ImageName = "Image";
+                        var test_timeName = "test_time";
+                        var threadName = "thread";
+                        var test_spend_timeName = "test_spend_time";
+
+                        columnDic.Add(isJooName, "TEXT");
+                        columnDic.Add(isFuturesName, "TEXT");
+                        columnDic.Add(strategyName, "INTEGER");
+                        columnDic.Add(CRName, "TEXT");
+                        columnDic.Add(isLongName, "TEXT");
+                        columnDic.Add(start_dayName, "TEXT");
+                        columnDic.Add(end_dayName, "TEXT");
+                        columnDic.Add(daysName, "TEXT");
+                        columnDic.Add(Cumulative_ReturnName, "TEXT");
+                        columnDic.Add(Win_RateName, "TEXT");
+                        columnDic.Add(CountName, "INTEGER");
+                        columnDic.Add(DisappearName, "INTEGER");
+                        columnDic.Add(LastDisappearName, "INTEGER");
+                        columnDic.Add(Average_Profit_RateName, "TEXT");
+                        columnDic.Add(Win_APRName, "TEXT");
+                        columnDic.Add(Lose_APRName, "TEXT");
+                        columnDic.Add(Max_Draw_DownName, "TEXT");
+                        columnDic.Add(MDD_DaysName, "TEXT");
+                        columnDic.Add(MDD_Start_DayName, "TEXT");
+                        columnDic.Add(MDD_Low_DayName, "TEXT");
+                        columnDic.Add(MDD_End_DayName, "TEXT");
+                        columnDic.Add(Day_Max_HasName, "INTEGER");
+                        columnDic.Add(DMH_DayName, "TEXT");
+                        columnDic.Add(Longest_Has_TimeName, "TEXT");
+                        columnDic.Add(LHT_CodeName, "TEXT");
+                        columnDic.Add(LHT_StartName, "TEXT");
+                        columnDic.Add(ImageName, "BLOB");
+                        columnDic.Add(test_timeName, "TEXT");
+                        columnDic.Add(threadName, "INTEGER");
+                        columnDic.Add(test_spend_timeName, "TEXT");
+
+                        var statement = "";
+
+                        var count = 0;
+                        foreach (var column in columnDic)
                         {
-                            var columnDic = new Dictionary<string, string>();
-                            var isJooName = "isJoo";
-                            var isFuturesName = "isFutures";
-                            var strategyName = "strategy";
-                            var CRName = "CR";
-                            var isLongName = "isLong";
-                            var start_dayName = "start_day";
-                            var end_dayName = "end_day";
-                            var daysName = "days";
-                            var Cumulative_ReturnName = "Cumulative_Return";
-                            var Win_RateName = "Win_Rate";
-                            var CountName = "Count";
-                            var Average_Profit_RateName = "Average_Profit_Rate";
-                            var Win_APRName = "Win_APR";
-                            var Lose_APRName = "Lose_APR";
-                            var Max_Draw_DownName = "Max_Draw_Down";
-                            var MDD_DaysName = "MDD_Days";
-                            var MDD_Start_DayName = "MDD_Start_Day";
-                            var MDD_Low_DayName = "MDD_Low_Day";
-                            var MDD_End_DayName = "MDD_End_Day";
-                            var Day_Max_HasName = "Day_Max_Has";
-                            var DMH_DayName = "DMH_Day";
-                            var Longest_Has_TimeName = "Longest_Has_Time";
-                            var LHT_CodeName = "LHT_Code";
-                            var LHT_StartName = "LHT_Start";
-                            var ImageName = "Image";
-                            var test_timeName = "test_time";
-                            var threadName = "thread";
-                            var test_spend_timeName = "test_spend_time";
+                            if (count == 0)
+                                statement = "CREATE TABLE IF NOT EXISTS 'result' (";
+                            else
+                                statement += ", ";
 
-                            columnDic.Add(isJooName, "TEXT");
-                            columnDic.Add(isFuturesName, "TEXT");
-                            columnDic.Add(strategyName, "INTEGER");
-                            columnDic.Add(CRName, "TEXT");
-                            columnDic.Add(isLongName, "TEXT");
-                            columnDic.Add(start_dayName, "TEXT");
-                            columnDic.Add(end_dayName, "TEXT");
-                            columnDic.Add(daysName, "TEXT");
-                            columnDic.Add(Cumulative_ReturnName, "TEXT");
-                            columnDic.Add(Win_RateName, "TEXT");
-                            columnDic.Add(CountName, "INTEGER");
-                            columnDic.Add(Average_Profit_RateName, "TEXT");
-                            columnDic.Add(Win_APRName, "TEXT");
-                            columnDic.Add(Lose_APRName, "TEXT");
-                            columnDic.Add(Max_Draw_DownName, "TEXT");
-                            columnDic.Add(MDD_DaysName, "TEXT");
-                            columnDic.Add(MDD_Start_DayName, "TEXT");
-                            columnDic.Add(MDD_Low_DayName, "TEXT");
-                            columnDic.Add(MDD_End_DayName, "TEXT");
-                            columnDic.Add(Day_Max_HasName, "INTEGER");
-                            columnDic.Add(DMH_DayName, "TEXT");
-                            columnDic.Add(Longest_Has_TimeName, "TEXT");
-                            columnDic.Add(LHT_CodeName, "TEXT");
-                            columnDic.Add(LHT_StartName, "TEXT");
-                            columnDic.Add(ImageName, "BLOB");
-                            columnDic.Add(test_timeName, "TEXT");
-                            columnDic.Add(threadName, "INTEGER");
-                            columnDic.Add(test_spend_timeName, "TEXT");
+                            statement += "'" + column.Key + "' " + column.Value;
 
-                            var statement = "";
+                            if (count == columnDic.Count - 1)
+                                statement += ")";
 
-                            var count = 0;
+                            count++;
+                        }
+
+                        new SQLiteCommand(statement, STResultDB).ExecuteNonQuery();
+
+                        columnDic[isJooName] = "'" + isJoo.ToString() + "'";
+                        columnDic[isFuturesName] = "'" + isFutures.ToString() + "'";
+                        columnDic[strategyName] = "'" + ST.ToString() + "'";
+                        columnDic[CRName] = "'" + CRType.ToString() + "'";
+                        columnDic[isLongName] = "'" + Enum.GetName(typeof(Position), isAllLongShort).ToString() + "'";
+                        columnDic[start_dayName] = "'" + start.ToString(DateTimeFormat) + "'";
+                        columnDic[end_dayName] = "'" + end.ToString(DateTimeFormat) + "'";
+                        columnDic[daysName] = "'" + Math.Round(end.Subtract(start).TotalDays, 0) + " days'";
+                        columnDic[Cumulative_ReturnName] = "'" + CR + "'";
+                        columnDic[Win_RateName] = "'" + WinRate + "'";
+                        columnDic[CountName] = "'" + AllCount + "'";
+                        columnDic[DisappearName] = "'" + disappearCount[i2] + "'";
+                        columnDic[LastDisappearName] = "'" + lastDisappearCount[i2] + "'";
+                        columnDic[Average_Profit_RateName] = "'" + AvgProfitRate + "'";
+                        columnDic[Win_APRName] = "'" + WinAvgProfitRate + "'";
+                        columnDic[Lose_APRName] = "'" + LoseAvgProfitRate + "'";
+                        columnDic[Max_Draw_DownName] = "'" + MDD + "'";
+                        columnDic[MDD_DaysName] = "'" + MDDDays + "'";
+                        columnDic[MDD_Start_DayName] = "'" + MDDStart + "'";
+                        columnDic[MDD_Low_DayName] = "'" + MDDLow + "'";
+                        columnDic[MDD_End_DayName] = "'" + MDDEnd + "'";
+                        columnDic[Day_Max_HasName] = "'" + DayMaxHas + "'";
+                        columnDic[DMH_DayName] = "'" + DayMaxHasDay + "'";
+                        columnDic[Longest_Has_TimeName] = "'" + LongestHasTime + "'";
+                        columnDic[LHT_CodeName] = "'" + LongestHasTimeCode + "'";
+                        columnDic[LHT_StartName] = "'" + LongestHasTimeStart + "'";
+                        columnDic[ImageName] = "@image";
+                        columnDic[test_timeName] = "'" + DateTime.Now.ToString(TimeFormat) + "'";
+                        columnDic[threadName] = "'" + threadN.ToString() + "'";
+                        columnDic[test_spend_timeName] = "'" + sw.Elapsed.ToString(TimeSpanFormat) + "'";
+
+                            ////Total Screen Capture
+                            var image = new Bitmap(Screen.PrimaryScreen.Bounds.Width,
+                                            Screen.PrimaryScreen.Bounds.Height);
+                        using (Graphics g = Graphics.FromImage(image))
+                        {
+                            g.CopyFromScreen(Screen.PrimaryScreen.Bounds.X,
+                                                Screen.PrimaryScreen.Bounds.Y,
+                                                0, 0,
+                                                image.Size,
+                                                CopyPixelOperation.SourceCopy);
+                        }
+                        var bytes = (byte[])new ImageConverter().ConvertTo(image, typeof(byte[]));
+
+                        var columnDic2 = new Dictionary<string, string>();
+                        columnDic2.Add(strategyName, columnDic[strategyName]);
+                        columnDic2.Add(CRName, columnDic[CRName]);
+                        columnDic2.Add(start_dayName, columnDic[start_dayName]);
+                        columnDic2.Add(end_dayName, columnDic[end_dayName]);
+                        columnDic2.Add(isLongName, columnDic[isLongName]);
+                        columnDic2.Add(isJooName, columnDic[isJooName]);
+                        columnDic2.Add(isFuturesName, columnDic[isFuturesName]);
+                        columnDic2.Add(threadName, columnDic[threadName]);
+
+                        count = 0;
+                        foreach (var column in columnDic2)
+                        {
+                            if (count == 0)
+                                statement = "SELECT *, rowid FROM 'result' where ";
+                            else
+                                statement += " and ";
+
+                            statement += column.Key + "=" + column.Value;
+
+                            count++;
+                        }
+
+                        var reader = new SQLiteCommand(statement, STResultDB).ExecuteReader();
+                        if (reader.Read())
+                        {
+                            count = 0;
                             foreach (var column in columnDic)
                             {
                                 if (count == 0)
-                                    statement = "CREATE TABLE IF NOT EXISTS 'result' (";
+                                    statement = "update 'result' set ";
                                 else
                                     statement += ", ";
 
-                                statement += "'" + column.Key + "' " + column.Value;
+                                statement += "'" + column.Key + "'=" + column.Value;
+
+                                if (count == columnDic.Count - 1)
+                                    statement += " where rowid='" + reader["rowid"] + "'";
+
+                                count++;
+                            }
+                        }
+                        else
+                        {
+                            count = 0;
+                            foreach (var column in columnDic)
+                            {
+                                if (count == 0)
+                                    statement = "INSERT INTO 'result' (";
+                                else
+                                    statement += ", ";
+
+                                statement += "'" + column.Key + "'";
+
+                                count++;
+                            }
+                            count = 0;
+                            foreach (var column in columnDic)
+                            {
+                                if (count == 0)
+                                    statement += ") values (";
+                                else
+                                    statement += ", ";
+
+                                statement += column.Value;
 
                                 if (count == columnDic.Count - 1)
                                     statement += ")";
 
                                 count++;
                             }
-
-                            new SQLiteCommand(statement, STResultDB).ExecuteNonQuery();
-
-                            columnDic[isJooName] = "'" + isJoo.ToString() + "'";
-                            columnDic[isFuturesName] = "'" + isFutures.ToString() + "'";
-                            columnDic[strategyName] = "'" + ST.ToString() + "'";
-                            columnDic[CRName] = "'" + CRType.ToString() + "'";
-                            columnDic[isLongName] = "'" + Enum.GetName(typeof(Position), isAllLongShort).ToString() + "'";
-                            columnDic[start_dayName] = "'" + start.ToString(DateTimeFormat) + "'";
-                            columnDic[end_dayName] = "'" + end.ToString(DateTimeFormat) + "'";
-                            columnDic[daysName] = "'" + Math.Round(end.Subtract(start).TotalDays, 0) + " days'";
-                            columnDic[Cumulative_ReturnName] = "'" + CR + "'";
-                            columnDic[Win_RateName] = "'" + WinRate + "'";
-                            columnDic[CountName] = "'" + AllCount + "'";
-                            columnDic[Average_Profit_RateName] = "'" + AvgProfitRate + "'";
-                            columnDic[Win_APRName] = "'" + WinAvgProfitRate + "'";
-                            columnDic[Lose_APRName] = "'" + LoseAvgProfitRate + "'";
-                            columnDic[Max_Draw_DownName] = "'" + MDD + "'";
-                            columnDic[MDD_DaysName] = "'" + MDDDays + "'";
-                            columnDic[MDD_Start_DayName] = "'" + MDDStart + "'";
-                            columnDic[MDD_Low_DayName] = "'" + MDDLow + "'";
-                            columnDic[MDD_End_DayName] = "'" + MDDEnd + "'";
-                            columnDic[Day_Max_HasName] = "'" + DayMaxHas + "'";
-                            columnDic[DMH_DayName] = "'" + DayMaxHasDay + "'";
-                            columnDic[Longest_Has_TimeName] = "'" + LongestHasTime + "'";
-                            columnDic[LHT_CodeName] = "'" + LongestHasTimeCode + "'";
-                            columnDic[LHT_StartName] = "'" + LongestHasTimeStart + "'";
-                            columnDic[ImageName] = "@image";
-                            columnDic[test_timeName] = "'" + DateTime.Now.ToString(TimeFormat) + "'";
-                            columnDic[threadName] = "'" + threadN.ToString() + "'";
-                            columnDic[test_spend_timeName] = "'" + sw.Elapsed.ToString(TimeSpanFormat) + "'";
-
-                            ////Total Screen Capture
-                            var image = new Bitmap(Screen.PrimaryScreen.Bounds.Width,
-                                                Screen.PrimaryScreen.Bounds.Height);
-                            using (Graphics g = Graphics.FromImage(image))
-                            {
-                                g.CopyFromScreen(Screen.PrimaryScreen.Bounds.X,
-                                                    Screen.PrimaryScreen.Bounds.Y,
-                                                    0, 0,
-                                                    image.Size,
-                                                    CopyPixelOperation.SourceCopy);
-                            }
-                            var bytes = (byte[])new ImageConverter().ConvertTo(image, typeof(byte[]));
-
-                            var columnDic2 = new Dictionary<string, string>();
-                            columnDic2.Add(strategyName, columnDic[strategyName]);
-                            columnDic2.Add(CRName, columnDic[CRName]);
-                            columnDic2.Add(start_dayName, columnDic[start_dayName]);
-                            columnDic2.Add(end_dayName, columnDic[end_dayName]);
-                            columnDic2.Add(isLongName, columnDic[isLongName]);
-                            columnDic2.Add(isJooName, columnDic[isJooName]);
-                            columnDic2.Add(isFuturesName, columnDic[isFuturesName]);
-                            columnDic2.Add(threadName, columnDic[threadName]);
-
-                            count = 0;
-                            foreach (var column in columnDic2)
-                            {
-                                if (count == 0)
-                                    statement = "SELECT *, rowid FROM 'result' where ";
-                                else
-                                    statement += " and ";
-
-                                statement += column.Key + "=" + column.Value;
-
-                                count++;
-                            }
-
-                            var reader = new SQLiteCommand(statement, STResultDB).ExecuteReader();
-                            if (reader.Read())
-                            {
-                                count = 0;
-                                foreach (var column in columnDic)
-                                {
-                                    if (count == 0)
-                                        statement = "update 'result' set ";
-                                    else
-                                        statement += ", ";
-
-                                    statement += "'" + column.Key + "'=" + column.Value;
-
-                                    if (count == columnDic.Count - 1)
-                                        statement += " where rowid='" + reader["rowid"] + "'";
-
-                                    count++;
-                                }
-                            }
-                            else
-                            {
-                                count = 0;
-                                foreach (var column in columnDic)
-                                {
-                                    if (count == 0)
-                                        statement = "INSERT INTO 'result' (";
-                                    else
-                                        statement += ", ";
-
-                                    statement += "'" + column.Key + "'";
-
-                                    count++;
-                                }
-                                count = 0;
-                                foreach (var column in columnDic)
-                                {
-                                    if (count == 0)
-                                        statement += ") values (";
-                                    else
-                                        statement += ", ";
-
-                                    statement += column.Value;
-
-                                    if (count == columnDic.Count - 1)
-                                        statement += ")";
-
-                                    count++;
-                                }
-                            }
-
-                            var command = new SQLiteCommand(statement, STResultDB);
-                            command.Parameters.AddWithValue("@image", bytes);
-                            command.ExecuteNonQuery();
-
-                            count = 0;
-                            foreach (var column in columnDic2)
-                            {
-                                if (count == 0)
-                                    statement = "";
-                                else
-                                    statement += ", ";
-
-                                statement += column.Key + "=" + column.Value;
-
-                                count++;
-                            }
-
-                            image.Save(STResultDBPath + statement + ".jpg", System.Drawing.Imaging.ImageFormat.Jpeg);
                         }
-                        catch (Exception e)
+
+                        var command = new SQLiteCommand(statement, STResultDB);
+                        command.Parameters.AddWithValue("@image", bytes);
+                        command.ExecuteNonQuery();
+
+                        count = 0;
+                        foreach (var column in columnDic2)
                         {
-                            throw;
+                            if (count == 0)
+                                statement = "";
+                            else
+                                statement += ", ";
+
+                            statement += column.Key + "=" + column.Value;
+
+                            count++;
                         }
-                    }));
+
+                        if (isAllLongShort == Position.All ? i2 == (int)Position.Long : i2 == (int)isAllLongShort)
+                            image.Save(STResultDBPath + statement + ".jpg", System.Drawing.Imaging.ImageFormat.Jpeg);
+                    }
+                    catch (Exception e)
+                    {
+                        throw;
+                    }
+                }));
 
                 metricDic[MetricCR].SetText(i, CR);
 
                 metricDic[MetricWinRate].SetText(i, WinRate);
                 metricDic[MetricAllCount].SetText(i, AllCount);
+                metricDic[MetricDisappear].SetText(i, disappearCount[i].ToString());
+                metricDic[MetricLastDisappear].SetText(i, lastDisappearCount[i].ToString());
                 metricDic[MetricAvgProfitRate].SetText(i, AvgProfitRate);
                 metricDic[MetricWinAvgProfitRate].SetText(i, WinAvgProfitRate);
                 metricDic[MetricLoseAvgProfitRate].SetText(i, LoseAvgProfitRate);
@@ -1380,17 +1408,17 @@ namespace BackTestingFinal
             }));
             #endregion
         }
-        decimal CalculateKelly(List<decimal> list)
+        double CalculateKelly(List<double> list)
         {
             if (list.Count <= 1)
-                return 0.5m;
+                return 0.5;
 
-            var beforeKelly = 1.01m;
-            var beforeGeoMean = decimal.MinValue;
-            var beforeKelly2 = 1.02m;
-            var beforeGeoMean2 = decimal.MinValue;
-            var kelly = 1m;
-            var geoMean = 1m;
+            var beforeKelly = 1.01D;
+            var beforeGeoMean = double.MinValue;
+            var beforeKelly2 = 1.02D;
+            var beforeGeoMean2 = double.MinValue;
+            var kelly = 1D;
+            var geoMean = 1D;
             while (true)
             {
                 for (int i = 0; i < list.Count; i++)
@@ -1398,15 +1426,15 @@ namespace BackTestingFinal
 
                 if (geoMean > beforeGeoMean)
                 {
-                    if (kelly <= 0.5m)
-                        return 0.5m;
+                    if (kelly <= 0.5)
+                        return 0.5;
 
                     beforeKelly2 = beforeKelly;
                     beforeGeoMean2 = beforeGeoMean;
                     beforeKelly = kelly;
                     beforeGeoMean = geoMean;
                     kelly = beforeKelly - (beforeKelly2 - beforeKelly);
-                    geoMean = 1m;
+                    geoMean = 1D;
                 }
                 else
                     return beforeKelly / 2;
@@ -2046,7 +2074,7 @@ namespace BackTestingFinal
                                 Code = itemData.Code,
                                 EnterTime = positionData.EnterTime,
                                 ExitTime = vm.lastStick.Time,
-                                ProfitRate = Math.Round((((Position)j == Position.Long ? vm.lastStick.Price[3] / positionData.EnterPrice : positionData.EnterPrice / vm.lastStick.Price[3]) - 1) * 100, 2),
+                                ProfitRate = Math.Round((double)(((Position)j == Position.Long ? vm.lastStick.Price[3] / positionData.EnterPrice : positionData.EnterPrice / vm.lastStick.Price[3]) - 1) * 100, 2),
                                 Duration = vm.lastStick.Time.Subtract(positionData.EnterTime).ToString(TimeSpanFormat),
                                 LorS = (Position)j
                             };
@@ -2082,7 +2110,7 @@ namespace BackTestingFinal
                                     OutEnterTime = positionData2.OutEnterTime,
                                     EnterTime = positionData2.EnterTime,
                                     ExitTime = vm.lastStick.Time,
-                                    ProfitRate = Math.Round((((Position)j == Position.Long ? vm.lastStick.Price[3] / positionData2.EnterPrice : positionData2.EnterPrice / vm.lastStick.Price[3]) - 1) * 100, 2),
+                                    ProfitRate = Math.Round((double)(((Position)j == Position.Long ? vm.lastStick.Price[3] / positionData2.EnterPrice : positionData2.EnterPrice / vm.lastStick.Price[3]) - 1) * 100, 2),
                                     Duration = vm.lastStick.Time.Subtract(positionData2.EnterTime).ToString(TimeSpanFormat),
                                     LorS = (Position)j
                                 };
@@ -2172,7 +2200,7 @@ namespace BackTestingFinal
                 threadN = 6;
 
             var from = start.Date;
-            var size = (int)end.Date.AddDays(1).Subtract(start).TotalSeconds / BaseChartTimeSet.OneMinute.seconds;
+            var size = (int)end.Date.AddDays(1).Subtract(from).TotalSeconds / BaseChartTimeSet.OneMinute.seconds;
 
             AddOrChangeLoadingText("Simulating ST" + ST + " ...(" + from.ToString(DateTimeFormat) + ")", true);
 
@@ -2312,58 +2340,59 @@ namespace BackTestingFinal
                     //        foundItemList[j].Add((itemData, positionData.foundList));
                     if (!itemData.positionData[(int)Position.Long].Enter && !itemData.positionData[(int)Position.Short].Enter && positionData.found)
                         lock (foundLocker)
-                            foundItemList[j].Add((itemData, positionData.foundList));
+                            foundItemList[j].Add(itemData.number, (itemData, positionData.foundList));
                     else
-                    if (positionData.Enter && ExitConditionFinal(itemData, (Position)j))
+                    if (positionData.Enter && (ExitConditionFinal(itemData, (Position)j) || itemData.firstLastMin.lastMin == from2))
                     {
                         positionData.Enter = false;
 
-                        if (!inside)
+                        var profitRow = (double)((Position)j == Position.Long ? vm.lastStick.Price[3] / positionData.EnterPrice : positionData.EnterPrice / vm.lastStick.Price[3]);
+                        var resultData = new BackResultData()
                         {
-                            var profitRow = ((Position)j == Position.Long ? vm.lastStick.Price[3] / positionData.EnterPrice : positionData.EnterPrice / vm.lastStick.Price[3]);
-                            var resultData = new BackResultData()
-                            {
-                                Code = itemData.Code,
-                                EnterTime = positionData.EnterTime,
-                                ExitTime = vm.lastStick.Time,
-                                ProfitRate = Math.Round((profitRow - 1) * 100, 2),
-                                Duration = vm.lastStick.Time.Subtract(positionData.EnterTime).ToString(TimeSpanFormat),
-                                BeforeGap = positionData.EnterTime.Subtract(itemData.BeforeExitTime).ToString(TimeSpanFormat),
-                                LorS = (Position)j
-                            };
+                            Code = itemData.Code,
+                            EnterTime = positionData.EnterTime,
+                            ExitTime = vm.lastStick.Time,
+                            ProfitRate = Math.Round((profitRow - 1) * 100, 2),
+                            Duration = vm.lastStick.Time.Subtract(positionData.EnterTime).ToString(TimeSpanFormat),
+                            BeforeGap = positionData.EnterTime.Subtract(itemData.BeforeExitTime).ToString(TimeSpanFormat),
+                            LorS = (Position)j
+                        };
 
-                            if (itemData.resultDataForMetric[j] != null)
+                        if (itemData.firstLastMin.lastMin != from2)
+                        {
+                            if (!inside)
                             {
-                                if (itemData.resultDataForMetric[j].Code == itemData.Code)
-                                    itemData.resultDataForMetric[j].ExitTime = resultData.ExitTime;
-                                lock (itemData.resultDataForMetric[j].locker)
+                                if (itemData.resultDataForMetric[j] != null)
                                 {
-                                    itemData.resultDataForMetric[j].ProfitRate += profitRow;
-                                    itemData.resultDataForMetric[j].listForAvg.Add(resultData);
+                                    if (itemData.resultDataForMetric[j].Code == itemData.Code)
+                                        itemData.resultDataForMetric[j].ExitTime = resultData.ExitTime;
+                                    lock (itemData.resultDataForMetric[j].locker)
+                                    {
+                                        itemData.resultDataForMetric[j].Count++;
+                                        itemData.resultDataForMetric[j].ProfitRate += profitRow;
+                                        itemData.resultDataForMetric[j].listForAvg.Add(resultData);
+                                    }
+                                    itemData.resultDataForMetric[j] = null;
                                 }
-                                itemData.resultDataForMetric[j] = null;
-                            }
 
-                            itemData.BeforeExitTime = resultData.ExitTime;
+                                itemData.BeforeExitTime = resultData.ExitTime;
 
-                            var enterIndex = simulDays[0].IndexOfKey(resultData.EnterTime.Date);
-                            for (int k = simulDays[0].IndexOfKey(resultData.ExitTime.Date); k >= 0; k--)
-                            {
-                                if (k < enterIndex)
-                                    break;
+                                PutResultDataToSimulDays(resultData, simulDays[j], ResultDatasType.Normal);
 
-                                lock (dayLocker)
+                                var BeforeGap = TimeSpan.ParseExact(resultData.BeforeGap, TimeSpanFormat, null);
+                                if (BeforeGap < itemData.ShortestBeforeGap)
                                 {
-                                    simulDays[j].Values[k].resultDatas.Add(resultData);
+                                    itemData.ShortestBeforeGap = BeforeGap;
+                                    itemData.ShortestBeforeGapText = BeforeGap.ToString();
                                 }
                             }
+                        }
+                        else
+                        {
+                            if (itemData.resultDataForMetric[j] != null && itemData.resultDataForMetric[j].Code == itemData.Code)
+                                itemData.resultDataForMetric[j].ExitTime = resultData.ExitTime;
 
-                            var BeforeGap = TimeSpan.ParseExact(resultData.BeforeGap, TimeSpanFormat, null);
-                            if (BeforeGap < itemData.ShortestBeforeGap)
-                            {
-                                itemData.ShortestBeforeGap = BeforeGap;
-                                itemData.ShortestBeforeGapText = BeforeGap.ToString();
-                            }
+                            PutResultDataToSimulDays(resultData, simulDays[j], from2 == end ? ResultDatasType.Last : ResultDatasType.Disappear);
                         }
                     }
 
@@ -2388,7 +2417,7 @@ namespace BackTestingFinal
                                 OutEnterTime = positionData2.OutEnterTime,
                                 EnterTime = positionData2.EnterTime,
                                 ExitTime = vm.lastStick.Time,
-                                ProfitRate = Math.Round((((Position)j == Position.Long ? vm.lastStick.Price[3] / positionData2.EnterPrice : positionData2.EnterPrice / vm.lastStick.Price[3]) - 1) * 100, 2),
+                                ProfitRate = Math.Round((double)(((Position)j == Position.Long ? vm.lastStick.Price[3] / positionData2.EnterPrice : positionData2.EnterPrice / vm.lastStick.Price[3]) - 1) * 100, 2),
                                 Duration = vm.lastStick.Time.Subtract(positionData2.EnterTime).ToString(TimeSpanFormat),
                                 BeforeGap = positionData2.EnterTime.Subtract(itemData.BeforeExitTime).ToString(TimeSpanFormat),
                                 LorS = (Position)j
@@ -2466,9 +2495,10 @@ namespace BackTestingFinal
                     }
                    }, new ExecutionDataflowBlockOptions { MaxDegreeOfParallelism = threadN });
 
-                foundItemList = new List<(BaseItemData itemData, List<(DateTime foundTime, ChartValues chartValues)>)>[] 
-                    { new List<(BaseItemData itemData, List<(DateTime foundTime, ChartValues chartValues)>)>(), 
-                        new List<(BaseItemData itemData, List<(DateTime foundTime, ChartValues chartValues)>)>() };
+                foundItemList = new SortedList<int, (BaseItemData itemData, List<(DateTime foundTime, ChartValues chartValues)> foundList)>[] {
+                    new SortedList<int, (BaseItemData itemData, List<(DateTime foundTime, ChartValues chartValues)> foundList)>(),
+                    new SortedList<int, (BaseItemData itemData, List<(DateTime foundTime, ChartValues chartValues)> foundList)>()
+                };
 
                 foreach (var iD in itemDataDic.Values)
                     block.Post(iD);
@@ -2489,7 +2519,7 @@ namespace BackTestingFinal
                     {
                         var simulDay = simulDays[j][from2.Date];
                         if (conditionResult.position[j])
-                            foreach (var foundItem in foundItemList[j])
+                            foreach (var foundItem in foundItemList[j].Values)
                                 if (from2 >= start)
                                 //if (!foundItem.itemData.positionData[(int)Position.Long].Enter && !foundItem.itemData.positionData[(int)Position.Short].Enter)
                                 //if (!foundItem.itemData.positionData[j].Enter)
@@ -2515,11 +2545,8 @@ namespace BackTestingFinal
                                     }
 
                                     var resultData = simulDay.ResultDatasForMetric[simulDay.ResultDatasForMetric.Count - 1];
-                                    //if (CRType < CR.LimitPlusCount0 || resultData.Count < ItemLimit + (int)CRType)
-                                    {
-                                        resultData.Count++;
+                                    if (CRType < CR.LimitPlusCount0 || resultData.Count < ItemLimit + (int)CRType)
                                         (foundItem.itemData as BackItemData).resultDataForMetric[j] = resultData;
-                                    }
                                     if (resultData.Count > maxHas[j])
                                         maxHas[j] = resultData.Count;
                                 }
@@ -2529,6 +2556,23 @@ namespace BackTestingFinal
             foreach (var iD in itemDataDic.Values)
                 foreach (var l in iD.listDic.Values)
                     l.Reset();
+        }
+        void PutResultDataToSimulDays(BackResultData resultData, SortedList<DateTime, DayData> simulDays, ResultDatasType type)
+        {
+            var enterIndex = simulDays.IndexOfKey(resultData.EnterTime.Date);
+            for (int k = simulDays.IndexOfKey(resultData.ExitTime.Date); k >= 0; k--)
+            {
+                if (k < enterIndex)
+                    break;
+
+                lock (dayLocker)
+                    if (type == ResultDatasType.Normal)
+                        simulDays.Values[k].resultDatas.Add(resultData);
+                    else if (type == ResultDatasType.Disappear)
+                        simulDays.Values[k].disResultDatas.Add(resultData);
+                    else
+                        simulDays.Values[k].lastResultDatas.Add(resultData);
+            }
         }
 
         List<TradeStick> LoadSticks(BackItemData itemData, ChartValues chartValues = default, DateTime from = default, int size = default, bool toPast = true)

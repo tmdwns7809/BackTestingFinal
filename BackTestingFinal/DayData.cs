@@ -11,6 +11,8 @@ namespace BackTestingFinal
     {
         public DateTime Date;
         public List<BackResultData> resultDatas = new List<BackResultData>();
+        public List<BackResultData> disResultDatas = new List<BackResultData>();
+        public List<BackResultData> lastResultDatas = new List<BackResultData>();
         public List<TradeStick> day_sticks_for_market = new List<TradeStick>();
 
         public int isL;
@@ -26,5 +28,12 @@ namespace BackTestingFinal
 
         public List<BackResultData> ResultDatasForMetric = new List<BackResultData>();
 
+    }
+
+    public enum ResultDatasType
+    {
+        Normal,
+        Disappear,
+        Last
     }
 }

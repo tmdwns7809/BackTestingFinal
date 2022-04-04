@@ -10,9 +10,9 @@ namespace BackTestingFinal
     {
         public bool isLong;
 
-        public decimal CR = 1m;
+        public double CR = 1D;
         public double Kelly = 1D;
-        public List<decimal> ProfitRates = new List<decimal>();
+        public List<double> ProfitRates = new List<double>();
 
         public DrawDownData DD = default;
         public DrawDownData MDD = default;

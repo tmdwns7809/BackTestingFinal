@@ -15,7 +15,7 @@ namespace BackTestingFinal
         public DateTime EnterTime;
         public DateTime OutEnterTime;
         public DateTime ExitTime;
-        public decimal ProfitRate = 0;
+        public double ProfitRate = 0;
         public int Count = 0;
         public double CumulativeReturnWhenEnter;
         public string Duration;
