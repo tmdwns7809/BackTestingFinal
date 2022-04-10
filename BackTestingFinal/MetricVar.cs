@@ -16,6 +16,7 @@ namespace BackTestingFinal
 
         public DrawDownData DD = default;
         public DrawDownData MDD = default;
+        public DrawDownData LDD = default;
 
         public int highestHasItemsAtADay = int.MinValue;
         public DateTime highestHasItemsDate = default;
@@ -28,5 +29,12 @@ namespace BackTestingFinal
         public double ProfitWinRateSum = 0;
 
         public int HasItemsAtADay = 0;
+
+        public int disappearCount;
+        public int lastDisappearCount;
+        public double baseKelly = 0.5;
+        public double lowestKelly = double.MaxValue;
+        public double beforeCR;
+
     }
 }

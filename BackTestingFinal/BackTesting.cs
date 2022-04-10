@@ -75,6 +75,11 @@ namespace BackTestingFinal
         string MetricMDDLow = "MDDLow";
         string MetricMDDEnd = "MDDEnd";
         string MetricMDDDays = "MDDDays";
+        string MetricLDD = "LDD";
+        string MetricLDDStart = "LDDStart";
+        string MetricLDDLow = "LDDLow";
+        string MetricLDDEnd = "LDDEnd";
+        string MetricLDDDays = "LDDDays";
         string MetricDays = "    Days";
         string MetricStart = "    Start";
         string MetricLow = "    Low";
@@ -87,17 +92,19 @@ namespace BackTestingFinal
         string MetricAvgProfitRate = "    APR";
         string MetricWinAvgProfitRate = "    WAPR";
         string MetricLoseAvgProfitRate = "    LAPR";
+        string MetricCommision = "    Commision";
+        string MetricSlippage = "    Slippage";
         string MetricDayMaxHas = "Day Max Has";
         string MetricDayMaxHasDay = "    Date";
         string MetricLongestHasTime = "LH Days";
         string MetricLongestHasTimeCode = "    Code";
         string MetricLongestHasTimeStart = "    Start";
+        string MetricBaseKelly = "Base Kelly";
+        string MetricLowestKelly = "Lowest Kelly";
         string MetricAverageHasDays = "AVGH Days";
 
         string sticksDBpath;
         string sticksDBbaseName;
-
-        string TimeSpanFormat = @"d\.hh\:mm\:ss";
 
         private object dayLocker = new object();
         private object foundLocker = new object();
@@ -118,7 +125,11 @@ namespace BackTestingFinal
 
         int[] maxHas = new int[] { 0, 0 };
 
-        public BackTesting(Form form, bool isJoo) : base(form, isJoo, 1)
+        public double slippage = 0.2;
+
+        CR lastCR;
+
+        public BackTesting(Form form, bool isJoo) : base(form, isJoo, 1.112m)
         {
             sticksDBpath = BaseSticksDB.path;
             sticksDBbaseName = BaseSticksDB.BaseName;
@@ -196,6 +207,10 @@ namespace BackTestingFinal
                     {
                         ca2.AxisX.ScaleView.ZoomReset();
                         ca2.AxisY2.ScaleView.ZoomReset();
+                        if (!double.IsNaN(ca2.CursorX.Position))
+                            ca2.CursorX.SetCursorPosition(double.NaN);
+                        if (!double.IsNaN(ca2.CursorY.Position))
+                            ca2.CursorY.SetCursorPosition(double.NaN);
                     }
                 }
             };
@@ -208,7 +223,7 @@ namespace BackTestingFinal
             chartAreaCR.InnerPlotPosition = new ElementPosition(mainChartArea.InnerPlotPosition.X, mainChartArea.InnerPlotPosition.Y, mainChartArea.InnerPlotPosition.Width, mainChartArea.InnerPlotPosition.Height - 7);
             chartAreaCR.AxisX.IntervalAutoMode = IntervalAutoMode.FixedCount;
             chartAreaCR.CursorX.IsUserSelectionEnabled = true;
-            chartAreaCR.AxisY.LabelStyle.Format = "{0:0}%";
+            chartAreaCR.AxisY.LabelStyle.Format = "{0:#,0}%";
             chartAreaCR.AxisY.IntervalAutoMode = IntervalAutoMode.FixedCount;
             chartAreaCR.AxisY.ScrollBar.Enabled = true;
             chartAreaCR.AxisY.MajorGrid.Enabled = false;
@@ -216,7 +231,7 @@ namespace BackTestingFinal
             chartAreaCR.AxisY.LabelStyle.Interval = double.NaN;
             chartAreaCR.AxisY.Maximum = double.NaN;
             chartAreaCR.AxisY.Minimum = double.NaN;
-            chartAreaCR.AxisY2.LabelStyle.Format = "{0:0}%";
+            chartAreaCR.AxisY2.LabelStyle.Format = "{0:#,0}%";
             chartAreaCR.AxisY2.IntervalAutoMode = IntervalAutoMode.FixedCount;
             chartAreaCR.AxisY2.ScrollBar.Enabled = true;
             //chartArea6.AxisY2.StripLines.Add(new StripLine() { IntervalOffset = 0, BackColor = ColorSet.Border, StripWidth = 0.5 });
@@ -226,36 +241,56 @@ namespace BackTestingFinal
 
             var chartAreaMCR = totalChart.ChartAreas.Add("ChartAreaMarketCumulativeReturn");
             SetChartAreaFirst(chartAreaMCR);
-            chartAreaMCR.Position = new ElementPosition(chartAreaCR.Position.X, chartAreaCR.Position.Y + chartAreaCR.Position.Height, chartAreaCR.Position.Width, chartAreaCR.Position.Height);
-            chartAreaMCR.InnerPlotPosition = new ElementPosition(chartAreaCR.InnerPlotPosition.X, chartAreaCR.InnerPlotPosition.Y, chartAreaCR.InnerPlotPosition.Width, chartAreaCR.InnerPlotPosition.Height);
+            chartAreaMCR.Position = new ElementPosition(chartAreaCR.Position.X, chartAreaCR.Position.Y + chartAreaCR.Position.Height, chartAreaCR.Position.Width, chartAreaCR.Position.Height / 5 * 3);
+            chartAreaMCR.InnerPlotPosition = new ElementPosition(chartAreaCR.InnerPlotPosition.X, chartAreaCR.InnerPlotPosition.Y, chartAreaCR.InnerPlotPosition.Width, 100 - chartAreaCR.InnerPlotPosition.Y);
             chartAreaMCR.AxisX.IntervalAutoMode = IntervalAutoMode.FixedCount;
             chartAreaMCR.CursorX.IsUserSelectionEnabled = true;
-            chartAreaMCR.AxisY.LabelStyle.Format = "{0:0}%";
+            chartAreaMCR.AxisY.LabelStyle.Format = "{0:#,0}%";
             chartAreaMCR.AxisY.IntervalAutoMode = IntervalAutoMode.FixedCount;
             chartAreaMCR.AxisY.ScrollBar.Enabled = true;
             chartAreaMCR.AxisY.MajorGrid.Enabled = false;
-            chartAreaMCR.AxisY.MajorTickMark.Enabled = true;
             chartAreaMCR.AxisY.LabelStyle.Interval = double.NaN;
             chartAreaMCR.AxisY.Maximum = double.NaN;
             chartAreaMCR.AxisY.Minimum = double.NaN;
-            chartAreaMCR.AxisY2.LabelStyle.Format = "{0:0}%";
+            chartAreaMCR.AxisY2.LabelStyle.Format = "{0:#,0}%";
             chartAreaMCR.AxisY2.IntervalAutoMode = IntervalAutoMode.FixedCount;
             chartAreaMCR.AxisY2.ScrollBar.Enabled = true;
+            chartAreaMCR.AxisY2.MajorGrid.Enabled = false;
             chartAreaMCR.AlignWithChartArea = chartAreaCR.Name;
             chartAreaMCR.CursorY.IsUserEnabled = true;
             chartAreaMCR.CursorY.IsUserSelectionEnabled = true;
             chartAreaMCR.CursorY.AxisType = AxisType.Secondary;
 
+            var chartAreaMV = totalChart.ChartAreas.Add("ChartAreaMarketVolume");
+            SetChartAreaFirst(chartAreaMV);
+            chartAreaMV.Position = new ElementPosition(chartAreaCR.Position.X, chartAreaMCR.Position.Y + chartAreaMCR.Position.Height, chartAreaCR.Position.Width, chartAreaCR.Position.Height - chartAreaMCR.Position.Height);
+            chartAreaMV.InnerPlotPosition = new ElementPosition(chartAreaCR.InnerPlotPosition.X, 0, chartAreaCR.InnerPlotPosition.Width, 85);
+            chartAreaMV.AxisX.IntervalAutoMode = IntervalAutoMode.FixedCount;
+            chartAreaMV.CursorX.IsUserSelectionEnabled = true;
+            chartAreaMV.AxisY.LabelStyle.Enabled = false;
+            chartAreaMV.AxisY.ScrollBar.Enabled = true;
+            chartAreaMV.AxisY.MajorGrid.Enabled = false;
+            chartAreaMV.AxisY.Maximum = double.NaN;
+            chartAreaMV.AxisY.Minimum = double.NaN;
+            chartAreaMV.AxisY2.IntervalAutoMode = IntervalAutoMode.FixedCount;
+            chartAreaMV.AxisY2.LabelStyle.Enabled = false;
+            chartAreaMV.AxisY2.ScrollBar.Enabled = true;
+            chartAreaMV.AxisY2.MajorGrid.Enabled = false;
+            chartAreaMV.AlignWithChartArea = chartAreaCR.Name;
+            chartAreaMV.CursorY.IsUserEnabled = true;
+            chartAreaMV.CursorY.IsUserSelectionEnabled = true;
+            chartAreaMV.CursorY.AxisType = AxisType.Secondary;
+
             var chartAreaPR = totalChart.ChartAreas.Add("ChartAreaProfitRate");
             SetChartAreaFirst(chartAreaPR);
-            chartAreaPR.Position = new ElementPosition(chartAreaMCR.Position.X, chartAreaMCR.Position.Y + chartAreaMCR.Position.Height, chartAreaMCR.Position.Width, chartAreaMCR.Position.Height / 2);
-            chartAreaPR.InnerPlotPosition = new ElementPosition(chartAreaCR.InnerPlotPosition.X, chartAreaCR.InnerPlotPosition.Y, chartAreaCR.InnerPlotPosition.Width, chartAreaCR.InnerPlotPosition.Height);
+            chartAreaPR.Position = new ElementPosition(chartAreaMV.Position.X, chartAreaMV.Position.Y + chartAreaMV.Position.Height, chartAreaCR.Position.Width, chartAreaCR.Position.Height / 2);
+            chartAreaPR.InnerPlotPosition = new ElementPosition(chartAreaCR.InnerPlotPosition.X, chartAreaCR.InnerPlotPosition.Y, chartAreaCR.InnerPlotPosition.Width, chartAreaCR.InnerPlotPosition.Height - 7);
             chartAreaPR.AxisX.IntervalAutoMode = IntervalAutoMode.FixedCount;
             chartAreaPR.CursorX.IsUserSelectionEnabled = true;
             chartAreaPR.AxisY.Enabled = AxisEnabled.False;
             chartAreaPR.AxisY.Maximum = double.NaN;
             chartAreaPR.AxisY.Minimum = double.NaN;
-            chartAreaPR.AxisY2.LabelStyle.Format = "{0:0}%";
+            chartAreaPR.AxisY2.LabelStyle.Format = "{0:#,0}%";
             chartAreaPR.AxisY2.IntervalAutoMode = IntervalAutoMode.FixedCount;
             chartAreaPR.AxisY2.ScrollBar.Enabled = true;
             chartAreaPR.AlignWithChartArea = chartAreaCR.Name;
@@ -335,6 +370,20 @@ namespace BackTestingFinal
             seriesMCR2.Color = Color.FromArgb(200, Color.Orange);
             seriesMCR2.YAxisType = AxisType.Secondary;
             seriesMCR2.ChartArea = chartAreaMCR.Name;
+
+            var seriesMV1 = totalChart.Series.Add("MarketVolume1");
+            seriesMV1.ChartType = SeriesChartType.Line;
+            seriesMV1.XValueType = ChartValueType.Time;
+            seriesMV1.Color = Color.FromArgb(200, Color.Red);
+            seriesMV1.YAxisType = AxisType.Primary;
+            seriesMV1.ChartArea = chartAreaMV.Name;
+
+            var seriesMV2 = totalChart.Series.Add("MarketVolume2");
+            seriesMV2.ChartType = SeriesChartType.Line;
+            seriesMV2.XValueType = ChartValueType.Time;
+            seriesMV2.Color = Color.FromArgb(200, Color.Orange);
+            seriesMV2.YAxisType = AxisType.Secondary;
+            seriesMV2.ChartArea = chartAreaMV.Name;
 
 
             SetButton(totalButton, "T", (sender, e) =>
@@ -548,7 +597,7 @@ namespace BackTestingFinal
                     ("Short", "Short", 4)
                 });
             metricListView.Size = new Size(GetFormWidth(form) - mainChart.Location.X - mainChart.Width - 5,
-                (GetFormHeight(form) - CRComboBox.Location.Y - CRComboBox.Height) / 2 - 10);
+                (GetFormHeight(form) - CRComboBox.Location.Y - CRComboBox.Height) / 5 * 3 - 10);
             metricListView.Location = new Point(mainChart.Location.X + mainChart.Size.Width, CRComboBox.Location.Y + CRComboBox.Height + 5);
             #endregion
 
@@ -731,6 +780,10 @@ namespace BackTestingFinal
             metricListView.AddObject(metricDic[MetricWinAvgProfitRate]);
             metricDic.Add(MetricLoseAvgProfitRate, new MetricData() { MetricName = MetricLoseAvgProfitRate });
             metricListView.AddObject(metricDic[MetricLoseAvgProfitRate]);
+            metricDic.Add(MetricCommision, new MetricData() { MetricName = MetricCommision });
+            metricListView.AddObject(metricDic[MetricCommision]);
+            metricDic.Add(MetricSlippage, new MetricData() { MetricName = MetricSlippage });
+            metricListView.AddObject(metricDic[MetricSlippage]);
             metricListView.AddObject(new MetricData());
 
             metricDic.Add(MetricMDD, new MetricData() { MetricName = MetricMDD });
@@ -743,6 +796,16 @@ namespace BackTestingFinal
             metricListView.AddObject(metricDic[MetricMDDLow]);
             metricDic.Add(MetricMDDEnd, new MetricData() { MetricName = MetricEnd });
             metricListView.AddObject(metricDic[MetricMDDEnd]);
+            metricDic.Add(MetricLDD, new MetricData() { MetricName = MetricLDD });
+            metricListView.AddObject(metricDic[MetricLDD]);
+            metricDic.Add(MetricLDDDays, new MetricData() { MetricName = MetricDays });
+            metricListView.AddObject(metricDic[MetricLDDDays]);
+            metricDic.Add(MetricLDDStart, new MetricData() { MetricName = MetricStart });
+            metricListView.AddObject(metricDic[MetricLDDStart]);
+            metricDic.Add(MetricLDDLow, new MetricData() { MetricName = MetricLow });
+            metricListView.AddObject(metricDic[MetricLDDLow]);
+            metricDic.Add(MetricLDDEnd, new MetricData() { MetricName = MetricEnd });
+            metricListView.AddObject(metricDic[MetricLDDEnd]);
             metricListView.AddObject(new MetricData());
 
             metricDic.Add(MetricDayMaxHas, new MetricData() { MetricName = MetricDayMaxHas });
@@ -757,13 +820,19 @@ namespace BackTestingFinal
             metricListView.AddObject(metricDic[MetricLongestHasTimeCode]);
             metricDic.Add(MetricLongestHasTimeStart, new MetricData() { MetricName = MetricLongestHasTimeStart });
             metricListView.AddObject(metricDic[MetricLongestHasTimeStart]);
+            metricListView.AddObject(new MetricData());
+
+            metricDic.Add(MetricBaseKelly, new MetricData() { MetricName = MetricBaseKelly });
+            metricListView.AddObject(metricDic[MetricBaseKelly]);
+            metricDic.Add(MetricLowestKelly, new MetricData() { MetricName = MetricLowestKelly });
+            metricListView.AddObject(metricDic[MetricLowestKelly]);
         }
 
         void RunMain(DateTime start, DateTime end, Position isAllLongShort, CR CRType)
         {
             form.BeginInvoke(new Action(() => { ClearChart(totalChart, true); }));
 
-            if (start < startDone || end > endDone)
+            if (lastCR != CRType || start < startDone || end > endDone)
             {
                 SetDB();
 
@@ -797,6 +866,8 @@ namespace BackTestingFinal
 
                 startDone = start;
                 endDone = end;
+
+                lastCR = CRType;
             }
 
             form.BeginInvoke(new Action(() =>
@@ -830,16 +901,12 @@ namespace BackTestingFinal
             foreach (var itemData in itemDataDic.Values)
                 itemData.Reset();
 
-            var beforeCR = new double[2];
-
             var CRType = (CR)Enum.Parse(typeof(CR), CRComboBox.Text);
 
             var market1 = LoadSticks(itemDataDic["BTCUSDT"], BaseChartTimeSet.OneDay, start.Date, (int)end.Date.AddDays(1).Subtract(start.Date).TotalDays, false);
             var market2 = LoadSticks(itemDataDic["ETHUSDT"], BaseChartTimeSet.OneDay, start.Date, (int)end.Date.AddDays(1).Subtract(start.Date).TotalDays, false);
             var m1I = 0;
             var m2I = 0;
-            var disappearCount = new int[2];
-            var lastDisappearCount = new int[2];
 
             for (int j = (int)Position.Long; j <= (int)Position.Short; j++)
                 if (isAllLongShort == Position.All || isAllLongShort == (Position)j)
@@ -871,7 +938,7 @@ namespace BackTestingFinal
                                 MetricVars[(int)resultData.LorS].HasItemsAtADay++;
                                 MetricVars[(int)resultData.LorS].Count++;
                                 MetricVars[(int)resultData.LorS].ProfitRateSum += resultData.ProfitRate;
-                                if (resultData.ProfitRate > commisionRate)
+                                if (resultData.ProfitRate > commisionRate + slippage)
                                 {
                                     simulDays[j].Values[i].Win++;
                                     itemData.Win++;
@@ -887,24 +954,30 @@ namespace BackTestingFinal
                             MetricVars[j].highestHasItemsDate = simulDays[j].Keys[i];
                         }
 
-                        var Kelly = CalculateKelly(MetricVars[j].ProfitRates);
+                        var Kelly = CalculateKelly(MetricVars[j].ProfitRates, MetricVars[j].baseKelly);
+                        if (MetricVars[j].lowestKelly > Kelly)
+                            MetricVars[j].lowestKelly = Kelly;
+
+                        if (simulDays[j].Keys[i].ToString(TimeFormat) == "2021-05-03 00:00:00" || simulDays[j].Keys[i].ToString(TimeFormat) == "2021-05-11 00:00:00")
+                            Kelly = Kelly;
+
                         foreach (var resultData in simulDays[j].Values[i].ResultDatasForMetric)
                             if (resultData.EnterTime.Date == simulDays[j].Keys[i] && resultData.ExitTime.Date <= end)
                             {
                                 if (resultData.Count == 0)
                                     continue;
                                     
-                                if (beforeCR[j] != default && beforeCR[j] != MetricVars[j].CR)
+                                if (MetricVars[j].beforeCR != default && MetricVars[j].beforeCR != MetricVars[j].CR)
                                     ShowError(form, "CR Error");
 
-                                var avgPR = (resultData.ProfitRate / resultData.Count - 1) * 100 - commisionRate;
+                                var avgPR = (resultData.ProfitRate / resultData.Count - 1) * 100 - commisionRate - slippage;
 
                                 if (CRType != CR.AllWithMinimum)
                                     MetricVars[j].CR *= 1 + avgPR * Kelly / 100;
                                 else
                                     MetricVars[j].CR += avgPR / 100 / maxHas[j] * resultData.Count;
 
-                                beforeCR[j] = MetricVars[j].CR;
+                                MetricVars[j].beforeCR = MetricVars[j].CR;
 
                                 MetricVars[j].ProfitRates.Add(avgPR);
                                 //resultList1[j].Add((MetricVars[j].CR, avgPR, Kelly));
@@ -912,11 +985,11 @@ namespace BackTestingFinal
 
                         foreach (var resultData in simulDays[j].Values[i].disResultDatas)
                             if (resultData.EnterTime.Date == simulDays[j].Keys[i] && resultData.ExitTime.Date <= end)
-                                disappearCount[j]++;
+                                MetricVars[j].disappearCount++;
 
                         foreach (var resultData in simulDays[j].Values[i].lastResultDatas)
                             if (resultData.EnterTime.Date == simulDays[j].Keys[i] && resultData.ExitTime.Date <= end)
-                                lastDisappearCount[j]++;
+                                MetricVars[j].lastDisappearCount++;
 
                         if (MetricVars[j].DD == default)
                         {
@@ -929,6 +1002,7 @@ namespace BackTestingFinal
                                 LastCumulativeReturnIndex = i,
                             };
                             MetricVars[j].MDD = MetricVars[j].DD;
+                            MetricVars[j].LDD = MetricVars[j].DD;
                         }
                         else
                         {
@@ -945,6 +1019,9 @@ namespace BackTestingFinal
                                     || (MetricVars[j].DD.LowestCumulativeReturn / MetricVars[j].DD.HighestCumulativeReturn == MetricVars[j].MDD.LowestCumulativeReturn / MetricVars[j].MDD.HighestCumulativeReturn &&
                                         MetricVars[j].DD.LastCumulativeReturnIndex - MetricVars[j].DD.HighestCumulativeReturnIndex > MetricVars[j].MDD.LastCumulativeReturnIndex - MetricVars[j].MDD.HighestCumulativeReturnIndex))
                                     MetricVars[j].MDD = MetricVars[j].DD;
+                                if (MetricVars[j].LDD == default || 
+                                    MetricVars[j].DD.LastCumulativeReturnIndex - MetricVars[j].DD.HighestCumulativeReturnIndex > MetricVars[j].LDD.LastCumulativeReturnIndex - MetricVars[j].LDD.HighestCumulativeReturnIndex)
+                                    MetricVars[j].LDD = MetricVars[j].DD;
 
                                 MetricVars[j].DD = new DrawDownData()
                                 {
@@ -990,17 +1067,25 @@ namespace BackTestingFinal
                             if (date >= market1[0].Time && date <= market1[market1.Count - 1].Time)
                             {
                                 totalChart.Series[6].Points.AddXY(axisLabel, Math.Round((market1[m1I].Price[3] / market1[0].Price[3] - 1) * 100, 0));
+                                totalChart.Series[8].Points.AddXY(axisLabel, market1[m1I].Ms + market1[m1I].Md);
                                 m1I++;
                             }
                             else
+                            {
                                 totalChart.Series[6].Points.AddXY(axisLabel, 0);
+                                totalChart.Series[8].Points.AddXY(axisLabel, 0);
+                            }
                             if (date >= market2[0].Time && date <= market2[market2.Count - 1].Time)
                             {
                                 totalChart.Series[7].Points.AddXY(axisLabel, Math.Round((market2[m2I].Price[3] / market2[0].Price[3] - 1) * 100, 0));
+                                totalChart.Series[9].Points.AddXY(axisLabel, market2[m2I].Ms + market2[m2I].Md);
                                 m2I++;
                             }
                             else
+                            {
                                 totalChart.Series[7].Points.AddXY(axisLabel, 0);
+                                totalChart.Series[9].Points.AddXY(axisLabel, 0);
+                            }
                         }
                     }
 
@@ -1026,289 +1111,362 @@ namespace BackTestingFinal
                 var CR = "";
                 var WinRate = "";
                 var AllCount = "";
+                var DisappearCount = "";
+                var LastDisappearCount = "";
                 var AvgProfitRate = "";
                 var WinAvgProfitRate = "";
                 var LoseAvgProfitRate = "";
+                var Commision = "";
+                var Slippage = "";
                 var MDD = "";
                 var MDDDays = "";
                 var MDDStart = "";
                 var MDDLow = "";
                 var MDDEnd = "";
+                var LDD = "";
+                var LDDDays = "";
+                var LDDStart = "";
+                var LDDLow = "";
+                var LDDEnd = "";
                 var DayMaxHas = "";
                 var DayMaxHasDay = "";
                 var LongestHasTime = "";
                 var LongestHasTimeCode = "";
                 var LongestHasTimeStart = "";
+                var BaseKelly = "";
+                var LowestKelly = "";
                 if (MetricVars[i].Count != 0)
                 {
-                    CR = Math.Round((MetricVars[i].CR - 1) * 100, 0) + "%";
+                    CR = Math.Round((MetricVars[i].CR - 1) * 100, 0).ToString("#,0") + "%";
 
                     WinRate = Math.Round((double)MetricVars[i].Win / MetricVars[i].Count * 100, 1) + "%";
-                    AllCount = MetricVars[i].Count.ToString();
+                    AllCount = MetricVars[i].Count.ToString("#,0");
+                    DisappearCount = MetricVars[i].disappearCount.ToString("#,0");
+                    LastDisappearCount = MetricVars[i].lastDisappearCount.ToString("#,0");
                     AvgProfitRate = Math.Round(MetricVars[i].ProfitRateSum / MetricVars[i].Count, 2) + "%";
                     WinAvgProfitRate = MetricVars[i].Win == 0 ? "0%" : (Math.Round(MetricVars[i].ProfitWinRateSum / MetricVars[i].Win, 2) + "%");
                     LoseAvgProfitRate = MetricVars[i].Count == MetricVars[i].Win ? "0%" : (Math.Round((MetricVars[i].ProfitRateSum - MetricVars[i].ProfitWinRateSum) / (MetricVars[i].Count - MetricVars[i].Win), 2) + "%");
+                    Commision = Math.Round(commisionRate, 2) + "%";
+                    Slippage = Math.Round(slippage, 2) + "%";
 
                     MDD = Math.Round((MetricVars[i].MDD.LowestCumulativeReturn / MetricVars[i].MDD.HighestCumulativeReturn - 1) * 100, 0) + "%";
                     MDDDays = MetricVars[i].MDD.LastCumulativeReturnIndex - MetricVars[i].MDD.HighestCumulativeReturnIndex + " days";
                     MDDStart = simulDays[i].Keys[MetricVars[i].MDD.HighestCumulativeReturnIndex].ToString(DateTimeFormat);
-                    MDDLow = simulDays[i].Keys[MetricVars[i].MDD.LastCumulativeReturnIndex].ToString(DateTimeFormat);
-                    MDDEnd = simulDays[i].Keys[MetricVars[i].MDD.LowestCumulativeReturnIndex].ToString(DateTimeFormat);
+                    MDDLow = simulDays[i].Keys[MetricVars[i].MDD.LowestCumulativeReturnIndex].ToString(DateTimeFormat);
+                    MDDEnd = simulDays[i].Keys[MetricVars[i].MDD.LastCumulativeReturnIndex].ToString(DateTimeFormat);
+                    LDD = Math.Round((MetricVars[i].LDD.LowestCumulativeReturn / MetricVars[i].LDD.HighestCumulativeReturn - 1) * 100, 0) + "%";
+                    LDDDays = MetricVars[i].LDD.LastCumulativeReturnIndex - MetricVars[i].LDD.HighestCumulativeReturnIndex + " days";
+                    LDDStart = simulDays[i].Keys[MetricVars[i].LDD.HighestCumulativeReturnIndex].ToString(DateTimeFormat);
+                    LDDLow = simulDays[i].Keys[MetricVars[i].LDD.LowestCumulativeReturnIndex].ToString(DateTimeFormat);
+                    LDDEnd = simulDays[i].Keys[MetricVars[i].LDD.LastCumulativeReturnIndex].ToString(DateTimeFormat);
 
-                    DayMaxHas = MetricVars[i].highestHasItemsAtADay.ToString();
+                    DayMaxHas = MetricVars[i].highestHasItemsAtADay.ToString("#,0");
                     DayMaxHasDay = MetricVars[i].highestHasItemsDate.ToString(DateTimeFormat);
 
                     LongestHasTime = MetricVars[i].longestHasTime.ToString(TimeSpanFormat);
                     LongestHasTimeCode = MetricVars[i].longestHasCode;
                     LongestHasTimeStart = MetricVars[i].longestHasTimeStart.ToString(TimeFormat);
+
+                    BaseKelly = Math.Round(MetricVars[i].baseKelly, 2).ToString();
+                    LowestKelly = Math.Round(MetricVars[i].lowestKelly, 2).ToString();
                 }
 
                 var i2 = i;
-                que.Enqueue(new Task(() =>
-                {
-                    try
+                if (isAllLongShort == Position.All || i == (int)isAllLongShort)
+                    que.Enqueue(new Task(() =>
                     {
-                        var columnDic = new Dictionary<string, string>();
-                        var isJooName = "isJoo";
-                        var isFuturesName = "isFutures";
-                        var strategyName = "strategy";
-                        var CRName = "CR";
-                        var isLongName = "isLong";
-                        var start_dayName = "start_day";
-                        var end_dayName = "end_day";
-                        var daysName = "days";
-                        var Cumulative_ReturnName = "Cumulative_Return";
-                        var Win_RateName = "Win_Rate";
-                        var CountName = "Count";
-                        var DisappearName = "Disappear";
-                        var LastDisappearName = "LastDisappear";
-                        var Average_Profit_RateName = "Average_Profit_Rate";
-                        var Win_APRName = "Win_APR";
-                        var Lose_APRName = "Lose_APR";
-                        var Max_Draw_DownName = "Max_Draw_Down";
-                        var MDD_DaysName = "MDD_Days";
-                        var MDD_Start_DayName = "MDD_Start_Day";
-                        var MDD_Low_DayName = "MDD_Low_Day";
-                        var MDD_End_DayName = "MDD_End_Day";
-                        var Day_Max_HasName = "Day_Max_Has";
-                        var DMH_DayName = "DMH_Day";
-                        var Longest_Has_TimeName = "Longest_Has_Time";
-                        var LHT_CodeName = "LHT_Code";
-                        var LHT_StartName = "LHT_Start";
-                        var ImageName = "Image";
-                        var test_timeName = "test_time";
-                        var threadName = "thread";
-                        var test_spend_timeName = "test_spend_time";
-
-                        columnDic.Add(isJooName, "TEXT");
-                        columnDic.Add(isFuturesName, "TEXT");
-                        columnDic.Add(strategyName, "INTEGER");
-                        columnDic.Add(CRName, "TEXT");
-                        columnDic.Add(isLongName, "TEXT");
-                        columnDic.Add(start_dayName, "TEXT");
-                        columnDic.Add(end_dayName, "TEXT");
-                        columnDic.Add(daysName, "TEXT");
-                        columnDic.Add(Cumulative_ReturnName, "TEXT");
-                        columnDic.Add(Win_RateName, "TEXT");
-                        columnDic.Add(CountName, "INTEGER");
-                        columnDic.Add(DisappearName, "INTEGER");
-                        columnDic.Add(LastDisappearName, "INTEGER");
-                        columnDic.Add(Average_Profit_RateName, "TEXT");
-                        columnDic.Add(Win_APRName, "TEXT");
-                        columnDic.Add(Lose_APRName, "TEXT");
-                        columnDic.Add(Max_Draw_DownName, "TEXT");
-                        columnDic.Add(MDD_DaysName, "TEXT");
-                        columnDic.Add(MDD_Start_DayName, "TEXT");
-                        columnDic.Add(MDD_Low_DayName, "TEXT");
-                        columnDic.Add(MDD_End_DayName, "TEXT");
-                        columnDic.Add(Day_Max_HasName, "INTEGER");
-                        columnDic.Add(DMH_DayName, "TEXT");
-                        columnDic.Add(Longest_Has_TimeName, "TEXT");
-                        columnDic.Add(LHT_CodeName, "TEXT");
-                        columnDic.Add(LHT_StartName, "TEXT");
-                        columnDic.Add(ImageName, "BLOB");
-                        columnDic.Add(test_timeName, "TEXT");
-                        columnDic.Add(threadName, "INTEGER");
-                        columnDic.Add(test_spend_timeName, "TEXT");
-
-                        var statement = "";
-
-                        var count = 0;
-                        foreach (var column in columnDic)
+                        try
                         {
-                            if (count == 0)
-                                statement = "CREATE TABLE IF NOT EXISTS 'result' (";
-                            else
-                                statement += ", ";
+                            var columnDic = new Dictionary<string, string>();
+                            var isJooName = "isJoo";
+                            var isFuturesName = "isFutures";
+                            var strategyName = "strategy";
+                            var CRName = "CR";
+                            var isLongName = "isLong";
+                            var start_dayName = "start_day";
+                            var end_dayName = "end_day";
+                            var daysName = "days";
+                            var Cumulative_ReturnName = "Cumulative_Return";
+                            var Win_RateName = "Win_Rate";
+                            var CountName = "Count";
+                            var DisappearName = "Disappear";
+                            var LastDisappearName = "LastDisappear";
+                            var Average_Profit_RateName = "Average_Profit_Rate";
+                            var Win_APRName = "Win_APR";
+                            var Lose_APRName = "Lose_APR";
+                            var CommisionName = "Commision";
+                            var SlippageName = "Slippage";
+                            var Max_Draw_DownName = "Max_Draw_Down";
+                            var MDD_DaysName = "MDD_Days";
+                            var MDD_Start_DayName = "MDD_Start_Day";
+                            var MDD_Low_DayName = "MDD_Low_Day";
+                            var MDD_End_DayName = "MDD_End_Day";
+                            var Longest_Draw_DownName = "Longest_Draw_Down";
+                            var LDD_DaysName = "LDD_Days";
+                            var LDD_Start_DayName = "LDD_Start_Day";
+                            var LDD_Low_DayName = "LDD_Low_Day";
+                            var LDD_End_DayName = "LDD_End_Day";
+                            var Day_Max_HasName = "Day_Max_Has";
+                            var DMH_DayName = "DMH_Day";
+                            var Longest_Has_TimeName = "Longest_Has_Time";
+                            var LHT_CodeName = "LHT_Code";
+                            var LHT_StartName = "LHT_Start";
+                            var Base_KellyName = "Base_Kelly";
+                            var Lowest_KellyName = "Lowest_Kelly";
+                            var ImageName = "Image";
+                            var test_timeName = "test_time";
+                            var threadName = "thread";
+                            var test_spend_timeName = "test_spend_time";
 
-                            statement += "'" + column.Key + "' " + column.Value;
+                            columnDic.Add(isJooName, "TEXT");
+                            columnDic.Add(isFuturesName, "TEXT");
+                            columnDic.Add(strategyName, "INTEGER");
+                            columnDic.Add(CRName, "TEXT");
+                            columnDic.Add(isLongName, "TEXT");
+                            columnDic.Add(start_dayName, "TEXT");
+                            columnDic.Add(end_dayName, "TEXT");
+                            columnDic.Add(daysName, "TEXT");
+                            columnDic.Add(Cumulative_ReturnName, "TEXT");
+                            columnDic.Add(Win_RateName, "TEXT");
+                            columnDic.Add(CountName, "INTEGER");
+                            columnDic.Add(DisappearName, "INTEGER");
+                            columnDic.Add(LastDisappearName, "INTEGER");
+                            columnDic.Add(Average_Profit_RateName, "TEXT");
+                            columnDic.Add(Win_APRName, "TEXT");
+                            columnDic.Add(Lose_APRName, "TEXT");
+                            columnDic.Add(CommisionName, "TEXT");
+                            columnDic.Add(SlippageName, "TEXT");
+                            columnDic.Add(Max_Draw_DownName, "TEXT");
+                            columnDic.Add(MDD_DaysName, "TEXT");
+                            columnDic.Add(MDD_Start_DayName, "TEXT");
+                            columnDic.Add(MDD_Low_DayName, "TEXT");
+                            columnDic.Add(MDD_End_DayName, "TEXT");
+                            columnDic.Add(Longest_Draw_DownName, "TEXT");
+                            columnDic.Add(LDD_DaysName, "TEXT");
+                            columnDic.Add(LDD_Start_DayName, "TEXT");
+                            columnDic.Add(LDD_Low_DayName, "TEXT");
+                            columnDic.Add(LDD_End_DayName, "TEXT");
+                            columnDic.Add(Day_Max_HasName, "INTEGER");
+                            columnDic.Add(DMH_DayName, "TEXT");
+                            columnDic.Add(Longest_Has_TimeName, "TEXT");
+                            columnDic.Add(LHT_CodeName, "TEXT");
+                            columnDic.Add(LHT_StartName, "TEXT");
+                            columnDic.Add(Base_KellyName, "TEXT");
+                            columnDic.Add(Lowest_KellyName, "TEXT");
+                            columnDic.Add(ImageName, "BLOB");
+                            columnDic.Add(test_timeName, "TEXT");
+                            columnDic.Add(threadName, "INTEGER");
+                            columnDic.Add(test_spend_timeName, "TEXT");
 
-                            if (count == columnDic.Count - 1)
-                                statement += ")";
+                            var statement = "";
 
-                            count++;
-                        }
-
-                        new SQLiteCommand(statement, STResultDB).ExecuteNonQuery();
-
-                        columnDic[isJooName] = "'" + isJoo.ToString() + "'";
-                        columnDic[isFuturesName] = "'" + isFutures.ToString() + "'";
-                        columnDic[strategyName] = "'" + ST.ToString() + "'";
-                        columnDic[CRName] = "'" + CRType.ToString() + "'";
-                        columnDic[isLongName] = "'" + Enum.GetName(typeof(Position), isAllLongShort).ToString() + "'";
-                        columnDic[start_dayName] = "'" + start.ToString(DateTimeFormat) + "'";
-                        columnDic[end_dayName] = "'" + end.ToString(DateTimeFormat) + "'";
-                        columnDic[daysName] = "'" + Math.Round(end.Subtract(start).TotalDays, 0) + " days'";
-                        columnDic[Cumulative_ReturnName] = "'" + CR + "'";
-                        columnDic[Win_RateName] = "'" + WinRate + "'";
-                        columnDic[CountName] = "'" + AllCount + "'";
-                        columnDic[DisappearName] = "'" + disappearCount[i2] + "'";
-                        columnDic[LastDisappearName] = "'" + lastDisappearCount[i2] + "'";
-                        columnDic[Average_Profit_RateName] = "'" + AvgProfitRate + "'";
-                        columnDic[Win_APRName] = "'" + WinAvgProfitRate + "'";
-                        columnDic[Lose_APRName] = "'" + LoseAvgProfitRate + "'";
-                        columnDic[Max_Draw_DownName] = "'" + MDD + "'";
-                        columnDic[MDD_DaysName] = "'" + MDDDays + "'";
-                        columnDic[MDD_Start_DayName] = "'" + MDDStart + "'";
-                        columnDic[MDD_Low_DayName] = "'" + MDDLow + "'";
-                        columnDic[MDD_End_DayName] = "'" + MDDEnd + "'";
-                        columnDic[Day_Max_HasName] = "'" + DayMaxHas + "'";
-                        columnDic[DMH_DayName] = "'" + DayMaxHasDay + "'";
-                        columnDic[Longest_Has_TimeName] = "'" + LongestHasTime + "'";
-                        columnDic[LHT_CodeName] = "'" + LongestHasTimeCode + "'";
-                        columnDic[LHT_StartName] = "'" + LongestHasTimeStart + "'";
-                        columnDic[ImageName] = "@image";
-                        columnDic[test_timeName] = "'" + DateTime.Now.ToString(TimeFormat) + "'";
-                        columnDic[threadName] = "'" + threadN.ToString() + "'";
-                        columnDic[test_spend_timeName] = "'" + sw.Elapsed.ToString(TimeSpanFormat) + "'";
-
-                            ////Total Screen Capture
-                            var image = new Bitmap(Screen.PrimaryScreen.Bounds.Width,
-                                            Screen.PrimaryScreen.Bounds.Height);
-                        using (Graphics g = Graphics.FromImage(image))
-                        {
-                            g.CopyFromScreen(Screen.PrimaryScreen.Bounds.X,
-                                                Screen.PrimaryScreen.Bounds.Y,
-                                                0, 0,
-                                                image.Size,
-                                                CopyPixelOperation.SourceCopy);
-                        }
-                        var bytes = (byte[])new ImageConverter().ConvertTo(image, typeof(byte[]));
-
-                        var columnDic2 = new Dictionary<string, string>();
-                        columnDic2.Add(strategyName, columnDic[strategyName]);
-                        columnDic2.Add(CRName, columnDic[CRName]);
-                        columnDic2.Add(start_dayName, columnDic[start_dayName]);
-                        columnDic2.Add(end_dayName, columnDic[end_dayName]);
-                        columnDic2.Add(isLongName, columnDic[isLongName]);
-                        columnDic2.Add(isJooName, columnDic[isJooName]);
-                        columnDic2.Add(isFuturesName, columnDic[isFuturesName]);
-                        columnDic2.Add(threadName, columnDic[threadName]);
-
-                        count = 0;
-                        foreach (var column in columnDic2)
-                        {
-                            if (count == 0)
-                                statement = "SELECT *, rowid FROM 'result' where ";
-                            else
-                                statement += " and ";
-
-                            statement += column.Key + "=" + column.Value;
-
-                            count++;
-                        }
-
-                        var reader = new SQLiteCommand(statement, STResultDB).ExecuteReader();
-                        if (reader.Read())
-                        {
-                            count = 0;
+                            var count = 0;
                             foreach (var column in columnDic)
                             {
                                 if (count == 0)
-                                    statement = "update 'result' set ";
+                                    statement = "CREATE TABLE IF NOT EXISTS 'result' (";
                                 else
                                     statement += ", ";
 
-                                statement += "'" + column.Key + "'=" + column.Value;
-
-                                if (count == columnDic.Count - 1)
-                                    statement += " where rowid='" + reader["rowid"] + "'";
-
-                                count++;
-                            }
-                        }
-                        else
-                        {
-                            count = 0;
-                            foreach (var column in columnDic)
-                            {
-                                if (count == 0)
-                                    statement = "INSERT INTO 'result' (";
-                                else
-                                    statement += ", ";
-
-                                statement += "'" + column.Key + "'";
-
-                                count++;
-                            }
-                            count = 0;
-                            foreach (var column in columnDic)
-                            {
-                                if (count == 0)
-                                    statement += ") values (";
-                                else
-                                    statement += ", ";
-
-                                statement += column.Value;
+                                statement += "'" + column.Key + "' " + column.Value;
 
                                 if (count == columnDic.Count - 1)
                                     statement += ")";
 
                                 count++;
                             }
-                        }
 
-                        var command = new SQLiteCommand(statement, STResultDB);
-                        command.Parameters.AddWithValue("@image", bytes);
-                        command.ExecuteNonQuery();
+                            new SQLiteCommand(statement, STResultDB).ExecuteNonQuery();
 
-                        count = 0;
-                        foreach (var column in columnDic2)
-                        {
-                            if (count == 0)
-                                statement = "";
+                            columnDic[isJooName] = "'" + isJoo.ToString() + "'";
+                            columnDic[isFuturesName] = "'" + isFutures.ToString() + "'";
+                            columnDic[strategyName] = "'" + ST.ToString() + "'";
+                            columnDic[CRName] = "'" + CRType.ToString() + "'";
+                            columnDic[isLongName] = "'" + Enum.GetName(typeof(Position), i2).ToString() + "'";
+                            columnDic[start_dayName] = "'" + start.ToString(DateTimeFormat) + "'";
+                            columnDic[end_dayName] = "'" + end.ToString(DateTimeFormat) + "'";
+                            columnDic[daysName] = "'" + Math.Round(end.Subtract(start).TotalDays, 0) + " days'";
+                            columnDic[Cumulative_ReturnName] = "'" + CR + "'";
+                            columnDic[Win_RateName] = "'" + WinRate + "'";
+                            columnDic[CountName] = "'" + AllCount + "'";
+                            columnDic[DisappearName] = "'" + DisappearCount + "'";
+                            columnDic[LastDisappearName] = "'" + LastDisappearCount + "'";
+                            columnDic[Average_Profit_RateName] = "'" + AvgProfitRate + "'";
+                            columnDic[Win_APRName] = "'" + WinAvgProfitRate + "'";
+                            columnDic[Lose_APRName] = "'" + LoseAvgProfitRate + "'";
+                            columnDic[CommisionName] = "'" + Commision + "'";
+                            columnDic[SlippageName] = "'" + Slippage + "'";
+                            columnDic[Max_Draw_DownName] = "'" + MDD + "'";
+                            columnDic[MDD_DaysName] = "'" + MDDDays + "'";
+                            columnDic[MDD_Start_DayName] = "'" + MDDStart + "'";
+                            columnDic[MDD_Low_DayName] = "'" + MDDLow + "'";
+                            columnDic[MDD_End_DayName] = "'" + MDDEnd + "'";
+                            columnDic[Longest_Draw_DownName] = "'" + LDD + "'";
+                            columnDic[LDD_DaysName] = "'" + LDDDays + "'";
+                            columnDic[LDD_Start_DayName] = "'" + LDDStart + "'";
+                            columnDic[LDD_Low_DayName] = "'" + LDDLow + "'";
+                            columnDic[LDD_End_DayName] = "'" + LDDEnd + "'";
+                            columnDic[Day_Max_HasName] = "'" + DayMaxHas + "'";
+                            columnDic[DMH_DayName] = "'" + DayMaxHasDay + "'";
+                            columnDic[Longest_Has_TimeName] = "'" + LongestHasTime + "'";
+                            columnDic[LHT_CodeName] = "'" + LongestHasTimeCode + "'";
+                            columnDic[LHT_StartName] = "'" + LongestHasTimeStart + "'";
+                            columnDic[Base_KellyName] = "'" + BaseKelly + "'";
+                            columnDic[Lowest_KellyName] = "'" + LowestKelly + "'";
+                            columnDic[ImageName] = "@image";
+                            columnDic[test_timeName] = "'" + DateTime.Now.ToString(TimeFormat) + "'";
+                            columnDic[threadName] = "'" + threadN.ToString() + "'";
+                            columnDic[test_spend_timeName] = "'" + sw.Elapsed.ToString(TimeSpanFormat) + "'";
+
+                        ////Total Screen Capture
+                        var image = new Bitmap(Screen.PrimaryScreen.Bounds.Width,
+                                        Screen.PrimaryScreen.Bounds.Height);
+                            using (Graphics g = Graphics.FromImage(image))
+                            {
+                                g.CopyFromScreen(Screen.PrimaryScreen.Bounds.X,
+                                                    Screen.PrimaryScreen.Bounds.Y,
+                                                    0, 0,
+                                                    image.Size,
+                                                    CopyPixelOperation.SourceCopy);
+                            }
+                            var bytes = (byte[])new ImageConverter().ConvertTo(image, typeof(byte[]));
+
+                            var columnDic2 = new Dictionary<string, string>();
+                            columnDic2.Add(strategyName, columnDic[strategyName]);
+                            columnDic2.Add(CRName, columnDic[CRName]);
+                            columnDic2.Add(start_dayName, columnDic[start_dayName]);
+                            columnDic2.Add(end_dayName, columnDic[end_dayName]);
+                            columnDic2.Add(isLongName, columnDic[isLongName]);
+                            columnDic2.Add(isJooName, columnDic[isJooName]);
+                            columnDic2.Add(isFuturesName, columnDic[isFuturesName]);
+                            columnDic2.Add(Base_KellyName, columnDic[Base_KellyName]);
+                            columnDic2.Add(CommisionName, columnDic[CommisionName]);
+                            columnDic2.Add(SlippageName, columnDic[SlippageName]);
+
+                            count = 0;
+                            foreach (var column in columnDic2)
+                            {
+                                if (count == 0)
+                                    statement = "SELECT *, rowid FROM 'result' where ";
+                                else
+                                    statement += " and ";
+
+                                statement += column.Key + "=" + column.Value;
+
+                                count++;
+                            }
+
+                            var reader = new SQLiteCommand(statement, STResultDB).ExecuteReader();
+                            if (reader.Read())
+                            {
+                                count = 0;
+                                foreach (var column in columnDic)
+                                {
+                                    if (count == 0)
+                                        statement = "update 'result' set ";
+                                    else
+                                        statement += ", ";
+
+                                    statement += "'" + column.Key + "'=" + column.Value;
+
+                                    if (count == columnDic.Count - 1)
+                                        statement += " where rowid='" + reader["rowid"] + "'";
+
+                                    count++;
+                                }
+                            }
                             else
-                                statement += ", ";
+                            {
+                                count = 0;
+                                foreach (var column in columnDic)
+                                {
+                                    if (count == 0)
+                                        statement = "INSERT INTO 'result' (";
+                                    else
+                                        statement += ", ";
 
-                            statement += column.Key + "=" + column.Value;
+                                    statement += "'" + column.Key + "'";
 
-                            count++;
+                                    count++;
+                                }
+                                count = 0;
+                                foreach (var column in columnDic)
+                                {
+                                    if (count == 0)
+                                        statement += ") values (";
+                                    else
+                                        statement += ", ";
+
+                                    statement += column.Value;
+
+                                    if (count == columnDic.Count - 1)
+                                        statement += ")";
+
+                                    count++;
+                                }
+                            }
+
+                            var command = new SQLiteCommand(statement, STResultDB);
+                            command.Parameters.AddWithValue("@image", bytes);
+                            command.ExecuteNonQuery();
+
+                            try
+                            {
+                                if (isAllLongShort != Position.All || i2 == (int)Position.Long)
+                                {
+                                    if (isAllLongShort == Position.All)
+                                        columnDic2[isLongName] = "'All'";
+
+                                    count = 0;
+                                    foreach (var column in columnDic2)
+                                    {
+                                        if (count == 0)
+                                            statement = "";
+                                        else
+                                            statement += ", ";
+
+                                        statement += column.Key + "=" + column.Value;
+
+                                        count++;
+                                    }
+
+                                    image.Save(STResultDBPath + statement + ".jpg", System.Drawing.Imaging.ImageFormat.Jpeg);
+                                }
+                            }
+                            catch (Exception e)
+                            {
+
+                                throw;
+                            }
                         }
-
-                        if (isAllLongShort == Position.All ? i2 == (int)Position.Long : i2 == (int)isAllLongShort)
-                            image.Save(STResultDBPath + statement + ".jpg", System.Drawing.Imaging.ImageFormat.Jpeg);
-                    }
-                    catch (Exception e)
-                    {
-                        throw;
-                    }
-                }));
+                        catch (Exception e)
+                        {
+                            throw;
+                        }
+                    }));
 
                 metricDic[MetricCR].SetText(i, CR);
 
                 metricDic[MetricWinRate].SetText(i, WinRate);
                 metricDic[MetricAllCount].SetText(i, AllCount);
-                metricDic[MetricDisappear].SetText(i, disappearCount[i].ToString());
-                metricDic[MetricLastDisappear].SetText(i, lastDisappearCount[i].ToString());
+                metricDic[MetricDisappear].SetText(i, DisappearCount);
+                metricDic[MetricLastDisappear].SetText(i, LastDisappearCount);
                 metricDic[MetricAvgProfitRate].SetText(i, AvgProfitRate);
                 metricDic[MetricWinAvgProfitRate].SetText(i, WinAvgProfitRate);
                 metricDic[MetricLoseAvgProfitRate].SetText(i, LoseAvgProfitRate);
+                metricDic[MetricCommision].SetText(i, Commision);
+                metricDic[MetricSlippage].SetText(i, Slippage);
 
                 metricDic[MetricMDD].SetText(i, MDD);
                 metricDic[MetricMDDDays].SetText(i, MDDDays);
                 metricDic[MetricMDDStart].SetText(i, MDDStart);
                 metricDic[MetricMDDLow].SetText(i, MDDLow);
                 metricDic[MetricMDDEnd].SetText(i, MDDEnd);
+                metricDic[MetricLDD].SetText(i, LDD);
+                metricDic[MetricLDDDays].SetText(i, LDDDays);
+                metricDic[MetricLDDStart].SetText(i, LDDStart);
+                metricDic[MetricLDDLow].SetText(i, LDDLow);
+                metricDic[MetricLDDEnd].SetText(i, LDDEnd);
 
                 metricDic[MetricDayMaxHas].SetText(i, DayMaxHas);
                 metricDic[MetricDayMaxHasDay].SetText(i, DayMaxHasDay);
@@ -1316,6 +1474,9 @@ namespace BackTestingFinal
                 metricDic[MetricLongestHasTime].SetText(i, LongestHasTime);
                 metricDic[MetricLongestHasTimeCode].SetText(i, LongestHasTimeCode);
                 metricDic[MetricLongestHasTimeStart].SetText(i, LongestHasTimeStart);
+
+                metricDic[MetricBaseKelly].SetText(i, BaseKelly);
+                metricDic[MetricLowestKelly].SetText(i, LowestKelly);
             }
 
             metricListView.Refresh();
@@ -1408,10 +1569,10 @@ namespace BackTestingFinal
             }));
             #endregion
         }
-        double CalculateKelly(List<double> list)
+        double CalculateKelly(List<double> list, double baseKelly)
         {
             if (list.Count <= 1)
-                return 0.5;
+                return baseKelly;
 
             var beforeKelly = 1.01D;
             var beforeGeoMean = double.MinValue;
@@ -1424,10 +1585,12 @@ namespace BackTestingFinal
                 for (int i = 0; i < list.Count; i++)
                     geoMean *= 1 + list[i] * kelly / 100;
 
-                if (geoMean > beforeGeoMean)
+                if (geoMean == beforeGeoMean)
+                    ShowError(form);
+                else if (geoMean > beforeGeoMean)
                 {
-                    if (kelly <= 0.5)
-                        return 0.5;
+                    if (kelly > beforeKelly && kelly > baseKelly)
+                        return baseKelly;
 
                     beforeKelly2 = beforeKelly;
                     beforeGeoMean2 = beforeGeoMean;
@@ -1436,8 +1599,18 @@ namespace BackTestingFinal
                     kelly = beforeKelly - (beforeKelly2 - beforeKelly);
                     geoMean = 1D;
                 }
+                else if (beforeGeoMean2 == double.MinValue)
+                {
+                    var kelly2 = beforeKelly2;
+
+                    beforeKelly2 = kelly;
+                    beforeGeoMean2 = geoMean;
+
+                    kelly = kelly2;
+                    geoMean = 1D;
+                }
                 else
-                    return beforeKelly / 2;
+                    return beforeKelly > baseKelly ? baseKelly : beforeKelly;
             }
         }
 
