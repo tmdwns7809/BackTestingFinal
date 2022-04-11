@@ -130,7 +130,7 @@ namespace BackTestingFinal
             }
 
             BaseFunctions.HideLoading();
-            BaseFunctions.AlertStart("done");
+            BaseFunctions.AlertStart("done", BaseFunctions.isAlertSoundOn);
         }
 
         void ChangeColumns()

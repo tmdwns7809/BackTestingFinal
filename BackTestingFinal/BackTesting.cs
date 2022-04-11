@@ -99,8 +99,8 @@ namespace BackTestingFinal
         string MetricLongestHasTime = "LH Days";
         string MetricLongestHasTimeCode = "    Code";
         string MetricLongestHasTimeStart = "    Start";
-        string MetricBaseKelly = "Base Kelly";
-        string MetricLowestKelly = "Lowest Kelly";
+        string MetricMinKelly = "Min Kelly(Real)";
+        string MetricMaxKelly = "Max Kelly(Real)";
         string MetricAverageHasDays = "AVGH Days";
 
         string sticksDBpath;
@@ -129,7 +129,7 @@ namespace BackTestingFinal
 
         CR lastCR;
 
-        public BackTesting(Form form, bool isJoo) : base(form, isJoo, 1.112m)
+        public BackTesting(Form form, bool isJoo) : base(form, isJoo, 1.11m)
         {
             sticksDBpath = BaseSticksDB.path;
             sticksDBbaseName = BaseSticksDB.BaseName;
@@ -822,10 +822,10 @@ namespace BackTestingFinal
             metricListView.AddObject(metricDic[MetricLongestHasTimeStart]);
             metricListView.AddObject(new MetricData());
 
-            metricDic.Add(MetricBaseKelly, new MetricData() { MetricName = MetricBaseKelly });
-            metricListView.AddObject(metricDic[MetricBaseKelly]);
-            metricDic.Add(MetricLowestKelly, new MetricData() { MetricName = MetricLowestKelly });
-            metricListView.AddObject(metricDic[MetricLowestKelly]);
+            metricDic.Add(MetricMinKelly, new MetricData() { MetricName = MetricMinKelly });
+            metricListView.AddObject(metricDic[MetricMinKelly]);
+            metricDic.Add(MetricMaxKelly, new MetricData() { MetricName = MetricMaxKelly });
+            metricListView.AddObject(metricDic[MetricMaxKelly]);
         }
 
         void RunMain(DateTime start, DateTime end, Position isAllLongShort, CR CRType)
@@ -862,7 +862,7 @@ namespace BackTestingFinal
                 sw.Stop();
                 HideLoading();
                 if (AlertOn)
-                    AlertStart("done : " + sw.Elapsed.ToString(TimeSpanFormat));
+                    AlertStart("done : " + sw.Elapsed.ToString(TimeSpanFormat), isAlertSoundOn);
 
                 startDone = start;
                 endDone = end;
@@ -954,9 +954,11 @@ namespace BackTestingFinal
                             MetricVars[j].highestHasItemsDate = simulDays[j].Keys[i];
                         }
 
-                        var Kelly = CalculateKelly(MetricVars[j].ProfitRates, MetricVars[j].baseKelly);
+                        var Kelly = CalculateKelly(MetricVars[j].ProfitRates, MetricVars[j].minKelly, MetricVars[j].maxKelly);
                         if (MetricVars[j].lowestKelly > Kelly)
                             MetricVars[j].lowestKelly = Kelly;
+                        if (MetricVars[j].highestKelly < Kelly)
+                            MetricVars[j].highestKelly = Kelly;
 
                         if (simulDays[j].Keys[i].ToString(TimeFormat) == "2021-05-03 00:00:00" || simulDays[j].Keys[i].ToString(TimeFormat) == "2021-05-11 00:00:00")
                             Kelly = Kelly;
@@ -1133,8 +1135,8 @@ namespace BackTestingFinal
                 var LongestHasTime = "";
                 var LongestHasTimeCode = "";
                 var LongestHasTimeStart = "";
-                var BaseKelly = "";
-                var LowestKelly = "";
+                var MinKelly = "";
+                var MaxKelly = "";
                 if (MetricVars[i].Count != 0)
                 {
                     CR = Math.Round((MetricVars[i].CR - 1) * 100, 0).ToString("#,0") + "%";
@@ -1167,8 +1169,8 @@ namespace BackTestingFinal
                     LongestHasTimeCode = MetricVars[i].longestHasCode;
                     LongestHasTimeStart = MetricVars[i].longestHasTimeStart.ToString(TimeFormat);
 
-                    BaseKelly = Math.Round(MetricVars[i].baseKelly, 2).ToString();
-                    LowestKelly = Math.Round(MetricVars[i].lowestKelly, 2).ToString();
+                    MinKelly = Math.Round(MetricVars[i].minKelly, 2) + "(" + Math.Round(MetricVars[i].lowestKelly, 2) + ")";
+                    MaxKelly = Math.Round(MetricVars[i].maxKelly, 2) + "(" + Math.Round(MetricVars[i].highestKelly, 2) + ")";
                 }
 
                 var i2 = i;
@@ -1211,8 +1213,8 @@ namespace BackTestingFinal
                             var Longest_Has_TimeName = "Longest_Has_Time";
                             var LHT_CodeName = "LHT_Code";
                             var LHT_StartName = "LHT_Start";
-                            var Base_KellyName = "Base_Kelly";
-                            var Lowest_KellyName = "Lowest_Kelly";
+                            var Min_KellyName = "Min_Kelly_R";
+                            var Max_KellyName = "Max_Kelly_R";
                             var ImageName = "Image";
                             var test_timeName = "test_time";
                             var threadName = "thread";
@@ -1251,8 +1253,8 @@ namespace BackTestingFinal
                             columnDic.Add(Longest_Has_TimeName, "TEXT");
                             columnDic.Add(LHT_CodeName, "TEXT");
                             columnDic.Add(LHT_StartName, "TEXT");
-                            columnDic.Add(Base_KellyName, "TEXT");
-                            columnDic.Add(Lowest_KellyName, "TEXT");
+                            columnDic.Add(Min_KellyName, "TEXT");
+                            columnDic.Add(Max_KellyName, "TEXT");
                             columnDic.Add(ImageName, "BLOB");
                             columnDic.Add(test_timeName, "TEXT");
                             columnDic.Add(threadName, "INTEGER");
@@ -1311,8 +1313,8 @@ namespace BackTestingFinal
                             columnDic[Longest_Has_TimeName] = "'" + LongestHasTime + "'";
                             columnDic[LHT_CodeName] = "'" + LongestHasTimeCode + "'";
                             columnDic[LHT_StartName] = "'" + LongestHasTimeStart + "'";
-                            columnDic[Base_KellyName] = "'" + BaseKelly + "'";
-                            columnDic[Lowest_KellyName] = "'" + LowestKelly + "'";
+                            columnDic[Min_KellyName] = "'" + MinKelly + "'";
+                            columnDic[Max_KellyName] = "'" + MaxKelly + "'";
                             columnDic[ImageName] = "@image";
                             columnDic[test_timeName] = "'" + DateTime.Now.ToString(TimeFormat) + "'";
                             columnDic[threadName] = "'" + threadN.ToString() + "'";
@@ -1339,7 +1341,8 @@ namespace BackTestingFinal
                             columnDic2.Add(isLongName, columnDic[isLongName]);
                             columnDic2.Add(isJooName, columnDic[isJooName]);
                             columnDic2.Add(isFuturesName, columnDic[isFuturesName]);
-                            columnDic2.Add(Base_KellyName, columnDic[Base_KellyName]);
+                            columnDic2.Add(Min_KellyName, columnDic[Min_KellyName]);
+                            columnDic2.Add(Max_KellyName, columnDic[Max_KellyName]);
                             columnDic2.Add(CommisionName, columnDic[CommisionName]);
                             columnDic2.Add(SlippageName, columnDic[SlippageName]);
 
@@ -1410,34 +1413,34 @@ namespace BackTestingFinal
                             command.Parameters.AddWithValue("@image", bytes);
                             command.ExecuteNonQuery();
 
-                            try
-                            {
-                                if (isAllLongShort != Position.All || i2 == (int)Position.Long)
-                                {
-                                    if (isAllLongShort == Position.All)
-                                        columnDic2[isLongName] = "'All'";
+                            //try
+                            //{
+                            //    if (isAllLongShort != Position.All || i2 == (int)Position.Long)
+                            //    {
+                            //        if (isAllLongShort == Position.All)
+                            //            columnDic2[isLongName] = "'All'";
 
-                                    count = 0;
-                                    foreach (var column in columnDic2)
-                                    {
-                                        if (count == 0)
-                                            statement = "";
-                                        else
-                                            statement += ", ";
+                            //        count = 0;
+                            //        foreach (var column in columnDic2)
+                            //        {
+                            //            if (count == 0)
+                            //                statement = "";
+                            //            else
+                            //                statement += ", ";
 
-                                        statement += column.Key + "=" + column.Value;
+                            //            statement += column.Key + "=" + column.Value;
 
-                                        count++;
-                                    }
+                            //            count++;
+                            //        }
 
-                                    image.Save(STResultDBPath + statement + ".jpg", System.Drawing.Imaging.ImageFormat.Jpeg);
-                                }
-                            }
-                            catch (Exception e)
-                            {
+                            //        image.Save(STResultDBPath + statement + ".jpg", System.Drawing.Imaging.ImageFormat.Jpeg);
+                            //    }
+                            //}
+                            //catch (Exception e)
+                            //{
 
-                                throw;
-                            }
+                            //    throw;
+                            //}
                         }
                         catch (Exception e)
                         {
@@ -1475,8 +1478,8 @@ namespace BackTestingFinal
                 metricDic[MetricLongestHasTimeCode].SetText(i, LongestHasTimeCode);
                 metricDic[MetricLongestHasTimeStart].SetText(i, LongestHasTimeStart);
 
-                metricDic[MetricBaseKelly].SetText(i, BaseKelly);
-                metricDic[MetricLowestKelly].SetText(i, LowestKelly);
+                metricDic[MetricMinKelly].SetText(i, MinKelly);
+                metricDic[MetricMaxKelly].SetText(i, MaxKelly);
             }
 
             metricListView.Refresh();
@@ -1569,16 +1572,16 @@ namespace BackTestingFinal
             }));
             #endregion
         }
-        double CalculateKelly(List<double> list, double baseKelly)
+        double CalculateKelly(List<double> list, double minKelly, double maxKelly)
         {
             if (list.Count <= 1)
-                return baseKelly;
+                return minKelly;
 
-            var beforeKelly = 1.01D;
+            var beforeKelly = minKelly + 0.01;
             var beforeGeoMean = double.MinValue;
-            var beforeKelly2 = 1.02D;
+            var beforeKelly2 = minKelly + 0.02;
             var beforeGeoMean2 = double.MinValue;
-            var kelly = 1D;
+            var kelly = minKelly;
             var geoMean = 1D;
             while (true)
             {
@@ -1589,8 +1592,19 @@ namespace BackTestingFinal
                     ShowError(form);
                 else if (geoMean > beforeGeoMean)
                 {
-                    if (kelly > beforeKelly && kelly > baseKelly)
-                        return baseKelly;
+                    if (beforeGeoMean != double.MinValue)
+                    {
+                        if (kelly > beforeKelly)
+                        {
+                            if (kelly >= maxKelly)
+                                return maxKelly;
+                        }
+                        else
+                        {
+                            if (kelly <= minKelly)
+                                return minKelly;
+                        }
+                    }
 
                     beforeKelly2 = beforeKelly;
                     beforeGeoMean2 = beforeGeoMean;
@@ -1610,7 +1624,7 @@ namespace BackTestingFinal
                     geoMean = 1D;
                 }
                 else
-                    return beforeKelly > baseKelly ? baseKelly : beforeKelly;
+                    return beforeKelly;
             }
         }
 
@@ -1796,7 +1810,7 @@ namespace BackTestingFinal
 
                 sw.Stop();
                 HideLoading();
-                AlertStart("done : " + sw.Elapsed.ToString(TimeSpanFormat));
+                AlertStart("done : " + sw.Elapsed.ToString(TimeSpanFormat), isAlertSoundOn);
             }));
         }
 

@@ -32,8 +32,10 @@ namespace BackTestingFinal
 
         public int disappearCount;
         public int lastDisappearCount;
-        public double baseKelly = 0.5;
+        public double minKelly = 0.5;
+        public double maxKelly = 1;
         public double lowestKelly = double.MaxValue;
+        public double highestKelly = double.MinValue;
         public double beforeCR;
 
     }

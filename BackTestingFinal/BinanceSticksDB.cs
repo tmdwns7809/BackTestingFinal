@@ -157,7 +157,7 @@ namespace BackTestingFinal
             }
 
             BaseFunctions.HideLoading();
-            BaseFunctions.AlertStart("done");
+            BaseFunctions.AlertStart("done", BaseFunctions.isAlertSoundOn);
         }
 
         protected override int GetSticksCountBetween(string code, DateTime start, DateTime end, ChartValues chartValue)
