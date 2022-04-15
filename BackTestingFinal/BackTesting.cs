@@ -129,7 +129,7 @@ namespace BackTestingFinal
 
         CR lastCR;
 
-        public BackTesting(Form form, bool isJoo) : base(form, isJoo, 1.112m)
+        public BackTesting(Form form, bool isJoo) : base(form, isJoo, 1.11m)
         {
             sticksDBpath = BaseSticksDB.path;
             sticksDBbaseName = BaseSticksDB.BaseName;
@@ -148,7 +148,8 @@ namespace BackTestingFinal
 
             fromTextBox.Text = DateTime.MinValue.ToString(DateTimeFormat);
             toTextBox.Text = DateTime.MaxValue.ToString(DateTimeFormat);
-            //toTextBox.Text = "2022-01-22";
+            fromTextBox.Text = "2022-01-15";
+            //toTextBox.Text = "2021-10-15";
         }
         void SetAdditionalMainView()
         {
@@ -171,7 +172,7 @@ namespace BackTestingFinal
 
                 var n = 0;
                     foreach (var data in date.resultDatas)
-                        if (data.EnterTime.Date == date.Date && data.ExitTime.Date <= simulDays[0].Keys[simulDays[0].Count - 1])
+                        if (data.EnterTime.Date == date.Date && data.ExitTime.Date <= simulDays[0].Keys.Last())
                         {
                             data.NumberForClick = ++n;
                             dayResultListView.AddObject(data);
@@ -785,7 +786,7 @@ namespace BackTestingFinal
             foreach (var sd in simulDays)
                 foreach (var day in sd)
                     foreach (var resultData in day.Value.resultDatas)
-                        if (itemData.Code == resultData.Code && resultData.ExitTime.Date == day.Key && resultData.EnterTime.Date >= sd.Values[0].Date)
+                        if (itemData.Code == resultData.Code && resultData.EnterTime.Date == day.Key && resultData.ExitTime.Date >= sd.Values[0].Date)
                         {
                             resultData.NumberForSingle = ++n;
                             codeResultListView.AddObject(resultData);
@@ -2807,7 +2808,7 @@ namespace BackTestingFinal
                     //if (positionData.found)
                     //    lock (foundLocker)
                     //        foundItemList[j].Add((itemData, positionData.foundList));
-                    if (!itemData.positionData[(int)Position.Long].Enter && !itemData.positionData[(int)Position.Short].Enter && positionData.found)
+                    if ((canLStogether ? !positionData.Enter : (!itemData.positionData[(int)Position.Long].Enter && !itemData.positionData[(int)Position.Short].Enter)) && positionData.found)
                         lock (foundLocker)
                             foundItemList[j].Add(itemData.number, (itemData, positionData.foundList));
                     else
@@ -2940,8 +2941,12 @@ namespace BackTestingFinal
 
                 if (!simulDays[0].ContainsKey(from2.Date))
                 {
-                    for (int j = 0; j < 2; j++)
+                    for (int j = (int)Position.Long; j <= (int)Position.Short; j++)
+                    {
                         simulDays[j].Add(from2.Date, new DayData() { Date = from2.Date, isL = j });
+                        if (simulDays[j].Count >= 2 && simulDays[j][from2.Date.AddDays(-1)].ResultDatasForMetric.Count != 0 && simulDays[j][from2.Date.AddDays(-1)].ResultDatasForMetric.Last().ExitTime == default)
+                            simulDays[j][from2.Date].ResultDatasForMetric.Add(simulDays[j][from2.Date.AddDays(-1)].ResultDatasForMetric.Last());
+                    }
                     marketDays.Add(from2.Date, new DayData() { Date = from2.Date });
 
                     var year = from2.Year;
@@ -3035,12 +3040,14 @@ namespace BackTestingFinal
                     break;
 
                 lock (dayLocker)
+                {
                     if (type == ResultDatasType.Normal)
                         simulDays.Values[k].resultDatas.Add(resultData);
                     else if (type == ResultDatasType.Disappear)
                         simulDays.Values[k].disResultDatas.Add(resultData);
                     else
                         simulDays.Values[k].lastResultDatas.Add(resultData);
+                }
             }
         }
 
