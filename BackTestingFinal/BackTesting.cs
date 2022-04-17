@@ -148,7 +148,7 @@ namespace BackTestingFinal
 
             fromTextBox.Text = DateTime.MinValue.ToString(DateTimeFormat);
             toTextBox.Text = DateTime.MaxValue.ToString(DateTimeFormat);
-            fromTextBox.Text = "2022-01-15";
+            fromTextBox.Text = "2022-04-16 00:37:00";
             //toTextBox.Text = "2021-10-15";
         }
         void SetAdditionalMainView()
@@ -594,6 +594,8 @@ namespace BackTestingFinal
                     var CRType = (CR)Enum.Parse(typeof(CR), CRComboBox.Text);
                     Task.Run(new Action(() =>
                     {
+                        SetDB();
+
                         var first = GetFirstOrLastTime(true, default, BaseChartTimeSet.OneMinute).time;
                         if (from < first)
                             from = first;
@@ -901,8 +903,6 @@ namespace BackTestingFinal
 
             if (lastCR != CRType || start < startDone || end > endDone)
             {
-                SetDB();
-
                 LoadingSettingFirst(form);
                 sw.Reset();
                 sw.Start();
@@ -1322,7 +1322,7 @@ namespace BackTestingFinal
                         ca.AxisY2.Minimum = ca.AxisY.Minimum;
                         ca.AxisY2.Maximum = ca.AxisY.Maximum;
                     }
-                    else 
+                    else if (min2 != 0 || max2 != 0)
                     {
                         if (min2 >= 0)
                         {
@@ -1368,6 +1368,8 @@ namespace BackTestingFinal
                         ca.AxisY.Minimum = ca.AxisY2.Minimum;
                         ca.AxisY.Maximum = ca.AxisY2.Maximum;
                     }
+                    else
+                        continue;
                 }
 
                 ca.AxisY.Interval = (ca.AxisY.Maximum - ca.AxisY.Minimum) / 2;
@@ -1396,8 +1398,8 @@ namespace BackTestingFinal
                 var CR = "";
                 var WinRate = "";
                 var AllCount = "";
-                var DisappearCount = "";
-                var LastDisappearCount = "";
+                var DisappearCount = MetricVars[i].disappearCount.ToString("#,0");
+                var LastDisappearCount = MetricVars[i].lastDisappearCount.ToString("#,0");
                 var AvgProfitRate = "";
                 var WinAvgProfitRate = "";
                 var LoseAvgProfitRate = "";
@@ -1426,8 +1428,6 @@ namespace BackTestingFinal
 
                     WinRate = Math.Round((double)MetricVars[i].Win / MetricVars[i].Count * 100, 1) + "%";
                     AllCount = MetricVars[i].Count.ToString("#,0");
-                    DisappearCount = MetricVars[i].disappearCount.ToString("#,0");
-                    LastDisappearCount = MetricVars[i].lastDisappearCount.ToString("#,0");
                     AvgProfitRate = Math.Round(MetricVars[i].ProfitRateSum / MetricVars[i].Count, 2) + "%";
                     WinAvgProfitRate = MetricVars[i].Win == 0 ? "0%" : (Math.Round(MetricVars[i].ProfitWinRateSum / MetricVars[i].Win, 2) + "%");
                     LoseAvgProfitRate = MetricVars[i].Count == MetricVars[i].Win ? "0%" : (Math.Round((MetricVars[i].ProfitRateSum - MetricVars[i].ProfitWinRateSum) / (MetricVars[i].Count - MetricVars[i].Win), 2) + "%");
