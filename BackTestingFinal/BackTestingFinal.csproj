@@ -83,13 +83,11 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="BackItemData.cs" />
-    <Compile Include="BackResultData.cs" />
     <Compile Include="BackTesting.cs" />
     <Compile Include="BackTradeStick.cs" />
     <Compile Include="BaseSticksDB.cs" />
     <Compile Include="BinanceSticksDB.cs" />
     <Compile Include="CR.cs" />
-    <Compile Include="DayData.cs" />
     <Compile Include="DayStick.cs" />
     <Compile Include="DrawDownData.cs" />
     <Compile Include="Form1.cs">

@@ -23,7 +23,6 @@ namespace BackTestingFinal
 
         BackItemData showingItemData;
 
-        SortedList<DateTime, DayData>[] simulDays = new SortedList<DateTime, DayData>[] { new SortedList<DateTime, DayData>(), new SortedList<DateTime, DayData>() }; // 0 long 1 short
         SortedList<DateTime, DayData> marketDays = new SortedList<DateTime, DayData>();
         public List<BackResultData>[] ResultDatasForMetric1 = new List<BackResultData>[] { new List<BackResultData>(), new List<BackResultData>() };
         public List<BackResultData>[] ResultDatasForMetric2 = new List<BackResultData>[] { new List<BackResultData>(), new List<BackResultData>() };
@@ -33,8 +32,9 @@ namespace BackTestingFinal
         Action<DayData> clickResultAction;
         FastObjectListView dayResultListView = new FastObjectListView();
 
-        public Chart totalChart = new Chart();
-        public Button totalButton = new Button();
+        public Chart[] Charts = new Chart[] { new Chart(), new Chart(), new Chart(), new Chart() };
+        public Chart[] Charts2 = new Chart[] { new Chart(), new Chart(), new Chart(), new Chart() };
+        public Button[] Buttons = new Button[] { new Button(), new Button(), new Button(), new Button(), new Button(), new Button(), new Button(), new Button() };
         public Button captureButton = new Button();
         public Button beforeButton = new Button();
         public Button afterButton = new Button();
@@ -84,12 +84,25 @@ namespace BackTestingFinal
         string MetricStart = "    Start";
         string MetricLow = "    Low";
         string MetricEnd = "    End";
-        string MetricWinRate = "Win Rate";
+        string MetricSingle = "Single";
+        string MetricSingleWinRate = "SingleWin Rate";
         string MetricWinRateYearStandardDeviation = "    WRYSD";
-        string MetricAllCount = "    Count";
+        string MetricSingleAllCount = "SingleCount";
         string MetricDisappear = "    Dis";
         string MetricLastDisappear = "    LDis";
+        string MetricSingleAvgProfitRate = "SingleAPR";
+        string MetricSingleWinAvgProfitRate = "SingleWAPR";
+        string MetricSingleLoseAvgProfitRate = "SingleLAPR";
+        string MetricAverage = "Average(-c,s)";
+        string MetricAverageWinRate = "AverageWin Rate";
+        string MetricAverageAllCount = "AverageCount";
+        string MetricAverageAvgProfitRate = "AverageAPR";
+        string MetricAverageWinAvgProfitRate = "AverageWAPR";
+        string MetricAverageLoseAvgProfitRate = "AverageLAPR";
+        string MetricWinRate = "    Win Rate";
+        string MetricAllCount = "    Count";
         string MetricAvgProfitRate = "    APR";
+        string MetricGeoMeanProfitRate = "    GMPR";
         string MetricWinAvgProfitRate = "    WAPR";
         string MetricLoseAvgProfitRate = "    LAPR";
         string MetricCommision = "    Commision";
@@ -125,11 +138,9 @@ namespace BackTestingFinal
 
         int[] maxHas = new int[] { 0, 0 };
 
-        public double slippage = 0.2;
-
         CR lastCR;
 
-        public BackTesting(Form form, bool isJoo) : base(form, isJoo, 1.11m)
+        public BackTesting(Form form, bool isJoo) : base(form, isJoo, 1.114m)
         {
             sticksDBpath = BaseSticksDB.path;
             sticksDBbaseName = BaseSticksDB.BaseName;
@@ -148,8 +159,8 @@ namespace BackTestingFinal
 
             fromTextBox.Text = DateTime.MinValue.ToString(DateTimeFormat);
             toTextBox.Text = DateTime.MaxValue.ToString(DateTimeFormat);
-            fromTextBox.Text = "2022-04-16 00:37:00";
-            //toTextBox.Text = "2021-10-15";
+            fromTextBox.Text = "2021-11-01";
+            toTextBox.Text = "2022-02-01";
         }
         void SetAdditionalMainView()
         {
@@ -185,26 +196,27 @@ namespace BackTestingFinal
                 //dayResultListView.Sort(dayResultListView.GetColumn("No."), SortOrder.Descending);
             });
 
-            SetChart(totalChart, new Size(mainChart.Size.Width, GetFormHeight(form) - GetFormUpBarSize(form) + 10), new Point(mainChart.Location.X, mainChart.Location.Y));
-            totalChart.Hide();
-            totalChart.Click += (sender, e) =>
-            {
+            EventHandler resultChartClick = (sender, e) => {
+                var chart = sender as Chart;
                 var e2 = e as MouseEventArgs;
                 if (e2.Button == MouseButtons.Left)
                 {
-                    var result = GetCursorPosition(totalChart, e2);
+                    var result = GetCursorPosition(chart, e2);
                     if (!result.isInArea)
                         return;
 
-                    form.Text = totalChart.Series[0].Points[result.Xindex].AxisLabel + "    " + totalChart.Series[0].Points[result.Xindex].YValues[0]
-                        + "    " + totalChart.Series[1].Points[result.Xindex].YValues[0];
+                    var text = chart.Series[0].Points[result.Xindex].AxisLabel;
+                    foreach (var s in chart.Series)
+                        if (s.Points.Count != 0)
+                            text += "    " + s.Points[result.Xindex].YValues[0];
 
+                    form.Text = text;
 
-                    clickResultAction(simulDays[0][DateTime.Parse(totalChart.Series[(totalChart.Series[0].Points.Count == totalChart.Series[3].Points.Count || totalChart.Series[3].Points.Count == 0) ? 0 : 1].Points[result.Xindex].AxisLabel)]);
+                    clickResultAction(simulDays[0][DateTime.Parse(chart.Series[0].Points[result.Xindex].AxisLabel).Date]);
                 }
                 else
                 {
-                    foreach (var ca2 in totalChart.ChartAreas)
+                    foreach (var ca2 in chart.ChartAreas)
                     {
                         ca2.AxisX.ScaleView.ZoomReset();
                         ca2.AxisY2.ScaleView.ZoomReset();
@@ -216,227 +228,404 @@ namespace BackTestingFinal
                 }
             };
 
-            var mainChartArea = mainChart.ChartAreas[0];
-            var areaHeight = 100 - mainChartArea.Position.Y;
-            var chartAreaCR = totalChart.ChartAreas.Add("ChartAreaCumulativeReturn");
-            SetChartAreaFirst(chartAreaCR);
-            chartAreaCR.Position = new ElementPosition(mainChartArea.Position.X + 3, mainChartArea.Position.Y, mainChartArea.Position.Width - 3, areaHeight / 4f);
-            chartAreaCR.InnerPlotPosition = new ElementPosition(mainChartArea.InnerPlotPosition.X, mainChartArea.InnerPlotPosition.Y, mainChartArea.InnerPlotPosition.Width, mainChartArea.InnerPlotPosition.Height - 7);
-            ChartAreaSet(chartAreaCR);
+            #region Charts
+            for (int i = 0; i < Charts.Length; i++)
+            {
+                SetChart(Charts[i], new Size(mainChart.Size.Width, GetFormHeight(form) - GetFormUpBarSize(form) + 10), new Point(mainChart.Location.X, mainChart.Location.Y));
+                Charts[i].Hide();
+                Charts[i].Click += resultChartClick;
 
-            var chartAreaPR = totalChart.ChartAreas.Add("ChartAreaProfitRate");
-            SetChartAreaFirst(chartAreaPR);
-            chartAreaPR.Position = new ElementPosition(chartAreaCR.Position.X, chartAreaCR.Position.Y + chartAreaCR.Position.Height, chartAreaCR.Position.Width, (areaHeight - chartAreaCR.Position.Y - chartAreaCR.Position.Height) / 4 * 3 / 5);
-            chartAreaPR.InnerPlotPosition = new ElementPosition(chartAreaCR.InnerPlotPosition.X, chartAreaCR.InnerPlotPosition.Y, chartAreaCR.InnerPlotPosition.Width, chartAreaCR.InnerPlotPosition.Height - 15);
-            ChartAreaSet(chartAreaPR);
-            chartAreaPR.AlignWithChartArea = chartAreaCR.Name;
+                var mainChartArea = mainChart.ChartAreas[0];
+                var areaHeight = 100 - mainChartArea.Position.Y;
+                var chartAreaCR = Charts[i].ChartAreas.Add("ChartAreaCumulativeReturn");
+                SetChartAreaFirst(chartAreaCR);
+                chartAreaCR.Position = new ElementPosition(mainChartArea.Position.X + 3, mainChartArea.Position.Y, mainChartArea.Position.Width - 3, areaHeight / 4f);
+                chartAreaCR.InnerPlotPosition = new ElementPosition(mainChartArea.InnerPlotPosition.X, mainChartArea.InnerPlotPosition.Y, mainChartArea.InnerPlotPosition.Width, mainChartArea.InnerPlotPosition.Height - 7);
+                ChartAreaSet(chartAreaCR, Charts[i]);
 
-            var chartAreaHas = totalChart.ChartAreas.Add("ChartAreaHas");
-            SetChartAreaFirst(chartAreaHas);
-            chartAreaHas.Position = new ElementPosition(chartAreaPR.Position.X, chartAreaPR.Position.Y + chartAreaPR.Position.Height, chartAreaPR.Position.Width, chartAreaPR.Position.Height);
-            chartAreaHas.InnerPlotPosition = new ElementPosition(chartAreaCR.InnerPlotPosition.X, chartAreaCR.InnerPlotPosition.Y, chartAreaCR.InnerPlotPosition.Width, chartAreaPR.InnerPlotPosition.Height);
-            ChartAreaSet(chartAreaHas);
-            chartAreaHas.AlignWithChartArea = chartAreaCR.Name;
-            chartAreaHas.AxisY.LabelStyle.Format = "";
-            chartAreaHas.AxisY2.LabelStyle.Format = "";
-            chartAreaHas.AxisY2.IsStartedFromZero = true;
-            chartAreaHas.AxisY.IsStartedFromZero = true;
+                var chartAreaPR = Charts[i].ChartAreas.Add("ChartAreaProfitRate");
+                SetChartAreaFirst(chartAreaPR);
+                chartAreaPR.Position = new ElementPosition(chartAreaCR.Position.X, chartAreaCR.Position.Y + chartAreaCR.Position.Height, chartAreaCR.Position.Width, (areaHeight - chartAreaCR.Position.Y - chartAreaCR.Position.Height) / 4 * 3 / 5);
+                chartAreaPR.InnerPlotPosition = new ElementPosition(chartAreaCR.InnerPlotPosition.X, chartAreaCR.InnerPlotPosition.Y, chartAreaCR.InnerPlotPosition.Width, chartAreaCR.InnerPlotPosition.Height - 15);
+                ChartAreaSet(chartAreaPR, Charts[i]);
+                chartAreaPR.AlignWithChartArea = chartAreaCR.Name;
 
-            var chartAreaWR = totalChart.ChartAreas.Add("ChartAreaWR");
-            SetChartAreaFirst(chartAreaWR);
-            chartAreaWR.Position = new ElementPosition(chartAreaPR.Position.X, chartAreaHas.Position.Y + chartAreaHas.Position.Height, chartAreaPR.Position.Width, chartAreaHas.Position.Height);
-            chartAreaWR.InnerPlotPosition = new ElementPosition(chartAreaCR.InnerPlotPosition.X, chartAreaCR.InnerPlotPosition.Y, chartAreaCR.InnerPlotPosition.Width, chartAreaPR.InnerPlotPosition.Height);
-            ChartAreaSet(chartAreaWR);
-            chartAreaWR.AlignWithChartArea = chartAreaCR.Name;
-            chartAreaWR.AxisY.Minimum = 0;
-            chartAreaWR.AxisY.Maximum = 100;
-            chartAreaWR.AxisY2.Minimum = 0;
-            chartAreaWR.AxisY2.Maximum = 100;
+                var chartAreaHas = Charts[i].ChartAreas.Add("ChartAreaHas");
+                SetChartAreaFirst(chartAreaHas);
+                chartAreaHas.Position = new ElementPosition(chartAreaPR.Position.X, chartAreaPR.Position.Y + chartAreaPR.Position.Height, chartAreaPR.Position.Width, chartAreaPR.Position.Height);
+                chartAreaHas.InnerPlotPosition = new ElementPosition(chartAreaCR.InnerPlotPosition.X, chartAreaCR.InnerPlotPosition.Y, chartAreaCR.InnerPlotPosition.Width, chartAreaPR.InnerPlotPosition.Height);
+                ChartAreaSet(chartAreaHas, Charts[i]);
+                chartAreaHas.AlignWithChartArea = chartAreaCR.Name;
+                chartAreaHas.AxisY.LabelStyle.Format = "";
+                chartAreaHas.AxisY2.LabelStyle.Format = "";
+                chartAreaHas.AxisY2.IsStartedFromZero = true;
+                chartAreaHas.AxisY.IsStartedFromZero = true;
 
-            var chartAreaWPR = totalChart.ChartAreas.Add("ChartAreaWPR");
-            SetChartAreaFirst(chartAreaWPR);
-            chartAreaWPR.Position = new ElementPosition(chartAreaPR.Position.X, chartAreaWR.Position.Y + chartAreaWR.Position.Height, chartAreaPR.Position.Width, chartAreaWR.Position.Height);
-            chartAreaWPR.InnerPlotPosition = new ElementPosition(chartAreaCR.InnerPlotPosition.X, chartAreaCR.InnerPlotPosition.Y, chartAreaCR.InnerPlotPosition.Width, chartAreaPR.InnerPlotPosition.Height);
-            ChartAreaSet(chartAreaWPR);
-            chartAreaWPR.AlignWithChartArea = chartAreaCR.Name;
+                var chartAreaWR = Charts[i].ChartAreas.Add("ChartAreaWR");
+                SetChartAreaFirst(chartAreaWR);
+                chartAreaWR.Position = new ElementPosition(chartAreaPR.Position.X, chartAreaHas.Position.Y + chartAreaHas.Position.Height, chartAreaPR.Position.Width, chartAreaHas.Position.Height);
+                chartAreaWR.InnerPlotPosition = new ElementPosition(chartAreaCR.InnerPlotPosition.X, chartAreaCR.InnerPlotPosition.Y, chartAreaCR.InnerPlotPosition.Width, chartAreaPR.InnerPlotPosition.Height);
+                ChartAreaSet(chartAreaWR, Charts[i]);
+                chartAreaWR.AlignWithChartArea = chartAreaCR.Name;
+                chartAreaWR.AxisY.Minimum = 0;
+                chartAreaWR.AxisY.Maximum = 100;
+                chartAreaWR.AxisY2.Minimum = 0;
+                chartAreaWR.AxisY2.Maximum = 100;
 
-            var chartAreaLPR = totalChart.ChartAreas.Add("ChartAreaLPR");
-            SetChartAreaFirst(chartAreaLPR);
-            chartAreaLPR.Position = new ElementPosition(chartAreaPR.Position.X, chartAreaWPR.Position.Y + chartAreaWPR.Position.Height, chartAreaPR.Position.Width, chartAreaWPR.Position.Height);
-            chartAreaLPR.InnerPlotPosition = new ElementPosition(chartAreaCR.InnerPlotPosition.X, chartAreaCR.InnerPlotPosition.Y, chartAreaCR.InnerPlotPosition.Width, chartAreaPR.InnerPlotPosition.Height);
-            ChartAreaSet(chartAreaLPR);
-            chartAreaLPR.AlignWithChartArea = chartAreaCR.Name;
+                var chartAreaWPR = Charts[i].ChartAreas.Add("ChartAreaWPR");
+                SetChartAreaFirst(chartAreaWPR);
+                chartAreaWPR.Position = new ElementPosition(chartAreaPR.Position.X, chartAreaWR.Position.Y + chartAreaWR.Position.Height, chartAreaPR.Position.Width, chartAreaWR.Position.Height);
+                chartAreaWPR.InnerPlotPosition = new ElementPosition(chartAreaCR.InnerPlotPosition.X, chartAreaCR.InnerPlotPosition.Y, chartAreaCR.InnerPlotPosition.Width, chartAreaPR.InnerPlotPosition.Height);
+                ChartAreaSet(chartAreaWPR, Charts[i]);
+                chartAreaWPR.AlignWithChartArea = chartAreaCR.Name;
 
-            var chartAreaMCR = totalChart.ChartAreas.Add("ChartAreaMarketCumulativeReturn");
-            SetChartAreaFirst(chartAreaMCR);
-            chartAreaMCR.Position = new ElementPosition(chartAreaCR.Position.X, chartAreaLPR.Position.Y + chartAreaLPR.Position.Height, chartAreaCR.Position.Width, (areaHeight - chartAreaLPR.Position.Y - chartAreaLPR.Position.Height) / 5 * 3);
-            chartAreaMCR.InnerPlotPosition = new ElementPosition(chartAreaCR.InnerPlotPosition.X, chartAreaCR.InnerPlotPosition.Y, chartAreaCR.InnerPlotPosition.Width, chartAreaPR.InnerPlotPosition.Height + 22);
-            ChartAreaSet(chartAreaMCR);
-            chartAreaMCR.AlignWithChartArea = chartAreaCR.Name;
+                var chartAreaLPR = Charts[i].ChartAreas.Add("ChartAreaLPR");
+                SetChartAreaFirst(chartAreaLPR);
+                chartAreaLPR.Position = new ElementPosition(chartAreaPR.Position.X, chartAreaWPR.Position.Y + chartAreaWPR.Position.Height, chartAreaPR.Position.Width, chartAreaWPR.Position.Height);
+                chartAreaLPR.InnerPlotPosition = new ElementPosition(chartAreaCR.InnerPlotPosition.X, chartAreaCR.InnerPlotPosition.Y, chartAreaCR.InnerPlotPosition.Width, chartAreaPR.InnerPlotPosition.Height);
+                ChartAreaSet(chartAreaLPR, Charts[i]);
+                chartAreaLPR.AlignWithChartArea = chartAreaCR.Name;
 
-            var chartAreaMV = totalChart.ChartAreas.Add("ChartAreaMarketVolume");
-            SetChartAreaLast(chartAreaMV);
-            chartAreaMV.Position = new ElementPosition(chartAreaCR.Position.X, chartAreaMCR.Position.Y + chartAreaMCR.Position.Height, chartAreaCR.Position.Width, 100 - (chartAreaMCR.Position.Y + chartAreaMCR.Position.Height));
-            chartAreaMV.InnerPlotPosition = new ElementPosition(chartAreaCR.InnerPlotPosition.X, chartAreaCR.InnerPlotPosition.Y, chartAreaCR.InnerPlotPosition.Width, 70);
-            ChartAreaSet(chartAreaMV);
-            chartAreaMV.AxisY.LabelStyle.Enabled = false;
-            chartAreaMV.AxisY2.LabelStyle.Enabled = false;
-            chartAreaMV.AlignWithChartArea = chartAreaCR.Name;
-            chartAreaMV.AxisY.Crossing = double.NaN;
-            chartAreaMV.AxisY2.Crossing = double.NaN;
+                var chartAreaMCR = Charts[i].ChartAreas.Add("ChartAreaMarketCumulativeReturn");
+                SetChartAreaFirst(chartAreaMCR);
+                chartAreaMCR.Position = new ElementPosition(chartAreaCR.Position.X, chartAreaLPR.Position.Y + chartAreaLPR.Position.Height, chartAreaCR.Position.Width, (areaHeight - chartAreaLPR.Position.Y - chartAreaLPR.Position.Height) / 5 * 3);
+                chartAreaMCR.InnerPlotPosition = new ElementPosition(chartAreaCR.InnerPlotPosition.X, chartAreaCR.InnerPlotPosition.Y, chartAreaCR.InnerPlotPosition.Width, chartAreaPR.InnerPlotPosition.Height + 22);
+                ChartAreaSet(chartAreaMCR, Charts[i]);
+                chartAreaMCR.AlignWithChartArea = chartAreaCR.Name;
 
-            #region series
-            var alp = 200;
-            var seriesLCR = totalChart.Series.Add("LongCR");
-            seriesLCR.ChartType = SeriesChartType.Line;
-            seriesLCR.XValueType = ChartValueType.Time;
-            seriesLCR.Color = Color.FromArgb(alp, ColorSet.PlusPrice);
-            seriesLCR.YAxisType = AxisType.Primary;
-            seriesLCR.ChartArea = chartAreaCR.Name;
-            seriesLCR.Legend = seriesLCR.ChartArea;
+                var chartAreaMV = Charts[i].ChartAreas.Add("ChartAreaMarketVolume");
+                SetChartAreaLast(chartAreaMV);
+                chartAreaMV.Position = new ElementPosition(chartAreaCR.Position.X, chartAreaMCR.Position.Y + chartAreaMCR.Position.Height, chartAreaCR.Position.Width, 100 - (chartAreaMCR.Position.Y + chartAreaMCR.Position.Height));
+                chartAreaMV.InnerPlotPosition = new ElementPosition(chartAreaCR.InnerPlotPosition.X, chartAreaCR.InnerPlotPosition.Y, chartAreaCR.InnerPlotPosition.Width, 50);
+                ChartAreaSet(chartAreaMV, Charts[i]);
+                chartAreaMV.AxisY.LabelStyle.Enabled = false;
+                chartAreaMV.AxisY2.LabelStyle.Enabled = false;
+                chartAreaMV.AlignWithChartArea = chartAreaCR.Name;
+                chartAreaMV.AxisY.Crossing = double.NaN;
+                chartAreaMV.AxisY2.Crossing = double.NaN;
 
-            var seriesSCR = totalChart.Series.Add("ShortCR");
-            seriesSCR.ChartType = seriesLCR.ChartType;
-            seriesSCR.XValueType = seriesLCR.XValueType;
-            seriesSCR.Color = Color.FromArgb(alp, ColorSet.MinusPrice);
-            seriesSCR.YAxisType = AxisType.Secondary;
-            seriesSCR.ChartArea = seriesLCR.ChartArea;
-            seriesSCR.Legend = seriesSCR.ChartArea;
+                #region series
+                var alp = 200;
+                var seriesLCR = Charts[i].Series.Add("LongCR");
+                seriesLCR.ChartType = SeriesChartType.Line;
+                seriesLCR.XValueType = ChartValueType.Time;
+                seriesLCR.Color = Color.FromArgb(alp, ColorSet.PlusPrice);
+                seriesLCR.YAxisType = AxisType.Primary;
+                seriesLCR.ChartArea = chartAreaCR.Name;
+                seriesLCR.Legend = seriesLCR.ChartArea;
 
-            var seriesMCR1 = totalChart.Series.Add("MarketCR1");
-            seriesMCR1.ChartType = SeriesChartType.Line;
-            seriesMCR1.XValueType = ChartValueType.Time;
-            seriesMCR1.Color = Color.FromArgb(alp, Color.Red);
-            seriesMCR1.YAxisType = AxisType.Primary;
-            seriesMCR1.ChartArea = chartAreaMCR.Name;
-            seriesMCR1.Legend = seriesMCR1.ChartArea;
+                var seriesSCR = Charts[i].Series.Add("ShortCR");
+                seriesSCR.ChartType = seriesLCR.ChartType;
+                seriesSCR.XValueType = seriesLCR.XValueType;
+                seriesSCR.Color = Color.FromArgb(alp, ColorSet.MinusPrice);
+                seriesSCR.YAxisType = AxisType.Secondary;
+                seriesSCR.ChartArea = seriesLCR.ChartArea;
+                seriesSCR.Legend = seriesSCR.ChartArea;
 
-            var seriesMCR2 = totalChart.Series.Add("MarketCR2");
-            seriesMCR2.ChartType = SeriesChartType.Line;
-            seriesMCR2.XValueType = ChartValueType.Time;
-            seriesMCR2.Color = Color.FromArgb(alp, Color.Orange);
-            seriesMCR2.YAxisType = AxisType.Secondary;
-            seriesMCR2.ChartArea = chartAreaMCR.Name;
-            seriesMCR2.Legend = seriesMCR2.ChartArea;
+                var seriesMCR1 = Charts[i].Series.Add("MarketCR1");
+                seriesMCR1.ChartType = SeriesChartType.Line;
+                seriesMCR1.XValueType = ChartValueType.Time;
+                seriesMCR1.Color = Color.FromArgb(alp, Color.Red);
+                seriesMCR1.YAxisType = AxisType.Primary;
+                seriesMCR1.ChartArea = chartAreaMCR.Name;
+                seriesMCR1.Legend = seriesMCR1.ChartArea;
 
-            var seriesMV1 = totalChart.Series.Add("MarketVolume1");
-            seriesMV1.ChartType = SeriesChartType.Line;
-            seriesMV1.XValueType = ChartValueType.Time;
-            seriesMV1.Color = seriesMCR1.Color;
-            seriesMV1.YAxisType = AxisType.Primary;
-            seriesMV1.ChartArea = chartAreaMV.Name;
-            seriesMV1.Legend = seriesMV1.ChartArea;
+                var seriesMCR2 = Charts[i].Series.Add("MarketCR2");
+                seriesMCR2.ChartType = SeriesChartType.Line;
+                seriesMCR2.XValueType = ChartValueType.Time;
+                seriesMCR2.Color = Color.FromArgb(alp, Color.Orange);
+                seriesMCR2.YAxisType = AxisType.Secondary;
+                seriesMCR2.ChartArea = chartAreaMCR.Name;
+                seriesMCR2.Legend = seriesMCR2.ChartArea;
 
-            var seriesMV2 = totalChart.Series.Add("MarketVolume2");
-            seriesMV2.ChartType = SeriesChartType.Line;
-            seriesMV2.XValueType = ChartValueType.Time;
-            seriesMV2.Color = seriesMCR2.Color;
-            seriesMV2.YAxisType = AxisType.Secondary;
-            seriesMV2.ChartArea = chartAreaMV.Name;
-            seriesMV2.Legend = seriesMV2.ChartArea;
+                var alp3 = 100;
+                var seriesMV1 = Charts[i].Series.Add("MarketVolume1");
+                seriesMV1.ChartType = SeriesChartType.Column;
+                seriesMV1.XValueType = ChartValueType.Time;
+                seriesMV1.Color = Color.FromArgb(alp3, seriesMCR1.Color);
+                seriesMV1.YAxisType = AxisType.Primary;
+                seriesMV1.ChartArea = chartAreaMV.Name;
+                seriesMV1.Legend = seriesMV1.ChartArea;
+                seriesMV1.CustomProperties = "DrawSideBySide=False";
 
-            var seriesLPR = totalChart.Series.Add("LongProfitRate");
-            seriesLPR.ChartType = SeriesChartType.Line;
-            seriesLPR.XValueType = seriesLCR.XValueType;
-            seriesLPR.Color = seriesLCR.Color;
-            seriesLPR.YAxisType = seriesLCR.YAxisType;
-            seriesLPR.ChartArea = chartAreaPR.Name;
-            seriesLPR.Legend = seriesLPR.ChartArea;
+                var seriesMV2 = Charts[i].Series.Add("MarketVolume2");
+                seriesMV2.ChartType = seriesMV1.ChartType;
+                seriesMV2.XValueType = ChartValueType.Time;
+                seriesMV2.Color = Color.FromArgb(alp3, seriesMCR2.Color);
+                seriesMV2.YAxisType = AxisType.Secondary;
+                seriesMV2.ChartArea = chartAreaMV.Name;
+                seriesMV2.Legend = seriesMV2.ChartArea;
+                seriesMV2.CustomProperties = seriesMV1.CustomProperties;
 
-            var seriesSPR = totalChart.Series.Add("ShortProfitRate");
-            seriesSPR.ChartType = seriesLPR.ChartType;
-            seriesSPR.XValueType = seriesLCR.XValueType;
-            seriesSPR.Color = seriesSCR.Color;
-            seriesSPR.YAxisType = seriesSCR.YAxisType;
-            seriesSPR.ChartArea = seriesLPR.ChartArea;
-            seriesSPR.Legend = seriesSPR.ChartArea;
+                var alp2 = 175;
+                var seriesLPR = Charts[i].Series.Add("LongProfitRate");
+                seriesLPR.ChartType = SeriesChartType.Column;
+                seriesLPR.XValueType = seriesLCR.XValueType;
+                seriesLPR.Color = Color.FromArgb(alp2, ColorSet.PlusPrice);
+                seriesLPR.YAxisType = seriesLCR.YAxisType;
+                seriesLPR.ChartArea = chartAreaPR.Name;
+                seriesLPR.Legend = seriesLPR.ChartArea;
+                seriesLPR.CustomProperties = "DrawSideBySide=False";
 
-            var seriesLH = totalChart.Series.Add("LongHas");
-            seriesLH.ChartType = SeriesChartType.Line;
-            seriesLH.XValueType = seriesLCR.XValueType;
-            seriesLH.Color = seriesLCR.Color;
-            seriesLH.YAxisType = seriesLCR.YAxisType;
-            seriesLH.ChartArea = chartAreaHas.Name;
-            seriesLH.Legend = seriesLH.ChartArea;
+                var seriesSPR = Charts[i].Series.Add("ShortProfitRate");
+                seriesSPR.ChartType = seriesLPR.ChartType;
+                seriesSPR.XValueType = seriesLCR.XValueType;
+                seriesSPR.Color = Color.FromArgb(alp2, ColorSet.MinusPrice);
+                seriesSPR.YAxisType = seriesSCR.YAxisType;
+                seriesSPR.ChartArea = seriesLPR.ChartArea;
+                seriesSPR.Legend = seriesSPR.ChartArea;
+                seriesSPR.CustomProperties = seriesLPR.CustomProperties;
 
-            var seriesSH = totalChart.Series.Add("ShortHas");
-            seriesSH.ChartType = seriesLH.ChartType;
-            seriesSH.XValueType = seriesLCR.XValueType;
-            seriesSH.Color = seriesSCR.Color;
-            seriesSH.YAxisType = seriesSCR.YAxisType;
-            seriesSH.ChartArea = seriesLH.ChartArea;
-            seriesSH.Legend = seriesSH.ChartArea;
+                var seriesLH = Charts[i].Series.Add("LongHas");
+                seriesLH.ChartType = seriesLPR.ChartType;
+                seriesLH.XValueType = seriesLCR.XValueType;
+                seriesLH.Color = seriesLPR.Color;
+                seriesLH.YAxisType = seriesLCR.YAxisType;
+                seriesLH.ChartArea = chartAreaHas.Name;
+                seriesLH.Legend = seriesLH.ChartArea;
+                seriesLH.CustomProperties = seriesLPR.CustomProperties;
 
-            var seriesLWR = totalChart.Series.Add("LongWinRate");
-            seriesLWR.ChartType = SeriesChartType.Line;
-            seriesLWR.XValueType = seriesLCR.XValueType;
-            seriesLWR.Color = seriesLCR.Color;
-            seriesLWR.YAxisType = seriesLCR.YAxisType;
-            seriesLWR.ChartArea = chartAreaWR.Name;
-            seriesLWR.Legend = seriesLWR.ChartArea;
+                var seriesSH = Charts[i].Series.Add("ShortHas");
+                seriesSH.ChartType = seriesLH.ChartType;
+                seriesSH.XValueType = seriesLCR.XValueType;
+                seriesSH.Color = seriesSPR.Color;
+                seriesSH.YAxisType = seriesSCR.YAxisType;
+                seriesSH.ChartArea = seriesLH.ChartArea;
+                seriesSH.Legend = seriesSH.ChartArea;
+                seriesSH.CustomProperties = seriesLPR.CustomProperties;
 
-            var seriesSWR = totalChart.Series.Add("ShortWinRate");
-            seriesSWR.ChartType = seriesLWR.ChartType;
-            seriesSWR.XValueType = seriesLCR.XValueType;
-            seriesSWR.Color = seriesSCR.Color;
-            seriesSWR.YAxisType = seriesSCR.YAxisType;
-            seriesSWR.ChartArea = seriesLWR.ChartArea;
-            seriesSWR.Legend = seriesSWR.ChartArea;
+                var seriesLWR = Charts[i].Series.Add("LongWinRate");
+                seriesLWR.ChartType = seriesLPR.ChartType;
+                seriesLWR.XValueType = seriesLCR.XValueType;
+                seriesLWR.Color = seriesLPR.Color;
+                seriesLWR.YAxisType = seriesLCR.YAxisType;
+                seriesLWR.ChartArea = chartAreaWR.Name;
+                seriesLWR.Legend = seriesLWR.ChartArea;
+                seriesLWR.CustomProperties = seriesLPR.CustomProperties;
 
-            var seriesLWPR = totalChart.Series.Add("LongWinProfitRate");
-            seriesLWPR.ChartType = SeriesChartType.Line;
-            seriesLWPR.XValueType = seriesLCR.XValueType;
-            seriesLWPR.Color = seriesLCR.Color;
-            seriesLWPR.YAxisType = seriesLCR.YAxisType;
-            seriesLWPR.ChartArea = chartAreaWPR.Name;
-            seriesLWPR.Legend = seriesLWPR.ChartArea;
+                var seriesSWR = Charts[i].Series.Add("ShortWinRate");
+                seriesSWR.ChartType = seriesLWR.ChartType;
+                seriesSWR.XValueType = seriesLCR.XValueType;
+                seriesSWR.Color = seriesSPR.Color;
+                seriesSWR.YAxisType = seriesSCR.YAxisType;
+                seriesSWR.ChartArea = seriesLWR.ChartArea;
+                seriesSWR.Legend = seriesSWR.ChartArea;
+                seriesSWR.CustomProperties = seriesLPR.CustomProperties;
 
-            var seriesSWPR = totalChart.Series.Add("ShortWinProfitRate");
-            seriesSWPR.ChartType = seriesLWR.ChartType;
-            seriesSWPR.XValueType = seriesLCR.XValueType;
-            seriesSWPR.Color = seriesSCR.Color;
-            seriesSWPR.YAxisType = seriesSCR.YAxisType;
-            seriesSWPR.ChartArea = seriesLWPR.ChartArea;
-            seriesSWPR.Legend = seriesSWPR.ChartArea;
+                var seriesLWPR = Charts[i].Series.Add("LongWinProfitRate");
+                seriesLWPR.ChartType = seriesLPR.ChartType;
+                seriesLWPR.XValueType = seriesLCR.XValueType;
+                seriesLWPR.Color = seriesLPR.Color;
+                seriesLWPR.YAxisType = seriesLCR.YAxisType;
+                seriesLWPR.ChartArea = chartAreaWPR.Name;
+                seriesLWPR.Legend = seriesLWPR.ChartArea;
+                seriesLWPR.CustomProperties = seriesLPR.CustomProperties;
 
-            var seriesLLPR = totalChart.Series.Add("LongLoseProfitRate");
-            seriesLLPR.ChartType = SeriesChartType.Line;
-            seriesLLPR.XValueType = seriesLCR.XValueType;
-            seriesLLPR.Color = seriesLCR.Color;
-            seriesLLPR.YAxisType = seriesLCR.YAxisType;
-            seriesLLPR.ChartArea = chartAreaLPR.Name;
-            seriesLLPR.Legend = seriesLLPR.ChartArea;
+                var seriesSWPR = Charts[i].Series.Add("ShortWinProfitRate");
+                seriesSWPR.ChartType = seriesLWR.ChartType;
+                seriesSWPR.XValueType = seriesLCR.XValueType;
+                seriesSWPR.Color = seriesSPR.Color;
+                seriesSWPR.YAxisType = seriesSCR.YAxisType;
+                seriesSWPR.ChartArea = seriesLWPR.ChartArea;
+                seriesSWPR.Legend = seriesSWPR.ChartArea;
+                seriesSWPR.CustomProperties = seriesLPR.CustomProperties;
 
-            var seriesSLPR = totalChart.Series.Add("ShortLoseProfitRate");
-            seriesSLPR.ChartType = seriesLWR.ChartType;
-            seriesSLPR.XValueType = seriesLCR.XValueType;
-            seriesSLPR.Color = seriesSCR.Color;
-            seriesSLPR.YAxisType = seriesSCR.YAxisType;
-            seriesSLPR.ChartArea = seriesLLPR.ChartArea;
-            seriesSLPR.Legend = seriesSLPR.ChartArea;
+                var seriesLLPR = Charts[i].Series.Add("LongLoseProfitRate");
+                seriesLLPR.ChartType = seriesLPR.ChartType;
+                seriesLLPR.XValueType = seriesLCR.XValueType;
+                seriesLLPR.Color = seriesLPR.Color;
+                seriesLLPR.YAxisType = seriesLCR.YAxisType;
+                seriesLLPR.ChartArea = chartAreaLPR.Name;
+                seriesLLPR.Legend = seriesLLPR.ChartArea;
+                seriesLLPR.CustomProperties = seriesLPR.CustomProperties;
+
+                var seriesSLPR = Charts[i].Series.Add("ShortLoseProfitRate");
+                seriesSLPR.ChartType = seriesLWR.ChartType;
+                seriesSLPR.XValueType = seriesLCR.XValueType;
+                seriesSLPR.Color = seriesSPR.Color;
+                seriesSLPR.YAxisType = seriesSCR.YAxisType;
+                seriesSLPR.ChartArea = seriesLLPR.ChartArea;
+                seriesSLPR.Legend = seriesSLPR.ChartArea;
+                seriesSLPR.CustomProperties = seriesLPR.CustomProperties;
+                #endregion
+            }
+            for (int i = 0; i < Charts2.Length; i++)
+            {
+                SetChart(Charts2[i], new Size(mainChart.Size.Width, GetFormHeight(form) - GetFormUpBarSize(form) + 10), new Point(mainChart.Location.X, mainChart.Location.Y));
+                Charts2[i].Hide();
+                Charts2[i].Click += resultChartClick;
+
+                var mainChartArea = mainChart.ChartAreas[0];
+                var areaHeight = 100 - mainChartArea.Position.Y;
+                var chartAreaCR = Charts2[i].ChartAreas.Add("ChartAreaCumulativeReturn");
+                SetChartAreaFirst(chartAreaCR);
+                chartAreaCR.Position = new ElementPosition(mainChartArea.Position.X + 3, mainChartArea.Position.Y, mainChartArea.Position.Width - 3, areaHeight / 13f * 2);
+                chartAreaCR.InnerPlotPosition = new ElementPosition(mainChartArea.InnerPlotPosition.X, mainChartArea.InnerPlotPosition.Y, mainChartArea.InnerPlotPosition.Width, mainChartArea.InnerPlotPosition.Height - 8);
+                ChartAreaSet(chartAreaCR, Charts2[i]);
+                chartAreaCR.AxisY2.Enabled = AxisEnabled.False;
+                chartAreaCR.CursorY.AxisType = AxisType.Primary;
+
+                var chartAreaPR = Charts2[i].ChartAreas.Add("ChartAreaProfitRate");
+                SetChartAreaFirst(chartAreaPR);
+                chartAreaPR.Position = new ElementPosition(chartAreaCR.Position.X, chartAreaCR.Position.Y + chartAreaCR.Position.Height, chartAreaCR.Position.Width, chartAreaCR.Position.Height);
+                chartAreaPR.InnerPlotPosition = new ElementPosition(chartAreaCR.InnerPlotPosition.X, chartAreaCR.InnerPlotPosition.Y, chartAreaCR.InnerPlotPosition.Width, chartAreaCR.InnerPlotPosition.Height);
+                ChartAreaSet(chartAreaPR, Charts2[i]);
+                chartAreaPR.AlignWithChartArea = chartAreaCR.Name;
+                chartAreaPR.AxisY2.Enabled = AxisEnabled.False;
+                chartAreaPR.CursorY.AxisType = AxisType.Primary;
+
+                var chartAreaHas = Charts2[i].ChartAreas.Add("ChartAreaHas");
+                SetChartAreaFirst(chartAreaHas);
+                chartAreaHas.Position = new ElementPosition(chartAreaPR.Position.X, chartAreaPR.Position.Y + chartAreaPR.Position.Height, chartAreaPR.Position.Width, chartAreaPR.Position.Height);
+                chartAreaHas.InnerPlotPosition = new ElementPosition(chartAreaCR.InnerPlotPosition.X, chartAreaCR.InnerPlotPosition.Y, chartAreaCR.InnerPlotPosition.Width, chartAreaCR.InnerPlotPosition.Height);
+                ChartAreaSet(chartAreaHas, Charts2[i]);
+                chartAreaHas.AlignWithChartArea = chartAreaCR.Name;
+                chartAreaHas.AxisY.LabelStyle.Format = "";
+                chartAreaHas.AxisY.IsStartedFromZero = true;
+                chartAreaHas.AxisY2.Enabled = AxisEnabled.False;
+                chartAreaHas.CursorY.AxisType = AxisType.Primary;
+
+                var chartAreaWR = Charts2[i].ChartAreas.Add("ChartAreaWR");
+                SetChartAreaFirst(chartAreaWR);
+                chartAreaWR.Position = new ElementPosition(chartAreaPR.Position.X, chartAreaHas.Position.Y + chartAreaHas.Position.Height, chartAreaPR.Position.Width, chartAreaHas.Position.Height);
+                chartAreaWR.InnerPlotPosition = new ElementPosition(chartAreaCR.InnerPlotPosition.X, chartAreaCR.InnerPlotPosition.Y, chartAreaCR.InnerPlotPosition.Width, chartAreaPR.InnerPlotPosition.Height);
+                ChartAreaSet(chartAreaWR, Charts2[i]);
+                chartAreaWR.AlignWithChartArea = chartAreaCR.Name;
+                chartAreaWR.AxisY.Minimum = 0;
+                chartAreaWR.AxisY.Maximum = 100;
+                chartAreaWR.AxisY2.Enabled = AxisEnabled.False;
+                chartAreaWR.CursorY.AxisType = AxisType.Primary;
+
+                var chartAreaWPR = Charts2[i].ChartAreas.Add("ChartAreaWPR");
+                SetChartAreaFirst(chartAreaWPR);
+                chartAreaWPR.Position = new ElementPosition(chartAreaPR.Position.X, chartAreaWR.Position.Y + chartAreaWR.Position.Height, chartAreaPR.Position.Width, chartAreaHas.Position.Height);
+                chartAreaWPR.InnerPlotPosition = new ElementPosition(chartAreaCR.InnerPlotPosition.X, chartAreaCR.InnerPlotPosition.Y, chartAreaCR.InnerPlotPosition.Width, chartAreaPR.InnerPlotPosition.Height);
+                ChartAreaSet(chartAreaWPR, Charts2[i]);
+                chartAreaWPR.AlignWithChartArea = chartAreaCR.Name;
+                chartAreaWPR.AxisY2.Enabled = AxisEnabled.False;
+                chartAreaWPR.CursorY.AxisType = AxisType.Primary;
+
+                var chartAreaLPR = Charts2[i].ChartAreas.Add("ChartAreaLPR");
+                SetChartAreaLast(chartAreaLPR);
+                chartAreaLPR.Position = new ElementPosition(chartAreaPR.Position.X, chartAreaWPR.Position.Y + chartAreaWPR.Position.Height, chartAreaPR.Position.Width, 100 - (chartAreaWPR.Position.Y + chartAreaWPR.Position.Height));
+                chartAreaLPR.InnerPlotPosition = new ElementPosition(chartAreaCR.InnerPlotPosition.X, chartAreaCR.InnerPlotPosition.Y, chartAreaCR.InnerPlotPosition.Width, 70);
+                ChartAreaSet(chartAreaLPR, Charts2[i]);
+                chartAreaLPR.AlignWithChartArea = chartAreaCR.Name;
+                chartAreaLPR.AxisY2.Enabled = AxisEnabled.False;
+                chartAreaLPR.CursorY.AxisType = AxisType.Primary;
+                chartAreaLPR.AxisY.Crossing = double.NaN;
+                chartAreaLPR.AxisY2.Crossing = double.NaN;
+
+                #region series
+                var alp = 200;
+                var seriesLCR = Charts2[i].Series.Add("CR");
+                seriesLCR.ChartType = SeriesChartType.Line;
+                seriesLCR.XValueType = ChartValueType.Time;
+                seriesLCR.Color = Color.FromArgb(alp, (i == 0 || i == 2) ? ColorSet.PlusPrice : ColorSet.MinusPrice);
+                seriesLCR.YAxisType = AxisType.Primary;
+                seriesLCR.ChartArea = chartAreaCR.Name;
+                seriesLCR.Legend = seriesLCR.ChartArea;
+
+                var seriesLPR = Charts2[i].Series.Add("ProfitRate");
+                seriesLPR.ChartType = SeriesChartType.Column;
+                seriesLPR.XValueType = seriesLCR.XValueType;
+                seriesLPR.Color = seriesLCR.Color;
+                seriesLPR.YAxisType = seriesLCR.YAxisType;
+                seriesLPR.ChartArea = chartAreaPR.Name;
+                seriesLPR.Legend = seriesLPR.ChartArea;
+
+                var seriesLH = Charts2[i].Series.Add("Has");
+                seriesLH.ChartType = seriesLPR.ChartType;
+                seriesLH.XValueType = seriesLCR.XValueType;
+                seriesLH.Color = seriesLPR.Color;
+                seriesLH.YAxisType = seriesLCR.YAxisType;
+                seriesLH.ChartArea = chartAreaHas.Name;
+                seriesLH.Legend = seriesLH.ChartArea;
+
+                var seriesLWR = Charts2[i].Series.Add("WinRate");
+                seriesLWR.ChartType = seriesLPR.ChartType;
+                seriesLWR.XValueType = seriesLCR.XValueType;
+                seriesLWR.Color = seriesLPR.Color;
+                seriesLWR.YAxisType = seriesLCR.YAxisType;
+                seriesLWR.ChartArea = chartAreaWR.Name;
+                seriesLWR.Legend = seriesLWR.ChartArea;
+                seriesLWR.CustomProperties = seriesLPR.CustomProperties;
+
+                var seriesLWPR = Charts2[i].Series.Add("WinProfitRate");
+                seriesLWPR.ChartType = seriesLPR.ChartType;
+                seriesLWPR.XValueType = seriesLCR.XValueType;
+                seriesLWPR.Color = seriesLPR.Color;
+                seriesLWPR.YAxisType = seriesLCR.YAxisType;
+                seriesLWPR.ChartArea = chartAreaWPR.Name;
+                seriesLWPR.Legend = seriesLWPR.ChartArea;
+                seriesLWPR.CustomProperties = seriesLPR.CustomProperties;
+
+                var seriesLLPR = Charts2[i].Series.Add("LoseProfitRate");
+                seriesLLPR.ChartType = seriesLPR.ChartType;
+                seriesLLPR.XValueType = seriesLCR.XValueType;
+                seriesLLPR.Color = seriesLPR.Color;
+                seriesLLPR.YAxisType = seriesLCR.YAxisType;
+                seriesLLPR.ChartArea = chartAreaLPR.Name;
+                seriesLLPR.Legend = seriesLLPR.ChartArea;
+                seriesLLPR.CustomProperties = seriesLPR.CustomProperties;
+                #endregion
+            }
             #endregion
 
-            SetButton(totalButton, "T", (sender, e) =>
+            #region Buttons
+            var charButton = new Action<Chart, Button>((c, b) =>
             {
-                if (!totalChart.Visible)
+                if (!c.Visible)
                 {
-                    totalChart.Visible = true;
-                    totalChart.BringToFront();
+                    c.Visible = true;
+                    c.BringToFront();
 
-                    foreach (var b in buttonDic.Values)
-                        b.BringToFront();
-                    totalButton.BackColor = ColorSet.ButtonSelected;
-                    totalButton.BringToFront();
+                    foreach (var b2 in buttonDic.Values)
+                        b2.BringToFront();
+                    b.BackColor = ColorSet.ButtonSelected;
+
+                    foreach (var b2 in Buttons)
+                        b2.BringToFront();
                     captureButton.BringToFront();
                 }
                 else
                 {
-                    totalChart.Visible = false;
-                    totalButton.BackColor = ColorSet.Button;
+                    c.Visible = false;
+                    b.BackColor = ColorSet.Button;
                 }
             });
-            totalButton.Size = buttonDic.Values.Last().Size;
-            totalButton.Location = new Point(buttonDic.Values.Last().Location.X, buttonDic.Values.Last().Location.Y + buttonDic.Values.Last().Height + 5);
+
+            SetButton(Buttons[2], "T", (sender, e) => { charButton(Charts[2], Buttons[2]); });
+            Buttons[2].Size = buttonDic.Values.Last().Size;
+            Buttons[2].Location = new Point(buttonDic.Values.Last().Location.X, buttonDic.Values.Last().Location.Y + buttonDic.Values.Last().Height + 5);
+
+            SetButton(Buttons[3], "TD", (sender, e) => { charButton(Charts[3], Buttons[3]); });
+            Buttons[3].Size = Buttons[2].Size;
+            Buttons[3].Location = new Point(Buttons[2].Location.X, Buttons[2].Location.Y + Buttons[2].Height + 5);
+
+            SetButton(Buttons[0], "L", (sender, e) => { charButton(Charts[0], Buttons[0]); });
+            Buttons[0].Size = new Size(Buttons[3].Width / 2 - 5, Buttons[3].Height);
+            Buttons[0].Location = new Point(Buttons[3].Location.X, Buttons[3].Location.Y + Buttons[3].Height + 5);
+
+            SetButton(Buttons[1], "S", (sender, e) => { charButton(Charts[1], Buttons[1]); });
+            Buttons[1].Size = Buttons[0].Size;
+            Buttons[1].Location = new Point(Buttons[0].Location.X + Buttons[0].Width + 10, Buttons[0].Location.Y);
+
+            SetButton(Buttons[4], "l", (sender, e) => { charButton(Charts2[0], Buttons[4]); });
+            Buttons[4].Size = Buttons[0].Size;
+            Buttons[4].Location = new Point(Buttons[0].Location.X, Buttons[0].Location.Y + Buttons[0].Height + 5);
+
+            SetButton(Buttons[5], "s", (sender, e) => { charButton(Charts2[1], Buttons[5]); });
+            Buttons[5].Size = Buttons[0].Size;
+            Buttons[5].Location = new Point(Buttons[1].Location.X, Buttons[1].Location.Y + Buttons[1].Height + 5);
+
+            SetButton(Buttons[6], "l", (sender, e) => { charButton(Charts2[2], Buttons[6]); });
+            Buttons[6].Size = Buttons[0].Size;
+            Buttons[6].Location = new Point(Buttons[4].Location.X, Buttons[4].Location.Y + Buttons[4].Height + 5);
+
+            SetButton(Buttons[7], "s", (sender, e) => { charButton(Charts2[3], Buttons[7]); });
+            Buttons[7].Size = Buttons[0].Size;
+            Buttons[7].Location = new Point(Buttons[5].Location.X, Buttons[5].Location.Y + Buttons[5].Height + 5);
 
             SetButton(captureButton, "", (sender, e) =>
             {
@@ -510,13 +699,14 @@ namespace BackTestingFinal
 
                 //        }
             });
-            captureButton.Size = new Size(totalButton.Width / 2, totalButton.Height / 2);
-            captureButton.Location = new Point(totalButton.Location.X, totalButton.Location.Y + totalButton.Height + 5);
+            captureButton.Size = new Size(Buttons[2].Width / 2, Buttons[2].Height / 2);
+            captureButton.Location = new Point(Buttons[6].Location.X, Buttons[6].Location.Y + Buttons[6].Height + 5);
+            #endregion
 
             #region Controller
             var ca = mainChart.ChartAreas[1];
             SetButton(beforeButton, "<", (sender, e) => { FindSimulAndShow(true); });
-            beforeButton.Size = new Size((int)((mainChart.Width * (ca.Position.X + ca.Position.Width * ca.InnerPlotPosition.X / 100) / 100 - 15) / 2), totalButton.Height);
+            beforeButton.Size = new Size((int)((mainChart.Width * (ca.Position.X + ca.Position.Width * ca.InnerPlotPosition.X / 100) / 100 - 15) / 2), Buttons[3].Height);
             beforeButton.Location = new Point(mainChart.Location.X + 5,
                 (int)(mainChart.Location.Y + mainChart.Height * (ca.Position.Y + ca.Position.Height * (ca.InnerPlotPosition.Y + ca.InnerPlotPosition.Height) / 100) / 100 - beforeButton.Height));
 
@@ -551,7 +741,7 @@ namespace BackTestingFinal
             lastButton.Location = new Point(afterButton.Location.X, firstButton.Location.Y);
             #endregion
         }
-        void ChartAreaSet(ChartArea ca)
+        void ChartAreaSet(ChartArea ca, Chart chart)
         {
             ca.AxisX.IntervalAutoMode = IntervalAutoMode.FixedCount;
             ca.AxisX.LineColor = Color.Gray;
@@ -576,7 +766,7 @@ namespace BackTestingFinal
             ca.CursorY.AxisType = AxisType.Secondary;
 
 
-            var legend = totalChart.Legends.Add(ca.Name);
+            var legend = chart.Legends.Add(ca.Name);
             legend.BackColor = Color.Transparent;
             legend.ForeColor = Color.FromArgb(50, ColorSet.FormText);
             legend.Docking = Docking.Top;
@@ -666,7 +856,7 @@ namespace BackTestingFinal
                     ("Short", "Short", 4)
                 });
             metricListView.Size = new Size(GetFormWidth(form) - mainChart.Location.X - mainChart.Width - 5,
-                (GetFormHeight(form) - CRComboBox.Location.Y - CRComboBox.Height) / 5 * 3 - 10);
+                (GetFormHeight(form) - CRComboBox.Location.Y - CRComboBox.Height) / 10 * 7 - 10);
             metricListView.Location = new Point(mainChart.Location.X + mainChart.Size.Width, CRComboBox.Location.Y + CRComboBox.Height + 5);
             #endregion
 
@@ -688,9 +878,6 @@ namespace BackTestingFinal
 
                 var itemData = codeListView.SelectedObject as BackItemData;
                 ShowChart(itemData, (GetFirstOrLastTime(false, itemData).time, baseChartViewSticksSize, false));
-
-                if (simulDays[0].Count == 0)
-                    return;
 
                 ShowCodeResult(itemData);
             };
@@ -833,26 +1020,40 @@ namespace BackTestingFinal
             metricListView.AddObject(metricDic[MetricCR]);
             metricListView.AddObject(new MetricData());
 
-            metricDic.Add(MetricWinRate, new MetricData() { MetricName = MetricWinRate });
-            metricListView.AddObject(metricDic[MetricWinRate]);
-            metricDic.Add(MetricWinRateYearStandardDeviation, new MetricData() { MetricName = MetricWinRateYearStandardDeviation });
-            metricListView.AddObject(metricDic[MetricWinRateYearStandardDeviation]);
-            metricDic.Add(MetricAllCount, new MetricData() { MetricName = MetricAllCount });
-            metricListView.AddObject(metricDic[MetricAllCount]);
+            metricDic.Add(MetricSingle, new MetricData() { MetricName = MetricSingle });
+            metricListView.AddObject(metricDic[MetricSingle]);
+            metricDic.Add(MetricSingleWinRate, new MetricData() { MetricName = MetricWinRate });
+            metricListView.AddObject(metricDic[MetricSingleWinRate]);
+            metricDic.Add(MetricSingleAllCount, new MetricData() { MetricName = MetricAllCount });
+            metricListView.AddObject(metricDic[MetricSingleAllCount]);
             metricDic.Add(MetricDisappear, new MetricData() { MetricName = MetricDisappear });
             metricListView.AddObject(metricDic[MetricDisappear]);
             metricDic.Add(MetricLastDisappear, new MetricData() { MetricName = MetricLastDisappear });
             metricListView.AddObject(metricDic[MetricLastDisappear]);
-            metricDic.Add(MetricAvgProfitRate, new MetricData() { MetricName = MetricAvgProfitRate });
-            metricListView.AddObject(metricDic[MetricAvgProfitRate]);
-            metricDic.Add(MetricWinAvgProfitRate, new MetricData() { MetricName = MetricWinAvgProfitRate });
-            metricListView.AddObject(metricDic[MetricWinAvgProfitRate]);
-            metricDic.Add(MetricLoseAvgProfitRate, new MetricData() { MetricName = MetricLoseAvgProfitRate });
-            metricListView.AddObject(metricDic[MetricLoseAvgProfitRate]);
+            metricDic.Add(MetricSingleAvgProfitRate, new MetricData() { MetricName = MetricAvgProfitRate });
+            metricListView.AddObject(metricDic[MetricSingleAvgProfitRate]);
+            metricDic.Add(MetricSingleWinAvgProfitRate, new MetricData() { MetricName = MetricWinAvgProfitRate });
+            metricListView.AddObject(metricDic[MetricSingleWinAvgProfitRate]);
+            metricDic.Add(MetricSingleLoseAvgProfitRate, new MetricData() { MetricName = MetricLoseAvgProfitRate });
+            metricListView.AddObject(metricDic[MetricSingleLoseAvgProfitRate]);
             metricDic.Add(MetricCommision, new MetricData() { MetricName = MetricCommision });
             metricListView.AddObject(metricDic[MetricCommision]);
             metricDic.Add(MetricSlippage, new MetricData() { MetricName = MetricSlippage });
             metricListView.AddObject(metricDic[MetricSlippage]);
+            metricDic.Add(MetricAverage, new MetricData() { MetricName = MetricAverage });
+            metricListView.AddObject(metricDic[MetricAverage]);
+            metricDic.Add(MetricAverageWinRate, new MetricData() { MetricName = MetricWinRate });
+            metricListView.AddObject(metricDic[MetricAverageWinRate]);
+            metricDic.Add(MetricAverageAllCount, new MetricData() { MetricName = MetricAllCount });
+            metricListView.AddObject(metricDic[MetricAverageAllCount]);
+            metricDic.Add(MetricGeoMeanProfitRate, new MetricData() { MetricName = MetricGeoMeanProfitRate });
+            metricListView.AddObject(metricDic[MetricGeoMeanProfitRate]);
+            metricDic.Add(MetricAverageAvgProfitRate, new MetricData() { MetricName = MetricAvgProfitRate });
+            metricListView.AddObject(metricDic[MetricAverageAvgProfitRate]);
+            metricDic.Add(MetricAverageWinAvgProfitRate, new MetricData() { MetricName = MetricWinAvgProfitRate });
+            metricListView.AddObject(metricDic[MetricAverageWinAvgProfitRate]);
+            metricDic.Add(MetricAverageLoseAvgProfitRate, new MetricData() { MetricName = MetricLoseAvgProfitRate });
+            metricListView.AddObject(metricDic[MetricAverageLoseAvgProfitRate]);
             metricListView.AddObject(new MetricData());
 
             metricDic.Add(MetricMDD, new MetricData() { MetricName = MetricMDD });
@@ -899,7 +1100,13 @@ namespace BackTestingFinal
 
         void RunMain(DateTime start, DateTime end, Position isAllLongShort, CR CRType)
         {
-            form.BeginInvoke(new Action(() => { ClearChart(totalChart, true); }));
+            form.BeginInvoke(new Action(() => 
+            {
+                foreach (var c in Charts)
+                    ClearChart(c, true);
+                foreach (var c in Charts2)
+                    ClearChart(c, true);
+            }));
 
             if (lastCR != CRType || start < startDone || end > endDone)
             {
@@ -941,23 +1148,29 @@ namespace BackTestingFinal
             {
                 form.Text += ST + " done : " + sw.Elapsed.ToString(TimeSpanFormat);
                 CalculateMetric(start, end, isAllLongShort);
-                if (!totalChart.Visible)
-                    totalButton.PerformClick();
+                if (!Charts[2].Visible)
+                    Buttons[2].PerformClick();
             }));
         }
         void ClearBeforeRun()
         {
             marketDays.Clear();
-            foreach (var sd in simulDays)
-                sd.Clear();
+            for (int i = 0; i < simulDays.Length; i++)
+            {
+                simulDays[i].Clear();
+                simulDaysDetail[i].Clear();
+            }
             openDaysPerYear.Clear();
         }
 
         void CalculateMetric(DateTime start, DateTime end, Position isAllLongShort)
         {
             #region First Setting
-            var startIndex = marketDays.IndexOfKey(start.Date);
-            var endIndex = marketDays.IndexOfKey(end.Date);
+            var startStartTime = GetDetailStartTime(start.Date);
+            var endStartTime = GetDetailStartTime(end);
+            var startIndex = simulDaysDetail[0].IndexOfKey(startStartTime);
+            var endIndex = simulDaysDetail[0].IndexOfKey(endStartTime);
+            var d = BaseChartTimeSet.OneDay.seconds / DetailCV.seconds;
 
             metricResultListView.ClearObjects();
 
@@ -971,24 +1184,36 @@ namespace BackTestingFinal
 
             var CRType = (CR)Enum.Parse(typeof(CR), CRComboBox.Text);
 
-            var market1 = LoadSticks(itemDataDic["BTCUSDT"], BaseChartTimeSet.OneDay, start.Date, (int)end.Date.AddDays(1).Subtract(start.Date).TotalDays, false);
-            var market2 = LoadSticks(itemDataDic["ETHUSDT"], BaseChartTimeSet.OneDay, start.Date, (int)end.Date.AddDays(1).Subtract(start.Date).TotalDays, false);
-            var m1I = 0;
-            var m2I = 0;
+            var market1Day = LoadSticks(itemDataDic["BTCUSDT"], BaseChartTimeSet.OneDay, start.Date, (int)end.Date.AddDays(1).Subtract(start.Date).TotalDays, false);
+            var market2Day = LoadSticks(itemDataDic["ETHUSDT"], BaseChartTimeSet.OneDay, start.Date, (int)end.Date.AddDays(1).Subtract(start.Date).TotalDays, false);
+            var m1DI = 0;
+            var m2DI = 0;
+            var market1DayDetail = LoadSticks(itemDataDic["BTCUSDT"], DetailCV, startStartTime, (int)endStartTime.AddSeconds(DetailCV.seconds).Subtract(startStartTime).TotalSeconds / DetailCV.seconds, false);
+            var market2DayDetail = LoadSticks(itemDataDic["ETHUSDT"], DetailCV, startStartTime, (int)endStartTime.AddSeconds(DetailCV.seconds).Subtract(startStartTime).TotalSeconds / DetailCV.seconds, false);
+            var m1DDI = 0;
+            var m2DDI = 0;
 
             for (int j = (int)Position.Long; j <= (int)Position.Short; j++)
                 if (isAllLongShort == Position.All || isAllLongShort == (Position)j)
                     for (int i = startIndex; i <= endIndex; i++)
                     {
-                        MetricVars[j].HasItemsAtADay = 0;
+                        var di = i / d;
+                        if (i % d == 0)
+                        {
+                            simulDays[j].Values[di].Count = 0;
+                            simulDays[j].Values[di].Win = 0;
+                            simulDays[j].Values[di].WinProfitRateSum = 0;
+                            simulDays[j].Values[di].ProfitRateSum = 0;
+                            simulDays[j].Values[di].kelly = CalculateKelly(MetricVars[j].ProfitRates, MetricVars[j].minKelly, MetricVars[j].maxKelly);
+                        }
 
-                        simulDays[j].Values[i].Count = 0;
-                        simulDays[j].Values[i].Win = 0;
-                        simulDays[j].Values[i].WinProfitRateSum = 0;
-                        simulDays[j].Values[i].ProfitRateSum = 0;
+                        simulDaysDetail[j].Values[i].Count = 0;
+                        simulDaysDetail[j].Values[i].Win = 0;
+                        simulDaysDetail[j].Values[i].WinProfitRateSum = 0;
+                        simulDaysDetail[j].Values[i].ProfitRateSum = 0;
 
-                        foreach (var resultData in simulDays[j].Values[i].resultDatas)
-                            if (resultData.EnterTime.Date == simulDays[j].Keys[i] && resultData.ExitTime.Date <= end)
+                        foreach (var resultData in simulDaysDetail[j].Values[i].resultDatas)
+                            if (GetDetailStartTime(resultData.EnterTime) == simulDaysDetail[j].Keys[i] && GetDetailStartTime(resultData.ExitTime) <= endStartTime)
                             {
                                 var hasTime = resultData.ExitTime.Subtract(resultData.EnterTime);
                                 if (hasTime > MetricVars[(int)resultData.LorS].longestHasTime)
@@ -1000,39 +1225,38 @@ namespace BackTestingFinal
 
                                 var itemData = itemDataDic[resultData.Code];
 
-                                simulDays[j].Values[i].Count++;
+                                simulDays[j].Values[di].Count++;
+                                simulDaysDetail[j].Values[i].Count++;
                                 itemData.Count++;
-                                simulDays[j].Values[i].ProfitRateSum += resultData.ProfitRate;
-                                MetricVars[(int)resultData.LorS].HasItemsAtADay++;
-                                MetricVars[(int)resultData.LorS].Count++;
-                                MetricVars[(int)resultData.LorS].ProfitRateSum += resultData.ProfitRate;
+                                simulDays[j].Values[di].ProfitRateSum += resultData.ProfitRate;
+                                simulDaysDetail[j].Values[i].ProfitRateSum += resultData.ProfitRate;
+                                MetricVars[(int)resultData.LorS].SingleCount++;
+                                MetricVars[(int)resultData.LorS].SingleProfitRateSum += resultData.ProfitRate;
                                 if (resultData.ProfitRate > commisionRate + slippage)
                                 {
-                                    simulDays[j].Values[i].Win++;
+                                    simulDays[j].Values[di].Win++;
+                                    simulDaysDetail[j].Values[i].Win++;
                                     itemData.Win++;
-                                    simulDays[j].Values[i].WinProfitRateSum += resultData.ProfitRate;
-                                    MetricVars[(int)resultData.LorS].Win++;
-                                    MetricVars[(int)resultData.LorS].ProfitWinRateSum += resultData.ProfitRate;
+                                    simulDays[j].Values[di].WinProfitRateSum += resultData.ProfitRate;
+                                    simulDaysDetail[j].Values[i].WinProfitRateSum += resultData.ProfitRate;
+                                    MetricVars[(int)resultData.LorS].SingleWin++;
+                                    MetricVars[(int)resultData.LorS].SingleProfitWinRateSum += resultData.ProfitRate;
                                 }
                             }
 
-                        if (MetricVars[j].HasItemsAtADay > MetricVars[j].highestHasItemsAtADay)
+                        if (simulDays[j].Values[di].Count > MetricVars[j].highestHasItemsAtADay)
                         {
-                            MetricVars[j].highestHasItemsAtADay = MetricVars[j].HasItemsAtADay;
-                            MetricVars[j].highestHasItemsDate = simulDays[j].Keys[i];
+                            MetricVars[j].highestHasItemsAtADay = simulDays[j].Values[di].Count;
+                            MetricVars[j].highestHasItemsDate = simulDays[j].Keys[di];
                         }
 
-                        var Kelly = CalculateKelly(MetricVars[j].ProfitRates, MetricVars[j].minKelly, MetricVars[j].maxKelly);
-                        if (MetricVars[j].lowestKelly > Kelly)
-                            MetricVars[j].lowestKelly = Kelly;
-                        if (MetricVars[j].highestKelly < Kelly)
-                            MetricVars[j].highestKelly = Kelly;
+                        if (MetricVars[j].lowestKelly > simulDays[j].Values[di].kelly)
+                            MetricVars[j].lowestKelly = simulDays[j].Values[di].kelly;
+                        if (MetricVars[j].highestKelly < simulDays[j].Values[di].kelly)
+                            MetricVars[j].highestKelly = simulDays[j].Values[di].kelly;
 
-                        if (simulDays[j].Keys[i].ToString(TimeFormat) == "2021-05-03 00:00:00" || simulDays[j].Keys[i].ToString(TimeFormat) == "2021-05-11 00:00:00")
-                            Kelly = Kelly;
-
-                        foreach (var resultData in simulDays[j].Values[i].ResultDatasForMetric)
-                            if (resultData.EnterTime.Date == simulDays[j].Keys[i] && resultData.ExitTime.Date <= end)
+                        foreach (var resultData in simulDaysDetail[j].Values[i].ResultDatasForMetric)
+                            if (GetDetailStartTime(resultData.EnterTime) == simulDaysDetail[j].Keys[i] && GetDetailStartTime(resultData.ExitTime) <= endStartTime)
                             {
                                 if (resultData.Count == 0)
                                     continue;
@@ -1043,22 +1267,40 @@ namespace BackTestingFinal
                                 var avgPR = (resultData.ProfitRate / resultData.Count - 1) * 100 - commisionRate - slippage;
 
                                 if (CRType != CR.AllWithMinimum)
-                                    MetricVars[j].CR *= 1 + avgPR * Kelly / 100;
+                                    MetricVars[j].CR *= 1 + avgPR * simulDays[j].Values[di].kelly / 100;
                                 else
                                     MetricVars[j].CR += avgPR / 100 / maxHas[j] * resultData.Count;
 
                                 MetricVars[j].beforeCR = MetricVars[j].CR;
 
                                 MetricVars[j].ProfitRates.Add(avgPR);
-                                //resultList1[j].Add((MetricVars[j].CR, avgPR, Kelly));
+                                resultList1[j].Add((MetricVars[j].CR, avgPR, simulDays[j].Values[di].kelly));
+
+                                MetricVars[j].AverageCount++;
+                                MetricVars[j].AverageProfitRateSum += avgPR;
+                                MetricVars[j].AverageProfitRateMul *= 1 + avgPR / 100;
+                                if (avgPR > 0)
+                                {
+                                    MetricVars[j].AverageWin++;
+                                    MetricVars[j].AverageProfitWinRateSum += avgPR;
+                                }
+
+                                var xLabel = resultData.EnterTime.ToString(TimeFormat);
+                                Charts2[j].Series[0].Points.AddXY(xLabel, Math.Round((MetricVars[j].CR - 1) * 100, 1));
+                                Charts2[j].Series[1].Points.AddXY(xLabel, Math.Round(avgPR, 2));
+                                Charts2[j].Series[2].Points.AddXY(xLabel, resultData.Count);
+                                Charts2[j].Series[3].Points.AddXY(xLabel, Math.Round((double)resultData.WinCount / resultData.Count * 100, 2));
+                                Charts2[j].Series[4].Points.AddXY(xLabel, resultData.WinCount == 0 ? 0 : Math.Round((resultData.WinProfitRateSum / resultData.WinCount - 1) * 100, 2));
+                                Charts2[j].Series[5].Points.AddXY(xLabel, resultData.Count == resultData.WinCount ? 0 :
+                                Math.Round(((resultData.ProfitRate - resultData.WinProfitRateSum) / (resultData.Count - resultData.WinCount) - 1) * 100, 2));
                             }
 
-                        foreach (var resultData in simulDays[j].Values[i].disResultDatas)
-                            if (resultData.EnterTime.Date == simulDays[j].Keys[i] && resultData.ExitTime.Date <= end)
+                        foreach (var resultData in simulDaysDetail[j].Values[i].disResultDatas)
+                            if (GetDetailStartTime(resultData.EnterTime) == simulDaysDetail[j].Keys[i] && GetDetailStartTime(resultData.ExitTime) <= endStartTime)
                                 MetricVars[j].disappearCount++;
 
-                        foreach (var resultData in simulDays[j].Values[i].lastResultDatas)
-                            if (resultData.EnterTime.Date == simulDays[j].Keys[i] && resultData.ExitTime.Date <= end)
+                        foreach (var resultData in simulDaysDetail[j].Values[i].lastResultDatas)
+                            if (GetDetailStartTime(resultData.EnterTime) == simulDaysDetail[j].Keys[i] && GetDetailStartTime(resultData.ExitTime) <= endStartTime)
                                 MetricVars[j].lastDisappearCount++;
 
                         if (MetricVars[j].DD == default)
@@ -1066,10 +1308,10 @@ namespace BackTestingFinal
                             MetricVars[j].DD = new DrawDownData()
                             {
                                 HighestCumulativeReturn = MetricVars[j].CR,
-                                HighestCumulativeReturnIndex = i,
+                                HighestCumulativeReturnIndex = di,
                                 LowestCumulativeReturn = MetricVars[j].CR,
-                                LowestCumulativeReturnIndex = i,
-                                LastCumulativeReturnIndex = i,
+                                LowestCumulativeReturnIndex = di,
+                                LastCumulativeReturnIndex = di,
                             };
                             MetricVars[j].MDD = MetricVars[j].DD;
                             MetricVars[j].LDD = MetricVars[j].DD;
@@ -1079,11 +1321,11 @@ namespace BackTestingFinal
                             if (MetricVars[j].CR <= MetricVars[j].DD.LowestCumulativeReturn && i != endIndex)
                             {
                                 MetricVars[j].DD.LowestCumulativeReturn = MetricVars[j].CR;
-                                MetricVars[j].DD.LowestCumulativeReturnIndex = i;
+                                MetricVars[j].DD.LowestCumulativeReturnIndex = di;
                             }
                             else if (MetricVars[j].CR > MetricVars[j].DD.HighestCumulativeReturn || i == endIndex)
                             {
-                                MetricVars[j].DD.LastCumulativeReturnIndex = i;
+                                MetricVars[j].DD.LastCumulativeReturnIndex = di;
 
                                 if (MetricVars[j].MDD == default || MetricVars[j].DD.LowestCumulativeReturn / MetricVars[j].DD.HighestCumulativeReturn < MetricVars[j].MDD.LowestCumulativeReturn / MetricVars[j].MDD.HighestCumulativeReturn
                                     || (MetricVars[j].DD.LowestCumulativeReturn / MetricVars[j].DD.HighestCumulativeReturn == MetricVars[j].MDD.LowestCumulativeReturn / MetricVars[j].MDD.HighestCumulativeReturn &&
@@ -1096,110 +1338,286 @@ namespace BackTestingFinal
                                 MetricVars[j].DD = new DrawDownData()
                                 {
                                     HighestCumulativeReturn = MetricVars[j].CR,
-                                    HighestCumulativeReturnIndex = i,
+                                    HighestCumulativeReturnIndex = di,
                                     LowestCumulativeReturn = MetricVars[j].CR,
-                                    LowestCumulativeReturnIndex = i,
-                                    LastCumulativeReturnIndex = i,
+                                    LowestCumulativeReturnIndex = di,
+                                    LastCumulativeReturnIndex = di,
                                 };
                             }
                         }
 
-                        if (simulDays[j].Values[i].Count != 0)
+                        if (simulDaysDetail[j].Values[i].Count != 0)
                         {
-                            simulDays[j].Values[i].WinRate = Math.Round((double)simulDays[j].Values[i].Win / simulDays[j].Values[i].Count * 100, 2);
-                            simulDays[j].Values[i].ProfitRateAvg = Math.Round(simulDays[j].Values[i].ProfitRateSum / simulDays[j].Values[i].Count, 2);
-                            simulDays[j].Values[i].WinProfitRateAvg = simulDays[j].Values[i].Win == 0 ? 0 : Math.Round(simulDays[j].Values[i].WinProfitRateSum / simulDays[j].Values[i].Win, 2);
-                            simulDays[j].Values[i].LoseProfitRateAvg = simulDays[j].Values[i].Count == simulDays[j].Values[i].Win ? 0 :
-                                Math.Round((simulDays[j].Values[i].ProfitRateSum - simulDays[j].Values[i].WinProfitRateSum) / (simulDays[j].Values[i].Count - simulDays[j].Values[i].Win), 2);
+                            simulDaysDetail[j].Values[i].WinRate = Math.Round((double)simulDaysDetail[j].Values[i].Win / simulDaysDetail[j].Values[i].Count * 100, 2);
+                            simulDaysDetail[j].Values[i].ProfitRateAvg = Math.Round(simulDaysDetail[j].Values[i].ProfitRateSum / simulDaysDetail[j].Values[i].Count, 2);
+                            simulDaysDetail[j].Values[i].WinProfitRateAvg = simulDaysDetail[j].Values[i].Win == 0 ? 0 : Math.Round(simulDaysDetail[j].Values[i].WinProfitRateSum / simulDaysDetail[j].Values[i].Win, 2);
+                            simulDaysDetail[j].Values[i].LoseProfitRateAvg = simulDaysDetail[j].Values[i].Count == simulDaysDetail[j].Values[i].Win ? 0 :
+                                Math.Round((simulDaysDetail[j].Values[i].ProfitRateSum - simulDaysDetail[j].Values[i].WinProfitRateSum) / (simulDaysDetail[j].Values[i].Count - simulDaysDetail[j].Values[i].Win), 2);
                         }
                         else
                         {
-                            simulDays[j].Values[i].WinRate = 0;
-                            simulDays[j].Values[i].ProfitRateAvg = 0;
-                            simulDays[j].Values[i].WinProfitRateAvg = 0;
-                            simulDays[j].Values[i].LoseProfitRateAvg = 0;
+                            simulDaysDetail[j].Values[i].WinRate = 0;
+                            simulDaysDetail[j].Values[i].ProfitRateAvg = 0;
+                            simulDaysDetail[j].Values[i].WinProfitRateAvg = 0;
+                            simulDaysDetail[j].Values[i].LoseProfitRateAvg = 0;
                         }
 
-                        if (simulDays[j].Values[i].Count != 0)
+                        if (simulDaysDetail[j].Values[i].Count != 0)
                         {
-                            simulDays[j].Values[i].Number = ++n;
-                            metricResultListView.AddObject(simulDays[j].Values[i]);
+                            simulDaysDetail[j].Values[i].Number = ++n;
+                            metricResultListView.AddObject(simulDaysDetail[j].Values[i]);
                         }
 
-                        var axisLabel = simulDays[j].Keys[i].ToString(DateTimeFormat);
-                        totalChart.Series[j].Points.AddXY(axisLabel, Math.Round((MetricVars[j].CR - 1) * 100, 0));
-                        totalChart.Series[j + 6].Points.AddXY(axisLabel, simulDays[j].Values[i].ProfitRateAvg);
-                        totalChart.Series[j + 8].Points.AddXY(axisLabel, MetricVars[j].HasItemsAtADay);
-                        totalChart.Series[j + 10].Points.AddXY(axisLabel, simulDays[j].Values[i].WinRate);
-                        totalChart.Series[j + 12].Points.AddXY(axisLabel, simulDays[j].Values[i].WinProfitRateAvg);
-                        totalChart.Series[j + 14].Points.AddXY(axisLabel, simulDays[j].Values[i].LoseProfitRateAvg);
+                        var axisLabel = simulDaysDetail[j].Keys[i].ToString(TimeFormat);
+                        Charts[3].Series[j].Points.AddXY(axisLabel, Math.Round((MetricVars[j].CR - 1) * 100, 0));
+                        Charts[3].Series[j + 6].Points.AddXY(axisLabel, simulDaysDetail[j].Values[i].ProfitRateAvg);
+                        Charts[3].Series[j + 8].Points.AddXY(axisLabel, simulDaysDetail[j].Values[i].Count);
+                        Charts[3].Series[j + 10].Points.AddXY(axisLabel, simulDaysDetail[j].Values[i].WinRate);
+                        Charts[3].Series[j + 12].Points.AddXY(axisLabel, simulDaysDetail[j].Values[i].WinProfitRateAvg);
+                        Charts[3].Series[j + 14].Points.AddXY(axisLabel, simulDaysDetail[j].Values[i].LoseProfitRateAvg);
 
                         if (isAllLongShort != Position.All || j == (int)Position.Long)
                         {
-                            var date = simulDays[j].Keys[i];
-                            if (date >= market1[0].Time && date <= market1[market1.Count - 1].Time)
+                            var date = simulDaysDetail[j].Keys[i];
+                            if (date >= market1DayDetail[0].Time && date <= market1DayDetail[market1DayDetail.Count - 1].Time)
                             {
-                                totalChart.Series[2].Points.AddXY(axisLabel, Math.Round((market1[m1I].Price[3] / market1[0].Price[3] - 1) * 100, 0));
-                                totalChart.Series[4].Points.AddXY(axisLabel, market1[m1I].Ms + market1[m1I].Md);
-                                m1I++;
+                                Charts[3].Series[2].Points.AddXY(axisLabel, Math.Round((market1DayDetail[m1DDI].Price[3] / market1DayDetail[0].Price[3] - 1) * 100, 0));
+                                Charts[3].Series[4].Points.AddXY(axisLabel, market1DayDetail[m1DDI].Ms + market1DayDetail[m1DDI].Md);
+                                m1DDI++;
                             }
                             else
                             {
-                                totalChart.Series[2].Points.AddXY(axisLabel, 0);
-                                totalChart.Series[4].Points.AddXY(axisLabel, 0);
+                                Charts[3].Series[2].Points.AddXY(axisLabel, 0);
+                                Charts[3].Series[4].Points.AddXY(axisLabel, 0);
                             }
-                            if (date >= market2[0].Time && date <= market2[market2.Count - 1].Time)
+                            if (date >= market2DayDetail[0].Time && date <= market2DayDetail[market2DayDetail.Count - 1].Time)
                             {
-                                totalChart.Series[3].Points.AddXY(axisLabel, Math.Round((market2[m2I].Price[3] / market2[0].Price[3] - 1) * 100, 0));
-                                totalChart.Series[5].Points.AddXY(axisLabel, market2[m2I].Ms + market2[m2I].Md);
-                                m2I++;
+                                Charts[3].Series[3].Points.AddXY(axisLabel, Math.Round((market2DayDetail[m2DDI].Price[3] / market2DayDetail[0].Price[3] - 1) * 100, 0));
+                                Charts[3].Series[5].Points.AddXY(axisLabel, market2DayDetail[m2DDI].Ms + market2DayDetail[m2DDI].Md);
+                                m2DDI++;
                             }
                             else
                             {
-                                totalChart.Series[3].Points.AddXY(axisLabel, 0);
-                                totalChart.Series[5].Points.AddXY(axisLabel, 0);
+                                Charts[3].Series[3].Points.AddXY(axisLabel, 0);
+                                Charts[3].Series[5].Points.AddXY(axisLabel, 0);
+                            }
+                        }
+
+                        Charts[j].Series[j].Points.AddXY(axisLabel, Charts[3].Series[j].Points.Last().YValues[0]);
+                        Charts[j].Series[2].Points.AddXY(axisLabel, Charts[3].Series[2].Points[Charts[3].Series[j].Points.Count - 1].YValues[0]);
+                        Charts[j].Series[3].Points.AddXY(axisLabel, Charts[3].Series[3].Points[Charts[3].Series[j].Points.Count - 1].YValues[0]);
+                        Charts[j].Series[4].Points.AddXY(axisLabel, Charts[3].Series[4].Points[Charts[3].Series[j].Points.Count - 1].YValues[0]);
+                        Charts[j].Series[5].Points.AddXY(axisLabel, Charts[3].Series[5].Points[Charts[3].Series[j].Points.Count - 1].YValues[0]);
+                        Charts[j].Series[j + 6].Points.AddXY(axisLabel, Charts[3].Series[j + 6].Points.Last().YValues[0]);
+                        Charts[j].Series[j + 8].Points.AddXY(axisLabel, Charts[3].Series[j + 8].Points.Last().YValues[0]);
+                        Charts[j].Series[j + 10].Points.AddXY(axisLabel, Charts[3].Series[j + 10].Points.Last().YValues[0]);
+                        Charts[j].Series[j + 12].Points.AddXY(axisLabel, Charts[3].Series[j + 12].Points.Last().YValues[0]);
+                        Charts[j].Series[j + 14].Points.AddXY(axisLabel, Charts[3].Series[j + 14].Points.Last().YValues[0]);
+
+                        //if (simulDaysDetail[j].Values[i].Count != 0)
+                        {
+                            Charts2[j + 2].Series[0].Points.AddXY(axisLabel, Charts[3].Series[j].Points.Last().YValues[0]);
+                            Charts2[j + 2].Series[1].Points.AddXY(axisLabel, Charts[3].Series[j + 6].Points.Last().YValues[0]);
+                            Charts2[j + 2].Series[2].Points.AddXY(axisLabel, Charts[3].Series[j + 8].Points.Last().YValues[0]);
+                            Charts2[j + 2].Series[3].Points.AddXY(axisLabel, Charts[3].Series[j + 10].Points.Last().YValues[0]);
+                            Charts2[j + 2].Series[4].Points.AddXY(axisLabel, Charts[3].Series[j + 12].Points.Last().YValues[0]);
+                            Charts2[j + 2].Series[5].Points.AddXY(axisLabel, Charts[3].Series[j + 14].Points.Last().YValues[0]);
+                        }
+
+                        if ((i + 1) % d == 0 || i == endIndex)
+                        {
+                            if (simulDays[j].Values[di].Count != 0)
+                            {
+                                simulDays[j].Values[di].WinRate = Math.Round((double)simulDays[j].Values[di].Win / simulDays[j].Values[di].Count * 100, 2);
+                                simulDays[j].Values[di].ProfitRateAvg = Math.Round(simulDays[j].Values[di].ProfitRateSum / simulDays[j].Values[di].Count, 2);
+                                simulDays[j].Values[di].WinProfitRateAvg = simulDays[j].Values[di].Win == 0 ? 0 : Math.Round(simulDays[j].Values[di].WinProfitRateSum / simulDays[j].Values[di].Win, 2);
+                                simulDays[j].Values[di].LoseProfitRateAvg = simulDays[j].Values[di].Count == simulDays[j].Values[di].Win ? 0 :
+                                    Math.Round((simulDays[j].Values[di].ProfitRateSum - simulDays[j].Values[di].WinProfitRateSum) / (simulDays[j].Values[di].Count - simulDays[j].Values[di].Win), 2);
+                            }
+                            else
+                            {
+                                simulDays[j].Values[di].WinRate = 0;
+                                simulDays[j].Values[di].ProfitRateAvg = 0;
+                                simulDays[j].Values[di].WinProfitRateAvg = 0;
+                                simulDays[j].Values[di].LoseProfitRateAvg = 0;
+                            }
+
+                            if (simulDays[j].Values[di].Count != 0)
+                            {
+                                simulDays[j].Values[di].Number = ++n;
+                                metricResultListView.AddObject(simulDays[j].Values[di]);
+                            }
+
+                            axisLabel = simulDays[j].Keys[di].ToString(DateTimeFormat);
+                            Charts[2].Series[j].Points.AddXY(axisLabel, Math.Round((MetricVars[j].CR - 1) * 100, 0));
+                            Charts[2].Series[j + 6].Points.AddXY(axisLabel, simulDays[j].Values[di].ProfitRateAvg);
+                            Charts[2].Series[j + 8].Points.AddXY(axisLabel, simulDays[j].Values[di].Count);
+                            Charts[2].Series[j + 10].Points.AddXY(axisLabel, simulDays[j].Values[di].WinRate);
+                            Charts[2].Series[j + 12].Points.AddXY(axisLabel, simulDays[j].Values[di].WinProfitRateAvg);
+                            Charts[2].Series[j + 14].Points.AddXY(axisLabel, simulDays[j].Values[di].LoseProfitRateAvg);
+
+                            if (isAllLongShort != Position.All || j == (int)Position.Long)
+                            {
+                                var date = simulDays[j].Keys[di];
+                                if (date >= market1Day[0].Time && date <= market1Day[market1Day.Count - 1].Time)
+                                {
+                                    Charts[2].Series[2].Points.AddXY(axisLabel, Math.Round((market1Day[m1DI].Price[3] / market1Day[0].Price[3] - 1) * 100, 0));
+                                    Charts[2].Series[4].Points.AddXY(axisLabel, market1Day[m1DI].Ms + market1Day[m1DI].Md);
+                                    m1DI++;
+                                }
+                                else
+                                {
+                                    Charts[2].Series[2].Points.AddXY(axisLabel, 0);
+                                    Charts[2].Series[4].Points.AddXY(axisLabel, 0);
+                                }
+                                if (date >= market2Day[0].Time && date <= market2Day[market2Day.Count - 1].Time)
+                                {
+                                    Charts[2].Series[3].Points.AddXY(axisLabel, Math.Round((market2Day[m2DI].Price[3] / market2Day[0].Price[3] - 1) * 100, 0));
+                                    Charts[2].Series[5].Points.AddXY(axisLabel, market2Day[m2DI].Ms + market2Day[m2DI].Md);
+                                    m2DI++;
+                                }
+                                else
+                                {
+                                    Charts[2].Series[3].Points.AddXY(axisLabel, 0);
+                                    Charts[2].Series[5].Points.AddXY(axisLabel, 0);
+                                }
                             }
                         }
                     }
 
-            for (int i = 0; i < totalChart.Series.Count / 2; i++)
-            {
-                var ca = totalChart.ChartAreas[totalChart.Series[i * 2].ChartArea];
+            for (int j = 0; j < Charts.Length; j++)
+                for (int i = 0; i < Charts[j].Series.Count / 2; i++)
+                {
+                    var ca = Charts[j].ChartAreas[Charts[j].Series[i * 2].ChartArea];
 
-                //ca.RecalculateAxesScale();
-                var min = 0m;
-                var max = 0m;
-                var min2 = 0m;
-                var max2 = 0m;
-                if (totalChart.Series[i * 2].Points.Count != 0)
-                {
-                    min = (decimal)totalChart.Series[i * 2].Points.FindMinByValue("Y1").YValues[0];
-                    max = (decimal)totalChart.Series[i * 2].Points.FindMaxByValue("Y1").YValues[0];
-                }
-                if (totalChart.Series[i * 2 + 1].Points.Count != 0)
-                {
-                    min2 = (decimal)totalChart.Series[i * 2 + 1].Points.FindMinByValue("Y1").YValues[0];
-                    max2 = (decimal)totalChart.Series[i * 2 + 1].Points.FindMaxByValue("Y1").YValues[0];
-                }
-
-                if (ca.AxisY.Minimum != 0 || ca.AxisY2.Minimum != 0 || ca.AxisY.Maximum != 100 || ca.AxisY2.Maximum != 100)
-                {
-                    if ((min != 0 || max != 0) && (min2 != 0 || max2 != 0))
+                    var min = 0m;
+                    var max = 0m;
+                    var min2 = 0m;
+                    var max2 = 0m;
+                    if (Charts[j].Series[i * 2].Points.Count != 0)
                     {
-                        if (min >= 0 && min2 >= 0)
+                        min = (decimal)Charts[j].Series[i * 2].Points.FindMinByValue("Y1").YValues[0];
+                        max = (decimal)Charts[j].Series[i * 2].Points.FindMaxByValue("Y1").YValues[0];
+                    }
+                    if (Charts[j].Series[i * 2 + 1].Points.Count != 0)
+                    {
+                        min2 = (decimal)Charts[j].Series[i * 2 + 1].Points.FindMinByValue("Y1").YValues[0];
+                        max2 = (decimal)Charts[j].Series[i * 2 + 1].Points.FindMaxByValue("Y1").YValues[0];
+                    }
+
+                    if (ca.AxisY.Minimum != 0 || ca.AxisY2.Minimum != 0 || ca.AxisY.Maximum != 100 || ca.AxisY2.Maximum != 100)
+                    {
+                        if ((min != 0 || max != 0) && (min2 != 0 || max2 != 0))
                         {
-                            ca.AxisY.Minimum = 0;
-                            ca.AxisY2.Minimum = 0;
+                            if (min >= 0 && min2 >= 0)
+                            {
+                                ca.AxisY.Minimum = 0;
+                                ca.AxisY2.Minimum = 0;
 
-                            var e = (decimal)Math.Pow(10, (int)Math.Log10((double)max / 4) - 1);
-                            var e2 = (decimal)Math.Pow(10, (int)Math.Log10((double)max2 / 4) - 1);
+                                var e = (decimal)Math.Pow(10, (int)Math.Log10((double)max / 4) - 1);
+                                var e2 = (decimal)Math.Pow(10, (int)Math.Log10((double)max2 / 4) - 1);
 
-                            ca.AxisY.Maximum = (double)((int)(max / 4 / e) * e * 5);
-                            ca.AxisY2.Maximum = (double)((int)(max2 / 4 / e2) * e2 * 5);
+                                ca.AxisY.Maximum = (double)((int)(max / 4 / e) * e * 5);
+                                ca.AxisY2.Maximum = (double)((int)(max2 / 4 / e2) * e2 * 5);
+                            }
+                            else
+                            {
+                                if (min >= 0 || (int)(max / -min) + 1 > 4)
+                                {
+                                    var e = (decimal)Math.Pow(10, (int)Math.Log10((double)max / 4) - 1);
+                                    ca.AxisY.Minimum = -(double)((int)(max / 4 / e) * e);
+                                    ca.AxisY.Maximum = -ca.AxisY.Minimum * 5;
+                                }
+                                else if (max / -min >= 1)
+                                {
+                                    var e = (decimal)Math.Pow(10, (int)Math.Log10(-(double)min / 4) - 1);
+                                    ca.AxisY.Minimum = -(double)((int)(-min / 4 / e) * e * 5);
+                                    ca.AxisY.Maximum = -ca.AxisY.Minimum * ((int)(max / -min) + 1);
+                                }
+                                else if (max <= 0 || (int)(-min / max) + 1 > 4)
+                                {
+                                    var e = (decimal)Math.Pow(10, (int)Math.Log10(-(double)min / 4) - 1);
+                                    ca.AxisY.Maximum = (double)((int)(-min / 4 / e) * e);
+                                    ca.AxisY.Minimum = -ca.AxisY.Maximum * 5;
+                                }
+                                else
+                                {
+                                    var e = (decimal)Math.Pow(10, (int)Math.Log10((double)max / 4) - 1);
+                                    ca.AxisY.Maximum = (double)((int)(max / 4 / e) * e * 5);
+                                    ca.AxisY.Minimum = -ca.AxisY.Maximum * ((int)(min / -max) + 1);
+                                }
+
+                                if (min2 >= 0 || (int)(max2 / -min2) + 1 > 4)
+                                {
+                                    var e2 = (decimal)Math.Pow(10, (int)Math.Log10((double)max2 / 4) - 1);
+                                    ca.AxisY2.Minimum = -(double)((int)(max2 / 4 / e2) * e2);
+                                    ca.AxisY2.Maximum = -ca.AxisY2.Minimum * 5;
+                                }
+                                else if (max2 / -min2 >= 1)
+                                {
+                                    var e2 = (decimal)Math.Pow(10, (int)Math.Log10(-(double)min2 / 4) - 1);
+                                    ca.AxisY2.Minimum = -(double)((int)(-min2 / 4 / e2) * e2 * 5);
+                                    ca.AxisY2.Maximum = -ca.AxisY2.Minimum * ((int)(max2 / -min2) + 1);
+                                }
+                                else if (max2 <= 0 || (int)(-min2 / max2) + 1 > 4)
+                                {
+                                    var e2 = (decimal)Math.Pow(10, (int)Math.Log10(-(double)min2 / 4) - 1);
+                                    ca.AxisY2.Maximum = (double)((int)(-min2 / 4 / e2) * e2);
+                                    ca.AxisY2.Minimum = -ca.AxisY2.Maximum * 5;
+                                }
+                                else
+                                {
+                                    var e2 = (decimal)Math.Pow(10, (int)Math.Log10((double)max2 / 4) - 1);
+                                    ca.AxisY2.Maximum = (double)((int)(max2 / 4 / e2) * e2 * 5);
+                                    ca.AxisY2.Minimum = -ca.AxisY2.Maximum * ((int)(min2 / -max2) + 1);
+                                }
+                            }
+
+                            if (ca.AxisY.Minimum == 0 && ca.AxisY2.Minimum == 0)
+                            {
+                                ca.AxisY.Interval = (ca.AxisY.Maximum - ca.AxisY.Minimum) / 2;
+                                ca.AxisY2.Interval = (ca.AxisY2.Maximum - ca.AxisY2.Minimum) / 2;
+                                continue;
+                            }
+                            else if (ca.AxisY.Minimum == 0 && ca.AxisY.Maximum == 0)
+                            {
+                                ca.AxisY.Minimum = ca.AxisY2.Minimum;
+                                ca.AxisY.Maximum = ca.AxisY2.Maximum;
+                            }
+                            else if (ca.AxisY2.Minimum == 0 && ca.AxisY2.Maximum == 0)
+                            {
+                                ca.AxisY2.Minimum = ca.AxisY.Minimum;
+                                ca.AxisY2.Maximum = ca.AxisY.Maximum;
+                            }
+
+                            if (ca.AxisY.Minimum == 0)
+                                ca.AxisY.Minimum = ca.AxisY.Maximum * ca.AxisY2.Minimum / ca.AxisY2.Maximum;
+                            else if (ca.AxisY2.Minimum == 0)
+                                ca.AxisY2.Minimum = ca.AxisY2.Maximum * ca.AxisY.Minimum / ca.AxisY.Maximum;
+                            else if (ca.AxisY.Maximum / -ca.AxisY.Minimum > ca.AxisY2.Maximum / -ca.AxisY2.Minimum)
+                                ca.AxisY2.Maximum = ca.AxisY2.Minimum * ca.AxisY.Maximum / ca.AxisY.Minimum;
+                            else
+                                ca.AxisY.Maximum = ca.AxisY.Minimum * ca.AxisY2.Maximum / ca.AxisY2.Minimum;
                         }
-                        else
+                        else if (min != 0 || max != 0)
                         {
-                            if (min >= 0 || (int)(max / -min) + 1 > 4)
+                            if (min >= 0)
+                            {
+                                ca.AxisY.Minimum = 0;
+
+                                var e = (decimal)Math.Pow(10, (int)Math.Log10((double)max / 4) - 1);
+
+                                ca.AxisY.Maximum = (double)((int)(max / 4 / e) * e * 5);
+                            }
+                            else if (max <= 0)
+                            {
+                                ca.AxisY.Maximum = 0;
+
+                                var e = (decimal)Math.Pow(10, (int)Math.Log10((double)-min / 4) - 1);
+
+                                ca.AxisY.Minimum = -(double)((int)(-min / 4 / e) * e * 5);
+                            }
+                            else if ((int)(max / -min) + 1 > 4)
                             {
                                 var e = (decimal)Math.Pow(10, (int)Math.Log10((double)max / 4) - 1);
                                 ca.AxisY.Minimum = -(double)((int)(max / 4 / e) * e);
@@ -1211,7 +1629,7 @@ namespace BackTestingFinal
                                 ca.AxisY.Minimum = -(double)((int)(-min / 4 / e) * e * 5);
                                 ca.AxisY.Maximum = -ca.AxisY.Minimum * ((int)(max / -min) + 1);
                             }
-                            else if (max <= 0 || (int)(-min / max) + 1 > 4)
+                            else if ((int)(-min / max) + 1 > 4)
                             {
                                 var e = (decimal)Math.Pow(10, (int)Math.Log10(-(double)min / 4) - 1);
                                 ca.AxisY.Maximum = (double)((int)(-min / 4 / e) * e);
@@ -1224,157 +1642,62 @@ namespace BackTestingFinal
                                 ca.AxisY.Minimum = -ca.AxisY.Maximum * ((int)(min / -max) + 1);
                             }
 
-                            if (min2 >= 0 || (int)(max2 / -min2) + 1 > 4)
+                            ca.AxisY2.Minimum = ca.AxisY.Minimum;
+                            ca.AxisY2.Maximum = ca.AxisY.Maximum;
+                        }
+                        else if (min2 != 0 || max2 != 0)
+                        {
+                            if (min2 >= 0)
                             {
-                                var e2 = (decimal)Math.Pow(10, (int)Math.Log10((double)max2 / 4) - 1);
-                                ca.AxisY2.Minimum = -(double)((int)(max2 / 4 / e2) * e2);
+                                ca.AxisY2.Minimum = 0;
+
+                                var e = (decimal)Math.Pow(10, (int)Math.Log10((double)max2 / 4) - 1);
+
+                                ca.AxisY2.Maximum = (double)((int)(max2 / 4 / e) * e * 5);
+                            }
+                            else if (max2 <= 0)
+                            {
+                                ca.AxisY2.Maximum = 0;
+
+                                var e = (decimal)Math.Pow(10, (int)Math.Log10((double)-min2 / 4) - 1);
+
+                                ca.AxisY2.Minimum = -(double)((int)(-min2 / 4 / e) * e * 5);
+                            }
+                            else if ((int)(max2 / -min2) + 1 > 4)
+                            {
+                                var e = (decimal)Math.Pow(10, (int)Math.Log10((double)max2 / 4) - 1);
+                                ca.AxisY2.Minimum = -(double)((int)(max2 / 4 / e) * e);
                                 ca.AxisY2.Maximum = -ca.AxisY2.Minimum * 5;
                             }
                             else if (max2 / -min2 >= 1)
                             {
-                                var e2 = (decimal)Math.Pow(10, (int)Math.Log10(-(double)min2 / 4) - 1);
-                                ca.AxisY2.Minimum = -(double)((int)(-min2 / 4 / e2) * e2 * 5);
+                                var e = (decimal)Math.Pow(10, (int)Math.Log10(-(double)min2 / 4) - 1);
+                                ca.AxisY2.Minimum = -(double)((int)(-min2 / 4 / e) * e * 5);
                                 ca.AxisY2.Maximum = -ca.AxisY2.Minimum * ((int)(max2 / -min2) + 1);
                             }
-                            else if (max2 <= 0 || (int)(-min2 / max2) + 1 > 4)
+                            else if ((int)(-min2 / max2) + 1 > 4)
                             {
-                                var e2 = (decimal)Math.Pow(10, (int)Math.Log10(-(double)min2 / 4) - 1);
-                                ca.AxisY2.Maximum = (double)((int)(-min2 / 4 / e2) * e2);
+                                var e = (decimal)Math.Pow(10, (int)Math.Log10(-(double)min2 / 4) - 1);
+                                ca.AxisY2.Maximum = (double)((int)(-min2 / 4 / e) * e);
                                 ca.AxisY2.Minimum = -ca.AxisY2.Maximum * 5;
                             }
                             else
                             {
-                                var e2 = (decimal)Math.Pow(10, (int)Math.Log10((double)max2 / 4) - 1);
-                                ca.AxisY2.Maximum = (double)((int)(max2 / 4 / e2) * e2 * 5);
+                                var e = (decimal)Math.Pow(10, (int)Math.Log10((double)max2 / 4) - 1);
+                                ca.AxisY2.Maximum = (double)((int)(max2 / 4 / e) * e * 5);
                                 ca.AxisY2.Minimum = -ca.AxisY2.Maximum * ((int)(min2 / -max2) + 1);
                             }
-                        }
 
-                        if (ca.AxisY.Minimum == 0 && ca.AxisY2.Minimum == 0)
-                        {
-                            ca.AxisY.Interval = (ca.AxisY.Maximum - ca.AxisY.Minimum) / 2;
-                            ca.AxisY2.Interval = (ca.AxisY2.Maximum - ca.AxisY2.Minimum) / 2;
-                            continue;
-                        }
-                        else if (ca.AxisY.Minimum == 0 && ca.AxisY.Maximum == 0)
-                        {
                             ca.AxisY.Minimum = ca.AxisY2.Minimum;
                             ca.AxisY.Maximum = ca.AxisY2.Maximum;
                         }
-                        else if (ca.AxisY2.Minimum == 0 && ca.AxisY2.Maximum == 0)
-                        {
-                            ca.AxisY2.Minimum = ca.AxisY.Minimum;
-                            ca.AxisY2.Maximum = ca.AxisY.Maximum;
-                        }
-
-                        if (ca.AxisY.Minimum == 0)
-                            ca.AxisY.Minimum = ca.AxisY.Maximum * ca.AxisY2.Minimum / ca.AxisY2.Maximum;
-                        else if (ca.AxisY2.Minimum == 0)
-                            ca.AxisY2.Minimum = ca.AxisY2.Maximum * ca.AxisY.Minimum / ca.AxisY.Maximum;
-                        else if (ca.AxisY.Maximum / -ca.AxisY.Minimum > ca.AxisY2.Maximum / -ca.AxisY2.Minimum)
-                            ca.AxisY2.Maximum = ca.AxisY2.Minimum * ca.AxisY.Maximum / ca.AxisY.Minimum;
                         else
-                            ca.AxisY.Maximum = ca.AxisY.Minimum * ca.AxisY2.Maximum / ca.AxisY2.Minimum;
+                            continue;
                     }
-                    else if (min != 0 || max != 0)
-                    {
-                        if (min >= 0)
-                        {
-                            ca.AxisY.Minimum = 0;
 
-                            var e = (decimal)Math.Pow(10, (int)Math.Log10((double)max / 4) - 1);
-
-                            ca.AxisY.Maximum = (double)((int)(max / 4 / e) * e * 5);
-                        }
-                        else if (max <= 0)
-                        {
-                            ca.AxisY.Maximum = 0;
-
-                            var e = (decimal)Math.Pow(10, (int)Math.Log10((double)-min / 4) - 1);
-
-                            ca.AxisY.Minimum = -(double)((int)(-min / 4 / e) * e * 5);
-                        }
-                        else if ((int)(max / -min) + 1 > 4)
-                        {
-                            var e = (decimal)Math.Pow(10, (int)Math.Log10((double)max / 4) - 1);
-                            ca.AxisY.Minimum = -(double)((int)(max / 4 / e) * e);
-                            ca.AxisY.Maximum = -ca.AxisY.Minimum * 5;
-                        }
-                        else if (max / -min >= 1)
-                        {
-                            var e = (decimal)Math.Pow(10, (int)Math.Log10(-(double)min / 4) - 1);
-                            ca.AxisY.Minimum = -(double)((int)(-min / 4 / e) * e * 5);
-                            ca.AxisY.Maximum = -ca.AxisY.Minimum * ((int)(max / -min) + 1);
-                        }
-                        else if ((int)(-min / max) + 1 > 4)
-                        {
-                            var e = (decimal)Math.Pow(10, (int)Math.Log10(-(double)min / 4) - 1);
-                            ca.AxisY.Maximum = (double)((int)(-min / 4 / e) * e);
-                            ca.AxisY.Minimum = -ca.AxisY.Maximum * 5;
-                        }
-                        else
-                        {
-                            var e = (decimal)Math.Pow(10, (int)Math.Log10((double)max / 4) - 1);
-                            ca.AxisY.Maximum = (double)((int)(max / 4 / e) * e * 5);
-                            ca.AxisY.Minimum = -ca.AxisY.Maximum * ((int)(min / -max) + 1);
-                        }
-
-                        ca.AxisY2.Minimum = ca.AxisY.Minimum;
-                        ca.AxisY2.Maximum = ca.AxisY.Maximum;
-                    }
-                    else if (min2 != 0 || max2 != 0)
-                    {
-                        if (min2 >= 0)
-                        {
-                            ca.AxisY2.Minimum = 0;
-
-                            var e = (decimal)Math.Pow(10, (int)Math.Log10((double)max2 / 4) - 1);
-
-                            ca.AxisY2.Maximum = (double)((int)(max2 / 4 / e) * e * 5);
-                        }
-                        else if (max2 <= 0)
-                        {
-                            ca.AxisY2.Maximum = 0;
-
-                            var e = (decimal)Math.Pow(10, (int)Math.Log10((double)-min2 / 4) - 1);
-
-                            ca.AxisY2.Minimum = -(double)((int)(-min2 / 4 / e) * e * 5);
-                        }
-                        else if ((int)(max2 / -min2) + 1 > 4)
-                        {
-                            var e = (decimal)Math.Pow(10, (int)Math.Log10((double)max2 / 4) - 1);
-                            ca.AxisY2.Minimum = -(double)((int)(max2 / 4 / e) * e);
-                            ca.AxisY2.Maximum = -ca.AxisY2.Minimum * 5;
-                        }
-                        else if (max2 / -min2 >= 1)
-                        {
-                            var e = (decimal)Math.Pow(10, (int)Math.Log10(-(double)min2 / 4) - 1);
-                            ca.AxisY2.Minimum = -(double)((int)(-min2 / 4 / e) * e * 5);
-                            ca.AxisY2.Maximum = -ca.AxisY2.Minimum * ((int)(max2 / -min2) + 1);
-                        }
-                        else if ((int)(-min2 / max2) + 1 > 4)
-                        {
-                            var e = (decimal)Math.Pow(10, (int)Math.Log10(-(double)min2 / 4) - 1);
-                            ca.AxisY2.Maximum = (double)((int)(-min2 / 4 / e) * e);
-                            ca.AxisY2.Minimum = -ca.AxisY2.Maximum * 5;
-                        }
-                        else
-                        {
-                            var e = (decimal)Math.Pow(10, (int)Math.Log10((double)max2 / 4) - 1);
-                            ca.AxisY2.Maximum = (double)((int)(max2 / 4 / e) * e * 5);
-                            ca.AxisY2.Minimum = -ca.AxisY2.Maximum * ((int)(min2 / -max2) + 1);
-                        }
-
-                        ca.AxisY.Minimum = ca.AxisY2.Minimum;
-                        ca.AxisY.Maximum = ca.AxisY2.Maximum;
-                    }
-                    else
-                        continue;
+                    ca.AxisY.Interval = (ca.AxisY.Maximum - ca.AxisY.Minimum) / 2;
+                    ca.AxisY2.Interval = (ca.AxisY2.Maximum - ca.AxisY2.Minimum) / 2;
                 }
-
-                ca.AxisY.Interval = (ca.AxisY.Maximum - ca.AxisY.Minimum) / 2;
-                ca.AxisY2.Interval = (ca.AxisY2.Maximum - ca.AxisY2.Minimum) / 2;
-            }
 
             resultList2 = resultList1;
             resultList1 = new List<(double cr, double profit, double profitWithKelly)>[] { new List<(double cr, double profit, double profitWithKelly)>(), new List<(double cr, double profit, double profitWithKelly)>() };
@@ -1396,13 +1719,19 @@ namespace BackTestingFinal
             for (int i = (int)Position.Long; i <= (int)Position.Short; i++)
             {
                 var CR = "";
-                var WinRate = "";
+                var SingleWinRate = "";
                 var AllCount = "";
                 var DisappearCount = MetricVars[i].disappearCount.ToString("#,0");
                 var LastDisappearCount = MetricVars[i].lastDisappearCount.ToString("#,0");
                 var AvgProfitRate = "";
                 var WinAvgProfitRate = "";
                 var LoseAvgProfitRate = "";
+                var AverageWinRate = "";
+                var AverageAllCount = "";
+                var GeoMeanProfitRate = "";
+                var AverageAvgProfitRate = "";
+                var AverageWinAvgProfitRate = "";
+                var AverageLoseAvgProfitRate = "";
                 var Commision = "";
                 var Slippage = "";
                 var MDD = "";
@@ -1422,15 +1751,15 @@ namespace BackTestingFinal
                 var LongestHasTimeStart = "";
                 var MinKelly = "";
                 var MaxKelly = "";
-                if (MetricVars[i].Count != 0)
+                if (MetricVars[i].SingleCount != 0)
                 {
                     CR = Math.Round((MetricVars[i].CR - 1) * 100, 0).ToString("#,0") + "%";
 
-                    WinRate = Math.Round((double)MetricVars[i].Win / MetricVars[i].Count * 100, 1) + "%";
-                    AllCount = MetricVars[i].Count.ToString("#,0");
-                    AvgProfitRate = Math.Round(MetricVars[i].ProfitRateSum / MetricVars[i].Count, 2) + "%";
-                    WinAvgProfitRate = MetricVars[i].Win == 0 ? "0%" : (Math.Round(MetricVars[i].ProfitWinRateSum / MetricVars[i].Win, 2) + "%");
-                    LoseAvgProfitRate = MetricVars[i].Count == MetricVars[i].Win ? "0%" : (Math.Round((MetricVars[i].ProfitRateSum - MetricVars[i].ProfitWinRateSum) / (MetricVars[i].Count - MetricVars[i].Win), 2) + "%");
+                    SingleWinRate = Math.Round((double)MetricVars[i].SingleWin / MetricVars[i].SingleCount * 100, 1) + "%";
+                    AllCount = MetricVars[i].SingleCount.ToString("#,0");
+                    AvgProfitRate = Math.Round(MetricVars[i].SingleProfitRateSum / MetricVars[i].SingleCount, 2) + "%";
+                    WinAvgProfitRate = MetricVars[i].SingleWin == 0 ? "0%" : (Math.Round(MetricVars[i].SingleProfitWinRateSum / MetricVars[i].SingleWin, 2) + "%");
+                    LoseAvgProfitRate = MetricVars[i].SingleCount == MetricVars[i].SingleWin ? "0%" : (Math.Round((MetricVars[i].SingleProfitRateSum - MetricVars[i].SingleProfitWinRateSum) / (MetricVars[i].SingleCount - MetricVars[i].SingleWin), 2) + "%");
                     Commision = Math.Round(commisionRate, 2) + "%";
                     Slippage = Math.Round(slippage, 2) + "%";
 
@@ -1454,6 +1783,15 @@ namespace BackTestingFinal
 
                     MinKelly = Math.Round(MetricVars[i].minKelly, 2) + "(" + Math.Round(MetricVars[i].lowestKelly, 2) + ")";
                     MaxKelly = Math.Round(MetricVars[i].maxKelly, 2) + "(" + Math.Round(MetricVars[i].highestKelly, 2) + ")";
+                }
+                if (MetricVars[i].AverageCount != 0)
+                {
+                    AverageWinRate = Math.Round((double)MetricVars[i].AverageWin / MetricVars[i].AverageCount * 100, 1) + "%";
+                    AverageAllCount = MetricVars[i].AverageCount.ToString("#,0");
+                    GeoMeanProfitRate = Math.Round((Math.Pow(MetricVars[i].AverageProfitRateMul, (double)1 / MetricVars[i].AverageCount) - 1) * 100, 2) + "%";
+                    AverageAvgProfitRate = Math.Round(MetricVars[i].AverageProfitRateSum / MetricVars[i].AverageCount, 2) + "%";
+                    AverageWinAvgProfitRate = MetricVars[i].AverageWin == 0 ? "0%" : (Math.Round(MetricVars[i].AverageProfitWinRateSum / MetricVars[i].AverageWin, 2) + "%");
+                    AverageLoseAvgProfitRate = MetricVars[i].AverageCount == MetricVars[i].AverageWin ? "0%" : (Math.Round((MetricVars[i].AverageProfitRateSum - MetricVars[i].AverageProfitWinRateSum) / (MetricVars[i].AverageCount - MetricVars[i].AverageWin), 2) + "%");
                 }
 
                 var i2 = i;
@@ -1572,7 +1910,7 @@ namespace BackTestingFinal
                             columnDic[end_dayName] = "'" + end.ToString(DateTimeFormat) + "'";
                             columnDic[daysName] = "'" + Math.Round(end.Subtract(start).TotalDays, 0) + " days'";
                             columnDic[Cumulative_ReturnName] = "'" + CR + "'";
-                            columnDic[Win_RateName] = "'" + WinRate + "'";
+                            columnDic[Win_RateName] = "'" + SingleWinRate + "'";
                             columnDic[CountName] = "'" + AllCount + "'";
                             columnDic[DisappearName] = "'" + DisappearCount + "'";
                             columnDic[LastDisappearName] = "'" + LastDisappearCount + "'";
@@ -1733,15 +2071,21 @@ namespace BackTestingFinal
 
                 metricDic[MetricCR].SetText(i, CR);
 
-                metricDic[MetricWinRate].SetText(i, WinRate);
-                metricDic[MetricAllCount].SetText(i, AllCount);
+                metricDic[MetricSingleWinRate].SetText(i, SingleWinRate);
+                metricDic[MetricSingleAllCount].SetText(i, AllCount);
                 metricDic[MetricDisappear].SetText(i, DisappearCount);
                 metricDic[MetricLastDisappear].SetText(i, LastDisappearCount);
-                metricDic[MetricAvgProfitRate].SetText(i, AvgProfitRate);
-                metricDic[MetricWinAvgProfitRate].SetText(i, WinAvgProfitRate);
-                metricDic[MetricLoseAvgProfitRate].SetText(i, LoseAvgProfitRate);
+                metricDic[MetricSingleAvgProfitRate].SetText(i, AvgProfitRate);
+                metricDic[MetricSingleWinAvgProfitRate].SetText(i, WinAvgProfitRate);
+                metricDic[MetricSingleLoseAvgProfitRate].SetText(i, LoseAvgProfitRate);
                 metricDic[MetricCommision].SetText(i, Commision);
                 metricDic[MetricSlippage].SetText(i, Slippage);
+                metricDic[MetricAverageWinRate].SetText(i, AverageWinRate);
+                metricDic[MetricAverageAllCount].SetText(i, AverageAllCount);
+                metricDic[MetricGeoMeanProfitRate].SetText(i, GeoMeanProfitRate);
+                metricDic[MetricAverageAvgProfitRate].SetText(i, AverageAvgProfitRate);
+                metricDic[MetricAverageWinAvgProfitRate].SetText(i, AverageWinAvgProfitRate);
+                metricDic[MetricAverageLoseAvgProfitRate].SetText(i, AverageLoseAvgProfitRate);
 
                 metricDic[MetricMDD].SetText(i, MDD);
                 metricDic[MetricMDDDays].SetText(i, MDDDays);
@@ -2100,8 +2444,11 @@ namespace BackTestingFinal
         public override void SetChartNowOrLoad(ChartValues chartValues)
         {
             mainChart.Visible = true;
-            totalChart.Visible = false;
-            totalButton.BackColor = ColorSet.Button;
+            for (int i = 0; i < Charts.Length; i ++)
+            {
+                Charts[i].Visible = false;
+                Buttons[i].BackColor = ColorSet.Button;
+            }
 
             var from = mainChart.Tag != null ? GetStandardDate() : default;
             var position = double.IsNaN(mainChart.ChartAreas[0].CursorX.Position) ? baseChartViewSticksSize / 2
@@ -2746,11 +3093,12 @@ namespace BackTestingFinal
                                     && (itemData.Code != "XRPUSDT" || v.lastStick.Time.ToString(DateTimeFormat) != "2020-01-16")
                                     && (itemData.Code != "XRPUSDT" || v.lastStick.Time.ToString(DateTimeFormat) != "2020-01-17")
                                     && (itemData.Code != "EOSUSDT" || v.lastStick.Time.ToString(DateTimeFormat) != "2020-01-19")
+                                    && (itemData.Code != "PEOPLEUSDT" || v.lastStick.Time.ToString(DateTimeFormat) != "2022-04-18")
                                     && (v.lastStick.Time.ToString(DateTimeFormat) != "2021-01-12")
                                     && (v.lastStick.Time.ToString(DateTimeFormat) != "2021-05-15"))
                                 {
-                                    BackTradeStick.isEqual(v.lastStick as BackTradeStick, v.list[v.currentIndex] as BackTradeStick);
                                     ShowError(form);
+                                    BackTradeStick.isEqual(v.lastStick as BackTradeStick, v.list[v.currentIndex] as BackTradeStick);
                                 }
 
                                 SetRSIAandDiff(v.list, v.list[v.currentIndex], v.currentIndex - 1);
@@ -2804,15 +3152,10 @@ namespace BackTestingFinal
                 for (int j = (int)Position.Long; j <= (int)Position.Short; j++)
                 {
                     var positionData = itemData.positionData[j];
-                    //if (!itemData.positionData[j].Enter && positionData.found)
-                    //if (positionData.found)
-                    //    lock (foundLocker)
-                    //        foundItemList[j].Add((itemData, positionData.foundList));
                     if ((canLStogether ? !positionData.Enter : (!itemData.positionData[(int)Position.Long].Enter && !itemData.positionData[(int)Position.Short].Enter)) && positionData.found)
                         lock (foundLocker)
                             foundItemList[j].Add(itemData.number, (itemData, positionData.foundList));
-                    else
-                    if (positionData.Enter && (ExitConditionFinal(itemData, (Position)j) || itemData.firstLastMin.lastMin == from2))
+                    else if (positionData.Enter && (ExitConditionFinal(itemData, (Position)j) || itemData.firstLastMin.lastMin == from2))
                     {
                         positionData.Enter = false;
 
@@ -2840,20 +3183,30 @@ namespace BackTestingFinal
                                     {
                                         itemData.resultDataForMetric[j].Count++;
                                         itemData.resultDataForMetric[j].ProfitRate += profitRow;
-                                        itemData.resultDataForMetric[j].listForAvg.Add(resultData);
+                                        if ((profitRow - 1) * 100 > commisionRate + slippage)
+                                        {
+                                            itemData.resultDataForMetric[j].WinCount++;
+                                            itemData.resultDataForMetric[j].WinProfitRateSum += profitRow;
+                                        }
+                                        itemData.resultDataForMetric[j].doneResults.Add(resultData);
+                                        itemData.resultDataForMetric[j].ingItems.Remove(itemData.Code);
                                     }
                                     itemData.resultDataForMetric[j] = null;
                                 }
 
-                                itemData.BeforeExitTime = resultData.ExitTime;
-
-                                PutResultDataToSimulDays(resultData, simulDays[j], ResultDatasType.Normal);
-
-                                var BeforeGap = TimeSpan.ParseExact(resultData.BeforeGap, TimeSpanFormat, null);
-                                if (BeforeGap < itemData.ShortestBeforeGap)
+                                if (!calSimul || positionData.Real)
                                 {
-                                    itemData.ShortestBeforeGap = BeforeGap;
-                                    itemData.ShortestBeforeGapText = BeforeGap.ToString();
+                                    itemData.BeforeExitTime = resultData.ExitTime;
+
+                                    PutResultDataToSimulDays(resultData, simulDays[j], ResultDatasType.Normal);
+                                    PutResultDataToSimulDays(resultData, simulDaysDetail[j], ResultDatasType.Normal, true);
+
+                                    var BeforeGap = TimeSpan.ParseExact(resultData.BeforeGap, TimeSpanFormat, null);
+                                    if (BeforeGap < itemData.ShortestBeforeGap)
+                                    {
+                                        itemData.ShortestBeforeGap = BeforeGap;
+                                        itemData.ShortestBeforeGapText = BeforeGap.ToString();
+                                    }
                                 }
                             }
                         }
@@ -2861,8 +3214,10 @@ namespace BackTestingFinal
                         {
                             if (itemData.resultDataForMetric[j] != null && itemData.resultDataForMetric[j].Code == itemData.Code)
                                 itemData.resultDataForMetric[j].ExitTime = resultData.ExitTime;
+                            itemData.resultDataForMetric[j].ingItems.Remove(itemData.Code);
 
                             PutResultDataToSimulDays(resultData, simulDays[j], from2 == end ? ResultDatasType.Last : ResultDatasType.Disappear);
+                            PutResultDataToSimulDays(resultData, simulDaysDetail[j], from2 == end ? ResultDatasType.Last : ResultDatasType.Disappear, true);
                         }
                     }
 
@@ -2900,24 +3255,15 @@ namespace BackTestingFinal
                                 lock (itemData.resultDataForMetric[j].locker)
                                 {
                                     itemData.resultDataForMetric[j].ProfitRate += resultData.ProfitRate;
-                                    itemData.resultDataForMetric[j].listForAvg.Add(resultData);
+                                    itemData.resultDataForMetric[j].doneResults.Add(resultData);
                                 }
                                 itemData.resultDataForMetric[j] = null;
                             }
 
                             itemData.BeforeExitTime = resultData.ExitTime;
 
-                            var enterIndex = simulDays[0].IndexOfKey(resultData.EnterTime.Date);
-                            for (int k = simulDays[0].IndexOfKey(resultData.ExitTime.Date); k >= 0; k--)
-                            {
-                                if (k < enterIndex)
-                                    break;
-
-                                lock (dayLocker)
-                                {
-                                    simulDays[j].Values[k].resultDatas.Add(resultData);
-                                }
-                            }
+                            PutResultDataToSimulDays(resultData, simulDays[j], ResultDatasType.Normal);
+                            PutResultDataToSimulDays(resultData, simulDaysDetail[j], ResultDatasType.Normal, true);
 
                             var BeforeGap = TimeSpan.ParseExact(resultData.BeforeGap, TimeSpanFormat, null);
                             if (BeforeGap < itemData.ShortestBeforeGap)
@@ -2932,6 +3278,8 @@ namespace BackTestingFinal
 
             maxHas = new int[] { 0, 0 };
 
+            lastResultDataForCheckTrend = null;
+
             for (int i = 0; i < size; i++)
             {
                 var from2 = from.AddMinutes(i);
@@ -2944,8 +3292,9 @@ namespace BackTestingFinal
                     for (int j = (int)Position.Long; j <= (int)Position.Short; j++)
                     {
                         simulDays[j].Add(from2.Date, new DayData() { Date = from2.Date, isL = j });
-                        if (simulDays[j].Count >= 2 && simulDays[j][from2.Date.AddDays(-1)].ResultDatasForMetric.Count != 0 && simulDays[j][from2.Date.AddDays(-1)].ResultDatasForMetric.Last().ExitTime == default)
-                            simulDays[j][from2.Date].ResultDatasForMetric.Add(simulDays[j][from2.Date.AddDays(-1)].ResultDatasForMetric.Last());
+                        var beforeKey = from2.Date.AddDays(-1);
+                        if (simulDays[j].Count >= 2 && simulDays[j][beforeKey].ResultDatasForMetric.Count != 0 && simulDays[j][beforeKey].ResultDatasForMetric.Last().ExitTime == default)
+                            simulDays[j][from2.Date].ResultDatasForMetric.Add(simulDays[j][beforeKey].ResultDatasForMetric.Last());
                     }
                     marketDays.Add(from2.Date, new DayData() { Date = from2.Date });
 
@@ -2957,17 +3306,17 @@ namespace BackTestingFinal
                     AddOrChangeLoadingText("Simulating ST" + ST + " ...(" + from2.ToString(DateTimeFormat) + ")   " + sw.Elapsed.ToString(TimeSpanFormat), false);
                 }
 
-                var block = new ActionBlock<BackItemData>(iD => {
-                    try
+                var detailStartTime = GetDetailStartTime(from2);
+                if (!simulDaysDetail[0].ContainsKey(detailStartTime))
+                    for (int j = (int)Position.Long; j <= (int)Position.Short; j++)
                     {
-                        action(iD, i, from2);
+                        simulDaysDetail[j].Add(detailStartTime, new DayData() { Date = detailStartTime, isL = j });
+                        var beforeKey = detailStartTime.AddMinutes(-DetailMinutes);
+                        if (simulDaysDetail[j].Count >= 2 && simulDaysDetail[j][beforeKey].ResultDatasForMetric.Count != 0 && simulDaysDetail[j][beforeKey].ResultDatasForMetric.Last().ExitTime == default)
+                            simulDaysDetail[j][detailStartTime].ResultDatasForMetric.Add(simulDaysDetail[j][beforeKey].ResultDatasForMetric.Last());
                     }
-                    catch (Exception e)
-                    {
 
-                        throw;
-                    }
-                   }, new ExecutionDataflowBlockOptions { MaxDegreeOfParallelism = threadN });
+                var block = new ActionBlock<BackItemData>(iD => { action(iD, i, from2); }, new ExecutionDataflowBlockOptions { MaxDegreeOfParallelism = threadN });
 
                 foundItemList = new SortedList<int, (BaseItemData itemData, List<(DateTime foundTime, ChartValues chartValues)> foundList)>[] {
                     new SortedList<int, (BaseItemData itemData, List<(DateTime foundTime, ChartValues chartValues)> foundList)>(),
@@ -2976,22 +3325,15 @@ namespace BackTestingFinal
 
                 foreach (var iD in itemDataDic.Values)
                     block.Post(iD);
-                try
-                {
-                    block.Complete();
-                    block.Completion.Wait();
-                }
-                catch (Exception e)
-                {
-
-                    throw;
-                }
+                block.Complete();
+                block.Completion.Wait();
 
                 var conditionResult = AllItemFindCondition();
                 if (conditionResult.found)
                     for (int j = (int)Position.Long; j <= (int)Position.Short; j++)
                     {
                         var simulDay = simulDays[j][from2.Date];
+                        var simulDayDetail = simulDaysDetail[j][detailStartTime];
                         if (conditionResult.position[j])
                             foreach (var foundItem in foundItemList[j].Values)
                                 if (from2 >= start)
@@ -2999,7 +3341,10 @@ namespace BackTestingFinal
                                 //if (!foundItem.itemData.positionData[j].Enter)
                                 {
                                     var minV = foundItem.itemData.listDic.Values[minCV.index];
-                                    EnterSetting(foundItem.itemData.positionData[j], minV.lastStick);
+                                    var positionData = foundItem.itemData.positionData[j];
+                                    EnterSetting(positionData, minV.lastStick);
+                                    if (calSimul)
+                                        positionData.Real = CheckTrend((Position)j);
 
                                     if (inside)
                                     {
@@ -3015,12 +3360,19 @@ namespace BackTestingFinal
                                     {
                                         var backResultData = new BackResultData() { EnterTime = from2, Code = foundItem.itemData.Code };
                                         simulDay.ResultDatasForMetric.Add(backResultData);
+                                        simulDayDetail.ResultDatasForMetric.Add(backResultData);
                                         ResultDatasForMetric1[j].Add(backResultData);
+                                        backResultData.beforeResultData = lastResultDataForCheckTrend;
+                                        lastResultDataForCheckTrend = backResultData;
                                     }
 
                                     var resultData = simulDay.ResultDatasForMetric[simulDay.ResultDatasForMetric.Count - 1];
                                     if (CRType < CR.LimitPlusCount0 || resultData.Count < ItemLimit + (int)CRType)
+                                    {
                                         (foundItem.itemData as BackItemData).resultDataForMetric[j] = resultData;
+                                        resultData.ingItems.Add(foundItem.itemData.Code, foundItem.itemData);
+                                    }
+
                                     if (resultData.Count > maxHas[j])
                                         maxHas[j] = resultData.Count;
                                 }
@@ -3031,10 +3383,21 @@ namespace BackTestingFinal
                 foreach (var l in iD.listDic.Values)
                     l.Reset();
         }
-        void PutResultDataToSimulDays(BackResultData resultData, SortedList<DateTime, DayData> simulDays, ResultDatasType type)
+        DateTime GetDetailStartTime(DateTime time)
+        {
+            return time.Date.AddMinutes((int)(time.TimeOfDay.TotalMinutes / DetailMinutes) * DetailMinutes);
+        }
+        void PutResultDataToSimulDays(BackResultData resultData, SortedList<DateTime, DayData> simulDays, ResultDatasType type, bool detail = false)
         {
             var enterIndex = simulDays.IndexOfKey(resultData.EnterTime.Date);
-            for (int k = simulDays.IndexOfKey(resultData.ExitTime.Date); k >= 0; k--)
+            var exitIndex = simulDays.IndexOfKey(resultData.ExitTime.Date);
+            if (detail)
+            {
+                enterIndex = simulDays.IndexOfKey(GetDetailStartTime(resultData.EnterTime));
+                exitIndex = simulDays.IndexOfKey(GetDetailStartTime(resultData.ExitTime));
+            }
+
+            for (int k = exitIndex; k >= 0; k--)
             {
                 if (k < enterIndex)
                     break;

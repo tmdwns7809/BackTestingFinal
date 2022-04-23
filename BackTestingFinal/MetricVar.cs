@@ -23,12 +23,15 @@ namespace BackTestingFinal
         public TimeSpan longestHasTime = TimeSpan.MinValue;
         public DateTime longestHasTimeStart = default;
         public string longestHasCode = "";
-        public int Count = 0;
-        public int Win = 0;
-        public double ProfitRateSum = 0;
-        public double ProfitWinRateSum = 0;
-
-        public int HasItemsAtADay = 0;
+        public int SingleCount = 0;
+        public int SingleWin = 0;
+        public double SingleProfitRateSum = 0;
+        public double SingleProfitWinRateSum = 0;
+        public int AverageCount = 0;
+        public int AverageWin = 0;
+        public double AverageProfitRateSum = 0;
+        public double AverageProfitRateMul = 1;
+        public double AverageProfitWinRateSum = 0;
 
         public int disappearCount;
         public int lastDisappearCount;
