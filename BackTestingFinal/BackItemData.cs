@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using TradingLibrary;
 using TradingLibrary.Base;
+using TradingLibrary.Base.Enum;
 
 namespace BackTestingFinal
 {
@@ -23,7 +24,7 @@ namespace BackTestingFinal
         public DateTime BeforeExitTime;
         public (DateTime firstMin, DateTime lastMin) firstLastMin;
 
-        public BackResultData[] resultDataForMetric = new BackResultData[2];
+        public BackResultData[] resultDataForMetricReal = new BackResultData[2];
 
         public BackItemData(string c, int n) : base (c, n) {}
 

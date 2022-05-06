@@ -85,8 +85,6 @@
     <Compile Include="BackItemData.cs" />
     <Compile Include="BackTesting.cs" />
     <Compile Include="BackTradeStick.cs" />
-    <Compile Include="BaseSticksDB.cs" />
-    <Compile Include="BinanceSticksDB.cs" />
     <Compile Include="CR.cs" />
     <Compile Include="DayStick.cs" />
     <Compile Include="DrawDownData.cs" />
@@ -96,7 +94,6 @@
     <Compile Include="Form1.Designer.cs">
       <DependentUpon>Form1.cs</DependentUpon>
     </Compile>
-    <Compile Include="JooSticksDB.cs" />
     <Compile Include="MetricData.cs" />
     <Compile Include="MetricVar.cs" />
     <Compile Include="Program.cs" />
