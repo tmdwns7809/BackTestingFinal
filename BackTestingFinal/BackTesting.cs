@@ -31,7 +31,9 @@ namespace BackTestingFinal
 
         public Chart[] Charts = new Chart[] { new Chart(), new Chart(), new Chart(), new Chart() };
         public Chart[] Charts2 = new Chart[] { new Chart(), new Chart(), new Chart(), new Chart() };
+        public Chart TimeCountChart = new Chart();
         public Button[] Buttons = new Button[] { new Button(), new Button(), new Button(), new Button(), new Button(), new Button(), new Button(), new Button() };
+        public Button TimeCountChartButton = new Button();
         public Button captureButton = new Button();
         public Button beforeButton = new Button();
         public Button afterButton = new Button();
@@ -64,6 +66,7 @@ namespace BackTestingFinal
         string KOSDAQ = "U201";
 
         SortedList<int, int> openDaysPerYear = new SortedList<int, int>();
+        SortedList<TimeSpan, int> TimeCount = new SortedList<TimeSpan, int>();
 
         string MetricCR = "CR";
         string MetricCompoundAnnualGrowthRate = "CAGR";
@@ -135,7 +138,7 @@ namespace BackTestingFinal
 
         CR lastCR;
 
-        public BackTesting(Form form, bool isJoo) : base(form, isJoo, 1.114111m)
+        public BackTesting(Form form, bool isJoo) : base(form, isJoo, 1.1141113m)
         {
 
             sticksDBpath = BaseSticksDB.path;
@@ -570,6 +573,22 @@ namespace BackTestingFinal
                 seriesLLPR.CustomProperties = seriesLPR.CustomProperties;
                 #endregion
             }
+            SetChart(TimeCountChart, mainChart.Size, mainChart.Location);
+            TimeCountChart.Hide();
+
+            var mainChartArea2 = mainChart.ChartAreas[0];
+            var chartAreaTC = TimeCountChart.ChartAreas.Add("ChartAreaTimeCount");
+            SetChartAreaLast(chartAreaTC);
+            chartAreaTC.Position = new ElementPosition(mainChartArea2.Position.X, mainChartArea2.Position.Y, mainChartArea2.Position.Width, 100);
+            chartAreaTC.InnerPlotPosition = new ElementPosition(mainChartArea2.InnerPlotPosition.X, mainChartArea2.InnerPlotPosition.Y + 2, mainChartArea2.InnerPlotPosition.Width, 90);
+            chartAreaTC.AxisY2.IsStartedFromZero = true;
+
+            var seriesTC = TimeCountChart.Series.Add("TC");
+            seriesTC.ChartType = SeriesChartType.Column;
+            seriesTC.XValueType = ChartValueType.Time;
+            seriesTC.Color = Color.White;
+            seriesTC.YAxisType = AxisType.Secondary;
+            seriesTC.ChartArea = chartAreaTC.Name;
             #endregion
 
             #region Buttons
@@ -579,14 +598,14 @@ namespace BackTestingFinal
                 {
                     c.Visible = true;
                     c.BringToFront();
+                    b.BackColor = ColorSet.ButtonSelected;
 
                     foreach (var b2 in buttonDic.Values)
                         b2.BringToFront();
-                    b.BackColor = ColorSet.ButtonSelected;
-
                     foreach (var b2 in Buttons)
                         b2.BringToFront();
                     captureButton.BringToFront();
+                    TimeCountChartButton.BringToFront();
                 }
                 else
                 {
@@ -701,6 +720,10 @@ namespace BackTestingFinal
             });
             captureButton.Size = new Size(Buttons[2].Width / 2, Buttons[2].Height / 2);
             captureButton.Location = new Point(Buttons[6].Location.X, Buttons[6].Location.Y + Buttons[6].Height + 5);
+
+            SetButton(TimeCountChartButton, "TC", (sender, e) => { charButton(TimeCountChart, TimeCountChartButton); });
+            TimeCountChartButton.Size = Buttons[2].Size;
+            TimeCountChartButton.Location = new Point(captureButton.Location.X, captureButton.Location.Y + captureButton.Height + 5);
             #endregion
 
             #region Controller
@@ -1091,6 +1114,7 @@ namespace BackTestingFinal
                     ClearChart(c, true);
                 foreach (var c in Charts2)
                     ClearChart(c, true);
+                ClearChart(TimeCountChart, true);
             }));
 
             if (lastCR != CRType || start < startDone || end > endDone)
@@ -1145,6 +1169,7 @@ namespace BackTestingFinal
                 simulDaysDetail[i].Clear();
             }
             openDaysPerYear.Clear();
+            TimeCount.Clear();
         }
 
         void CalculateMetric(DateTime start, DateTime end, Position isAllLongShort)
@@ -1162,6 +1187,9 @@ namespace BackTestingFinal
 
             var n = 0;
             #endregion
+
+            foreach (var tc in TimeCount)
+                TimeCountChart.Series[0].Points.AddXY(tc.Key.ToString(TimeSpanFormatdX), tc.Value);
 
             foreach (BackItemData itemData in itemDataDic.Values)
                 itemData.Reset();
@@ -2427,6 +2455,8 @@ namespace BackTestingFinal
                 Charts[i].Visible = false;
                 Buttons[i].BackColor = ColorSet.Button;
             }
+            TimeCountChart.Visible = false;
+            TimeCountChartButton.BackColor = ColorSet.Button;
 
             var from = mainChart.Tag != null ? GetStandardDate() : default;
             var position = double.IsNaN(mainChart.ChartAreas[0].CursorX.Position) ? baseChartViewSticksSize / 2
@@ -2839,7 +2869,7 @@ namespace BackTestingFinal
                             SetRSIAandDiff(v.list, v.lastStick, v.currentIndex - 1);
 
                         if (toPast ? vm.lastStick.Time <= checkStartTime : vm.lastStick.Time >= checkStartTime)
-                            OneChartFindConditionAndAdd(itemData, vc, vm.lastStick, v.lastStick, v.currentIndex - 1);
+                            OneChartFindConditionAndAdd(itemData, vc, vm.lastStick, v.lastStick, vm.currentIndex - 1, v.currentIndex - 1);
                     }
 
                     for (int j = (int)Position.Long; j <= (int)Position.Short; j++)
@@ -3135,7 +3165,7 @@ namespace BackTestingFinal
                         if (!calOnlyFullStick)
                             SetRSIAandDiff(v.list, v.lastStick, v.currentIndex - 1);
 
-                        OneChartFindConditionAndAdd(itemData, vc, vm.lastStick, v.lastStick, v.currentIndex - 1);
+                        OneChartFindConditionAndAdd(itemData, vc, vm.lastStick, v.lastStick, vm.currentIndex - 1, v.currentIndex - 1);
                     }
                     catch (Exception e)
                     {
@@ -3314,6 +3344,9 @@ namespace BackTestingFinal
                 if (from2 > end)
                     break;
 
+                if (!TimeCount.ContainsKey(from2.TimeOfDay))
+                    TimeCount.Add(from2.TimeOfDay, 0);
+
                 if (!simulDays[0].ContainsKey(from2.Date))
                 {
                     for (int j = (int)Position.Long; j <= (int)Position.Short; j++)
@@ -3350,9 +3383,6 @@ namespace BackTestingFinal
                     block.Post(iD);
                 block.Complete();
                 block.Completion.Wait();
-
-                //if (from2 == start)
-                //    start = start;
 
                 if (from2 >= simulStartTime)
                 {
@@ -3407,8 +3437,10 @@ namespace BackTestingFinal
 
                                             if (resultDataReal.Count > maxHas[j])
                                                 maxHas[j] = resultDataReal.Count;
-                                        }
+
+                                            TimeCount[from2.TimeOfDay]++;
                                     }
+                                }
                         }
                 }
             }
