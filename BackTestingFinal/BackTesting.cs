@@ -138,7 +138,7 @@ namespace BackTestingFinal
 
         CR lastCR;
 
-        public BackTesting(Form form, bool isJoo) : base(form, isJoo, 1.11411141m)
+        public BackTesting(Form form, bool isJoo) : base(form, isJoo, 3)
         {
 
             sticksDBpath = BaseSticksDB.path;
@@ -166,7 +166,8 @@ namespace BackTestingFinal
             //fromTextBox.Text = "2022-02-01";
             //fromTextBox.Text = "2022-05-10 09:34:00";
             //toTextBox.Text = "2022-05-09 06:26:00";
-            toTextBox.Text = "2022-05-06 19:30:00";
+            //toTextBox.Text = "2022-05-06 19:30:00";
+            fromTextBox.Text = "2022-05-01";
         }
         void SetAdditionalMainView()
         {
@@ -174,11 +175,8 @@ namespace BackTestingFinal
             {
                 var chartValues = mainChart.Tag as ChartValues;
                 var list = showingItemData.listDic[chartValues].list;
-                var Ind3 = CalIndicator(list, list[i], i - 1, 3);
-                var Ind20 = CalIndicator(list, list[i - 3], i - 4, 20);
-
-                //var text = "   ind20-3(priceAmp:" + Math.Round(Ind20.priceAmp, 3) + ", pricePR:" + Math.Round(Ind20.pricePR, 2) + ", priceA:" + Math.Round(Ind20.priceA, 2) +
-                //    ") ind3(priceAmp:" + Math.Round(Ind3.priceAmp, 3) + ", priceA:" + Math.Round(Ind3.priceA, 2) + ")";
+                //for (int j = 0; j < 100; j++)
+                    //NewCal(list, list[i], i - 1, 80);
 
                 form.Text = showingItemData.Code + "     H:" + list[i].Price[0] + "  L:" + list[i].Price[1] + "  O:" + list[i].Price[2] + "  C:" + list[i].Price[3] + "  Ms:" + list[i].Ms + "  Md:" + list[i].Md;
             };
@@ -237,7 +235,7 @@ namespace BackTestingFinal
             #region Charts
             for (int i = 0; i < Charts.Length; i++)
             {
-                SetChart(Charts[i], new Size(mainChart.Size.Width, GetFormHeight(form) - GetFormUpBarSize(form) + 10), new Point(mainChart.Location.X, mainChart.Location.Y));
+                SetChart(Charts[i], new Size(mainChart.Size.Width, GetFormHeight(form) - GetFormUpBarSize(form) + 10), new Point(mainChart.Location.X, mainChart.Location.Y), form);
                 Charts[i].Hide();
                 Charts[i].Click += resultChartClick;
 
@@ -457,7 +455,7 @@ namespace BackTestingFinal
             }
             for (int i = 0; i < Charts2.Length; i++)
             {
-                SetChart(Charts2[i], new Size(mainChart.Size.Width, GetFormHeight(form) - GetFormUpBarSize(form) + 10), new Point(mainChart.Location.X, mainChart.Location.Y));
+                SetChart(Charts2[i], new Size(mainChart.Size.Width, GetFormHeight(form) - GetFormUpBarSize(form) + 10), new Point(mainChart.Location.X, mainChart.Location.Y), form);
                 Charts2[i].Hide();
                 Charts2[i].Click += resultChartClick;
 
@@ -576,7 +574,7 @@ namespace BackTestingFinal
                 seriesLLPR.CustomProperties = seriesLPR.CustomProperties;
                 #endregion
             }
-            SetChart(TimeCountChart, mainChart.Size, mainChart.Location);
+            SetChart(TimeCountChart, mainChart.Size, mainChart.Location, form);
             TimeCountChart.Hide();
 
             var mainChartArea2 = mainChart.ChartAreas[0];
@@ -959,17 +957,22 @@ namespace BackTestingFinal
             SetListView(dayResultListView, new (string, string, int)[]
                 {
                     ("No.", "NumberForClick", 2),
-                    ("Code", "Code", 7),
-                    ("EnterTime", "EnterTime", 7),
-                    ("ExitTime", "ExitTime", 7),
+                    ("Code", "Code", 4),
+                    ("EnterTime", "EnterTime", 6),
+                    ("ExitTime", "ExitTime", 6),
+                    ("Dura", "Duration", 4),
                     ("Long", "LorS", 2),
                     ("PR(%)", "ProfitRate", 3),
-                    ("Dura", "Duration", 5)
+                    ("LM", "EnterMarketLastMin", 3),
+                    ("LMs", "EnterMarketLastMins", 3)
                 });
             dayResultListView.Size = new Size(tabPage.Width - 12, tabPage.Height - 6);
             dayResultListView.Location = new Point(6, 6);
             dayResultListView.SelectionChanged += (sender, e) =>
             {
+                if (dayResultListView.SelectedObject == null)
+                    return;
+
                 action(dayResultListView);
                 ShowCodeResult(itemDataDic[(dayResultListView.SelectedObject as BackResultData).Code] as BackItemData);
             };
@@ -1010,7 +1013,6 @@ namespace BackTestingFinal
                             codeResultListView.AddObject(resultData);
                         }
         }
-
 
         void LoadCodeListAndMetric()
         {
@@ -2146,6 +2148,8 @@ namespace BackTestingFinal
 
                 new SQLiteCommand("Commit", STResultDB).ExecuteNonQuery();
                 STResultDB.Close();
+                GC.Collect();
+                GC.WaitForPendingFinalizers();
 
                 if (!active || current.showCmd == ShowWindowCommands.Minimized)
                     ShowWindow(proc.MainWindowHandle, SW_MINIMIZE);
@@ -2777,8 +2781,8 @@ namespace BackTestingFinal
                 var vmc = BaseChartTimeSet.OneMinute;
                 for (int i = BaseChartTimeSet.OneMinute.index; i <= maxCV.index; i++)
                 {
-                    if (i != BaseChartTimeSet.OneMinute.index && i < minCV.index)
-                        continue;
+                    //if (i != BaseChartTimeSet.OneMinute.index && i < minCV.index)
+                    //    continue;
 
                     var v = itemData.listDic.Values[i];
                     var vc = itemData.listDic.Keys[i];
@@ -2835,9 +2839,6 @@ namespace BackTestingFinal
 
                     for (int j = BaseChartTimeSet.OneMinute.index; j <= maxCV.index; j++)
                     {
-                        if (j != BaseChartTimeSet.OneMinute.index && j < minCV.index)
-                            continue;
-
                         var v = itemData.listDic.Values[j];
                         var vc = itemData.listDic.Keys[j];
                         if (j != BaseChartTimeSet.OneMinute.index)
@@ -2999,8 +3000,8 @@ namespace BackTestingFinal
 
                     for (int i = BaseChartTimeSet.OneMinute.index; i <= maxCV.index; i++)
                     {
-                        if (i != BaseChartTimeSet.OneMinute.index && i < minCV.index)
-                            continue;
+                        //if (i != BaseChartTimeSet.OneMinute.index && i < minCV.index)
+                        //    continue;
 
                         var v = itemData.listDic.Values[i];
                         var vc = itemData.listDic.Keys[i];
@@ -3214,7 +3215,9 @@ namespace BackTestingFinal
                                 ProfitRate = Math.Round((profitRow - 1) * 100, 2),
                                 Duration = vm.lastStick.Time.Subtract(positionData.EnterTime).ToString(TimeSpanFormat),
                                 BeforeGap = positionData.EnterTime.Subtract(itemData.BeforeExitTime).ToString(TimeSpanFormat),
-                                LorS = (Position)j
+                                LorS = (Position)j,
+                                EnterMarketLastMin = positionData.EnterMarketLastMin,
+                                EnterMarketLastMins = positionData.EnterMarketLastMins
                             };
 
                             if (itemData.firstLastMin.lastMin != from2)
@@ -3353,12 +3356,26 @@ namespace BackTestingFinal
 
             lastResultDataForCheckTrend = new BackResultData[] { null, null };
 
+            var market1Day = LoadSticks(itemDataDic["BTCUSDT"] as BackItemData, BaseChartTimeSet.OneMinute, from, minituesInADay * 30, false);
+            var m1DI = 0;
+            var enterCount = new List<DateTime>[] { new List<DateTime>(), new List<DateTime>() };
+
             for (int i = 0; i < size; i++)
             {
                 var from2 = from.AddMinutes(i);
 
                 if (from2 > end)
                     break;
+
+                if (market1Day.Count == m1DI)
+                {
+                    market1Day.AddRange(LoadSticks(itemDataDic["BTCUSDT"] as BackItemData, BaseChartTimeSet.OneMinute, from2, minituesInADay * 30, false));
+                    if (m1DI >= minituesInADay * 30 * 2)
+                    {
+                        market1Day.RemoveRange(0, minituesInADay * 30);
+                        m1DI -= minituesInADay * 30;
+                    }
+                }
 
                 if (!TimeCount.ContainsKey(from2.TimeOfDay))
                     TimeCount.Add(from2.TimeOfDay, 0);
@@ -3407,6 +3424,9 @@ namespace BackTestingFinal
                     if (conditionResult.found)
                         for (int j = (int)Position.Long; j <= (int)Position.Short; j++)
                         {
+                            while (enterCount[j].Count > 0 && from2.Subtract(enterCount[j][0]).TotalMinutes > 60)
+                                enterCount[j].RemoveAt(0);
+
                             var simulDayDetail = simulDaysDetail[j][detailStartTime];
                             if (conditionResult.position[j])
                                 foreach (var foundItem in foundItemList[j].Values)
@@ -3417,7 +3437,15 @@ namespace BackTestingFinal
                                     var positionData = foundItem.itemData.positionData[j];
                                     EnterSetting(positionData, minV.lastStick);
                                     if (calSimul && from2 >= start)
-                                        positionData.Real = CheckTrend((Position)j, from2);
+                                        positionData.Real = CheckTrend((Position)j, from2,
+                                            (market1Day[m1DI].Price[3] > market1Day[m1DI].Price[2] ? 1 : -1) * market1Day[m1DI].Price[0] / market1Day[m1DI].Price[1], enterCount[j].Count);
+
+                                    if (market1Day[m1DI].Time != from2)
+                                        ShowError(form);
+                                    positionData.EnterMarketLastMin = (market1Day[m1DI].Price[3] > market1Day[m1DI].Price[2] ? 1 : -1) * market1Day[m1DI].Price[0] / market1Day[m1DI].Price[1];
+                                    positionData.EnterMarketLastMins = enterCount[j].Count;
+                                    //if (!calSimul || positionData.Real)
+                                        enterCount[j].Add(from2);
 
                                     if (inside)
                                     {
@@ -3463,11 +3491,21 @@ namespace BackTestingFinal
                                 }
                         }
                 }
+
+                if (market1Day[m1DI].Time == from2)
+                    m1DI++;
             }
 
             foreach (var iD in itemDataDic.Values)
                 foreach (var l in iD.listDic.Values)
                     l.Reset();
+        }
+        decimal GetAverageAmp(List<TradeStick> sticks)
+        {
+            decimal sum = 0;
+            for (int i = 0; i < sticks.Count; i++)
+                sum += sticks[i].Price[0] / sticks[i].Price[1];
+            return sum / sticks.Count;
         }
         DateTime GetDetailStartTime(DateTime time)
         {
