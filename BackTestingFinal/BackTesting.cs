@@ -919,8 +919,8 @@ namespace BackTestingFinal
                 var data = sender.SelectedObject as BackResultData;
                 var itemData = itemDataDic[data.Code] as BackItemData;
                 var result = LoadAndCheckSticks(itemData, true, false, default, data.OutEnterTime == default ? data.EnterTime : data.OutEnterTime, default, false);
-                SetChartNowOrLoad(result.chartValues);
-                ShowChart(itemData, (result.foundTime, baseChartViewSticksSize / 2, true), true);
+                //SetChartNowOrLoad(result.chartValues);
+                ShowChart(itemData, (result.foundTime, baseChartViewSticksSize / 2, true), true, result.chartValues);
             });
 
             var tab_page_list = new List<TabPage>() { new TabPage("Metric Result"), new TabPage("Day Result") };
@@ -2481,9 +2481,10 @@ namespace BackTestingFinal
             var list = showingItemData.listDic[mainChart.Tag as ChartValues].list;
             ShowChart(showingItemData, (from, (int)position, true), list.Count != 0 && from >= list[0].Time && from <= list[list.Count - 1].Time);
         }
-        void ShowChart(BackItemData itemData, (DateTime time, int position, bool on) cursor, bool loaded = false)
+        void ShowChart(BackItemData itemData, (DateTime time, int position, bool on) cursor, bool loaded = false, ChartValues chartValues = default)
         {
-            var chartValues = mainChart.Tag as ChartValues;
+            if (chartValues == default)
+                chartValues = mainChart.Tag as ChartValues;
             showingItemData = itemData;
             form.Text = itemData.Code;
             var v = itemData.listDic[chartValues];
@@ -2875,7 +2876,7 @@ namespace BackTestingFinal
                             v.lastStick.TCount += vm.lastStick.TCount;
                         }
 
-                        if (!calOnlyFullStick)
+                        if (!calLater && (j == BaseChartTimeSet.OneMinute.index || !calOnlyFullStick))
                             SetRSIAandDiff(v.list, v.lastStick, v.currentIndex - 1);
 
                         if (toPast ? vm.lastStick.Time <= checkStartTime : vm.lastStick.Time >= checkStartTime)
@@ -3181,7 +3182,7 @@ namespace BackTestingFinal
                                 ShowError(form);
                         }
 
-                        if (!calOnlyFullStick)
+                        if (!calLater && (j == BaseChartTimeSet.OneMinute.index || !calOnlyFullStick))
                             SetRSIAandDiff(v.list, v.lastStick, v.currentIndex - 1);
 
                         OneChartFindConditionAndAdd(itemData, vc, vm.lastStick, v.lastStick, vm.currentIndex - 1, v.currentIndex - 1);
