@@ -128,7 +128,7 @@ namespace BackTestingFinal
         bool AlertOn = MessageBox.Show("AlertOn?", "caption", MessageBoxButtons.YesNo) == DialogResult.Yes;
         int threadN;
 
-        static string STResultDBPath = @"C:\Users\tmdwn\source\repos\BackTestingFinal\전략결과\";
+        static string STResultDBPath = PathString.Base + @"BackTestingFinal\전략결과\";
         SQLiteConnection STResultDB = new SQLiteConnection(@"Data Source=" + STResultDBPath + "strategy_result.db");
 
         DateTime startDone = DateTime.MaxValue;
@@ -138,7 +138,7 @@ namespace BackTestingFinal
 
         CR lastCR;
 
-        public BackTesting(Form form, bool isJoo) : base(form, isJoo, 3)
+        public BackTesting(Form form, bool isJoo) : base(form, isJoo, 1.1141114m)
         {
 
             sticksDBpath = BaseSticksDB.path;
@@ -167,7 +167,7 @@ namespace BackTestingFinal
             //fromTextBox.Text = "2022-05-10 09:34:00";
             //toTextBox.Text = "2022-05-09 06:26:00";
             //toTextBox.Text = "2022-05-06 19:30:00";
-            fromTextBox.Text = "2022-05-01";
+            toTextBox.Text = "2022-05-06";
         }
         void SetAdditionalMainView()
         {
