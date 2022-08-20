@@ -179,6 +179,8 @@ namespace BackTestingFinal
                     //NewCal(list, list[i], i - 1, 80);
 
                 form.Text = showingItemData.Code + "     H:" + list[i].Price[0] + "  L:" + list[i].Price[1] + "  O:" + list[i].Price[2] + "  C:" + list[i].Price[3] + "  Ms:" + list[i].Ms + "  Md:" + list[i].Md;
+
+                DetectDropping(list, i);
             };
 
             clickResultAction = new Action<DayData>((date) =>
