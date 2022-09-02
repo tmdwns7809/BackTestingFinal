@@ -171,16 +171,12 @@ namespace BackTestingFinal
         }
         void SetAdditionalMainView()
         {
-            var rightclick = 4;
-
             LeftClickAction += (i) =>
             {
                 var chartValues = mainChart.Tag as ChartValues;
                 var list = showingItemData.listDic[chartValues].list;
-                //for (int j = 0; j < 100; j++)
-                    //NewCal(list, list[i], i - 1, 80);
 
-                form.Text = showingItemData.Code + "     H:" + list[i].Price[0] + "  L:" + list[i].Price[1] + "  O:" + list[i].Price[2] + "  C:" + list[i].Price[3] + "  Ms:" + list[i].Ms + "  Md:" + list[i].Md + " S5:" + Math.Round(mainChart.Series[5].Points[i].YValues[0], 2) + " version:" + rightclick;
+                form.Text = showingItemData.Code + "     H:" + list[i].Price[0] + "  L:" + list[i].Price[1] + "  O:" + list[i].Price[2] + "  C:" + list[i].Price[3] + "  Ms:" + list[i].Ms + "  Md:" + list[i].Md + " S5:" + Math.Round(mainChart.Series[5].Points[i].YValues[0], 2);
             };
 
             RightClickAction += (i) =>
@@ -188,12 +184,10 @@ namespace BackTestingFinal
                 var chartValues = mainChart.Tag as ChartValues;
                 var list = showingItemData.listDic[chartValues].list;
 
-                rightclick++;
+                foreach (var p in mainChart.Series[5].Points)
+                    p.YValues[0] = double.NaN;
 
-                if (rightclick > 7)
-                    rightclick = 5;
-
-                DetectDropping(list, i, rightclick);
+                DetectDropping(list, i - 1, list[i]);
             };
 
             clickResultAction = new Action<DayData>((date) =>
