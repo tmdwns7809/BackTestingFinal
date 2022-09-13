@@ -17,6 +17,7 @@ using TradingLibrary.Base.Enum;
 using TradingLibrary.Base.Settings;
 using TradingLibrary.Base.SticksDB;
 using System.Runtime.InteropServices;
+using static System.Windows.Forms.AxHost;
 
 namespace BackTestingFinal
 {
@@ -138,7 +139,7 @@ namespace BackTestingFinal
 
         CR lastCR;
 
-        public BackTesting(Form form, bool isJoo) : base(form, isJoo, 1.1141114m)
+        public BackTesting(Form form, bool isJoo) : base(form, isJoo, 4.1m)
         {
 
             sticksDBpath = BaseSticksDB.path;
@@ -167,7 +168,8 @@ namespace BackTestingFinal
             //fromTextBox.Text = "2022-05-10 09:34:00";
             //toTextBox.Text = "2022-05-09 06:26:00";
             //toTextBox.Text = "2022-05-06 19:30:00";
-            toTextBox.Text = "2022-05-06";
+            //fromTextBox.Text = "2022-08-01";
+            //toTextBox.Text = "2022-08-07";
         }
         void SetAdditionalMainView()
         {
@@ -176,7 +178,8 @@ namespace BackTestingFinal
                 var chartValues = mainChart.Tag as ChartValues;
                 var list = showingItemData.listDic[chartValues].list;
 
-                form.Text = showingItemData.Code + "     H:" + list[i].Price[0] + "  L:" + list[i].Price[1] + "  O:" + list[i].Price[2] + "  C:" + list[i].Price[3] + "  Ms:" + list[i].Ms + "  Md:" + list[i].Md + " S5:" + Math.Round(mainChart.Series[5].Points[i].YValues[0], 2);
+                form.Text = showingItemData.Code + "     H:" + list[i].Price[0] + "  L:" + list[i].Price[1] + "  O:" + list[i].Price[2] + "  C:" + list[i].Price[3] + "  Ms:" + list[i].Ms + "  Md:" + list[i].Md + 
+                    " S5:" + Math.Round(mainChart.Series[5].Points[i].YValues[0], 2) + " S6:" + Math.Round(mainChart.Series[6].Points[i].YValues[0], 2);
             };
 
             RightClickAction += (i) =>
@@ -184,10 +187,34 @@ namespace BackTestingFinal
                 var chartValues = mainChart.Tag as ChartValues;
                 var list = showingItemData.listDic[chartValues].list;
 
-                foreach (var p in mainChart.Series[5].Points)
-                    p.YValues[0] = double.NaN;
+                for (int j = 0; j < mainChart.Series[5].Points.Count; j++)
+                {
+                    mainChart.Series[5].Points[j].YValues[0] = double.NaN;
+                    mainChart.Series[6].Points[j].YValues[0] = double.NaN;
+                }
 
-                DetectDropping(list, i - 1, list[i]);
+                var list2 = new List<double>();
+                var sum = 0D;
+                for (int j = 99; j >= 0; j--)
+                {
+                    var size = 7;
+                    if (j < size)
+                        continue;
+                    var a = GetAngleDiffRatio(list, i, i - j, 7);
+                    mainChart.Series[5].Points[i - j].YValues[0] = Math.Round(a, 2);
+                    list2.Add(a);
+                    sum += a;
+                    if (list2.Count > 3)
+                    {
+                        sum -= list2[0];
+                        list2.RemoveAt(0);
+                        mainChart.Series[6].Points[i - j].YValues[0] = Math.Round(sum / list2.Count, 2);
+                        if (list2.Count != 3)
+                            ShowError(form);
+                    }
+                }
+
+                //DetectWM(list, i - 1, list[i], true);
             };
 
             clickResultAction = new Action<DayData>((date) =>
@@ -768,7 +795,7 @@ namespace BackTestingFinal
             SetButton(lastButton, "L", (sender, e) =>
             {
                 var result = GetFirstOrLastTime(false);
-                ShowChart(result.itemData, (result.time, baseChartViewSticksSize, true));
+                ShowChart(result.itemData, (result.time, chartViewSticksSize, true));
             });
             lastButton.Size = beforeButton.Size;
             lastButton.Location = new Point(afterButton.Location.X, firstButton.Location.Y);
@@ -913,7 +940,7 @@ namespace BackTestingFinal
                     return;
 
                 var itemData = codeListView.SelectedObject as BackItemData;
-                ShowChart(itemData, (GetFirstOrLastTime(false, itemData).time, baseChartViewSticksSize, false));
+                ShowChart(itemData, (GetFirstOrLastTime(false, itemData).time, chartViewSticksSize, false));
 
                 ShowCodeResult(itemData);
             };
@@ -929,7 +956,7 @@ namespace BackTestingFinal
                 var itemData = itemDataDic[data.Code] as BackItemData;
                 var result = LoadAndCheckSticks(itemData, true, false, default, data.OutEnterTime == default ? data.EnterTime : data.OutEnterTime, default, false);
                 //SetChartNowOrLoad(result.chartValues);
-                ShowChart(itemData, (result.foundTime, baseChartViewSticksSize / 2, true), true, result.chartValues);
+                ShowChart(itemData, (result.foundTime, chartViewSticksSize / 2, true), true, result.chartValues);
             });
 
             var tab_page_list = new List<TabPage>() { new TabPage("Metric Result"), new TabPage("Day Result") };
@@ -2447,7 +2474,7 @@ namespace BackTestingFinal
                     form.BeginInvoke(new Action(() =>
                     {
                         ClearMainChartAndSet(result.chartValues, itemData);
-                        ShowChart(itemData, (result.foundTime, baseChartViewSticksSize / 2, true), true);
+                        ShowChart(itemData, (result.foundTime, chartViewSticksSize / 2, true), true);
                     }));
                 }
                 else
@@ -2475,7 +2502,7 @@ namespace BackTestingFinal
             TimeCountChartButton.BackColor = ColorSet.Button;
 
             var from = mainChart.Tag != null ? GetStandardDate() : default;
-            var position = double.IsNaN(mainChart.ChartAreas[0].CursorX.Position) ? baseChartViewSticksSize / 2
+            var position = double.IsNaN(mainChart.ChartAreas[0].CursorX.Position) ? chartViewSticksSize / 2
                 : mainChart.ChartAreas[0].CursorX.Position - mainChart.ChartAreas[0].AxisX.ScaleView.ViewMinimum - 1;
 
             ClearMainChartAndSet(chartValues, showingItemData);
@@ -2501,21 +2528,21 @@ namespace BackTestingFinal
 
             if (!loaded)
             {
-                var more = baseChartViewSticksSize - cursor.position + baseChartViewSticksSize / 2;
-                LoadAndCheckSticks(itemData, true, true, baseChartViewSticksSize * 2,
+                var more = chartViewSticksSize - cursor.position + chartViewSticksSize / 2;
+                LoadAndCheckSticks(itemData, true, true, chartViewSticksSize * 2,
                     chartValues != BaseChartTimeSet.OneMonth ? cursor.time.AddSeconds(more * chartValues.seconds) : cursor.time.AddMonths(more),
                     chartValues);
             }
             else
             {
                 if (cursor.time < v.list[0].Time)
-                    LoadAndCheckSticks(itemData, false, true, (int)v.list[0].Time.Subtract(cursor.time).TotalSeconds / chartValues.seconds + baseChartViewSticksSize);
+                    LoadAndCheckSticks(itemData, false, true, (int)v.list[0].Time.Subtract(cursor.time).TotalSeconds / chartValues.seconds + chartViewSticksSize);
                 else if (cursor.time > v.list[v.list.Count - 1].Time)
-                    LoadAndCheckSticks(itemData, false, true, (int)cursor.time.Subtract(v.list[v.list.Count - 1].Time).TotalSeconds / chartValues.seconds + baseChartViewSticksSize);
+                    LoadAndCheckSticks(itemData, false, true, (int)cursor.time.Subtract(v.list[v.list.Count - 1].Time).TotalSeconds / chartValues.seconds + chartViewSticksSize);
 
-                if (cursor.time.Subtract(v.list[0].Time).TotalSeconds / chartValues.seconds < baseChartViewSticksSize)
+                if (cursor.time.Subtract(v.list[0].Time).TotalSeconds / chartValues.seconds < chartViewSticksSize)
                     LoadAndCheckSticks(itemData, false, true);
-                if (v.list[v.list.Count - 1].Time.Subtract(cursor.time).TotalSeconds / chartValues.seconds < baseChartViewSticksSize)
+                if (v.list[v.list.Count - 1].Time.Subtract(cursor.time).TotalSeconds / chartValues.seconds < chartViewSticksSize)
                     LoadAndCheckSticks(itemData, false, false);
 
                 var foundIndex = 0;
@@ -2564,10 +2591,10 @@ namespace BackTestingFinal
                     right = exitIndex;
                 }
 
-                if (v.list.Count > right + baseChartViewSticksSize)
-                    v.list.RemoveRange(right + baseChartViewSticksSize, v.list.Count - (right + baseChartViewSticksSize));
-                if (left > baseChartViewSticksSize)
-                    v.list.RemoveRange(0, left - baseChartViewSticksSize);
+                if (v.list.Count > right + chartViewSticksSize)
+                    v.list.RemoveRange(right + chartViewSticksSize, v.list.Count - (right + chartViewSticksSize));
+                if (left > chartViewSticksSize)
+                    v.list.RemoveRange(0, left - chartViewSticksSize);
             }
 
             //if (mainChart.Series[0].Points.Count != 0)
@@ -2582,7 +2609,7 @@ namespace BackTestingFinal
             }
 
             var zoomStart = cursorIndex - cursor.position + 1;
-            ZoomX(mainChart, zoomStart, zoomStart + baseChartViewSticksSize);
+            ZoomX(mainChart, zoomStart, zoomStart + chartViewSticksSize);
 
             if (cursor.on)
             {
@@ -3662,7 +3689,7 @@ namespace BackTestingFinal
             if (from == default)
             {
                 var chartValues = oneChart ? default : BaseChartTimeSet.OneMinute;
-                var centerViewIndex = (int)mainChart.ChartAreas[0].AxisX.ScaleView.ViewMaximum - 2 - (baseChartViewSticksSize + 1) / 2;
+                var centerViewIndex = (int)mainChart.ChartAreas[0].AxisX.ScaleView.ViewMaximum - 2 - (chartViewSticksSize + 1) / 2;
                 from = (mainChart.Series[0].Points.Count - 1 >= centerViewIndex && centerViewIndex >= 0)
                         ? DateTime.Parse(mainChart.Series[0].Points[centerViewIndex].AxisLabel)
                         : (mainChart.Series[0].Points.Count == 0
