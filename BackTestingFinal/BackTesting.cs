@@ -139,7 +139,7 @@ namespace BackTestingFinal
 
         CR lastCR;
 
-        public BackTesting(Form form, bool isJoo) : base(form, isJoo, 4.1m)
+        public BackTesting(Form form, bool isJoo) : base(form, isJoo, 7m)
         {
 
             sticksDBpath = BaseSticksDB.path;
