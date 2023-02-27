@@ -182,6 +182,7 @@ namespace BackTestingFinal
                     " S5:" + Math.Round(mainChart.Series[5].Points[i].YValues[0], 2) + " S6:" + Math.Round(mainChart.Series[6].Points[i].YValues[0], 2);
             };
 
+            /* test?
             RightClickAction += (i) =>
             {
                 var chartValues = mainChart.Tag as ChartValues;
@@ -216,6 +217,7 @@ namespace BackTestingFinal
 
                 //DetectWM(list, i - 1, list[i], true);
             };
+             */
 
             clickResultAction = new Action<DayData>((date) =>
             {
