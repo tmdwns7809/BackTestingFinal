@@ -2496,7 +2496,7 @@ namespace BackTestingFinal
             }));
         }
 
-        public override void SetChartNowOrLoad(ChartValues chartValues, int position = int.MinValue)
+        public override void SetChartNowOrLoad(ChartValues chartValues, int position = int.MinValue, bool loadNew = false)
         {
             if (showingItemData != default && !BinanceSticksDB.DBDic.ContainsKey(chartValues))
                 return;
@@ -2524,8 +2524,11 @@ namespace BackTestingFinal
             if (from < firstTime)
                 from = firstTime;
 
+            if (!DateTime.TryParse(toTextBox.Text, out DateTime et))
+                ShowError(form);
+
             var list = showingItemData.listDic[mainChart.Tag as ChartValues].list;
-            ShowChart(showingItemData, (from, position, true), list.Count != 0 && from >= list[0].Time && from <= list[list.Count - 1].Time);
+            ShowChart(showingItemData, (from, position, true), !loadNew && list.Count != 0 && from >= list[0].Time && from <= list[list.Count - 1].Time);
         }
         void ShowChart(BackItemData itemData, (DateTime time, int position, bool on) cursor, bool loaded = false, ChartValues chartValues = default)
         {
@@ -3111,10 +3114,7 @@ namespace BackTestingFinal
             list.AddRange(LoadSticks(itemData, BaseChartTimeSet.OneMinute, minStart, (int)(endTime.Subtract(minStart).TotalSeconds / BaseChartTimeSet.OneMinute.seconds) + 1, false));
 
             if (lastTime != list[0].Time)
-            {
-                ShowError(form);
-                return null;
-            }
+                list.InsertRange(0, LoadSticks(itemData, BaseChartTimeSet.OneMinute, lastTime, (int)(list[0].Time.Subtract(lastTime).TotalSeconds / BaseChartTimeSet.OneMinute.seconds), false));
 
             var lastStick = new BackTradeStick()
             {
@@ -3798,11 +3798,13 @@ namespace BackTestingFinal
                 return default;
             }
 
+            var endl = end.AddSeconds(-chartValues.seconds);
+
             if (itemData == default)
                 foreach (BackItemData itemData2 in itemDataDic.Values)
                 {
                     var reader = new SQLiteCommand("Select *, rowid From '" + itemData2.Code + "'" +
-                        (first ? "" : "where time<='" + end.ToString(DBTimeFormat) + "'") +
+                        (first ? "" : "where (time<='" + end.ToString(DBTimeFormat) + "') and (time>'" + endl.ToString(DBTimeFormat) + "') ") +
                         " order by rowid " + (first ? "" : "desc") + " limit 1", conn).ExecuteReader();
                     if (!reader.Read())
                         ShowError(form);
@@ -3816,7 +3818,7 @@ namespace BackTestingFinal
             else
             {
                 var reader = new SQLiteCommand("Select *, rowid From '" + itemData.Code + "'" +
-                    (first ? "" : "where time<='" + end.ToString(DBTimeFormat) + "'") +
+                    (first ? "" : "where (time<='" + end.ToString(DBTimeFormat) + "') and (time>'" + endl.ToString(DBTimeFormat) + "') ") +
                     " order by rowid " + (first ? "" : "desc") + " limit 1", conn).ExecuteReader();
                 if (!reader.Read())
                     ShowError(form);
@@ -3832,10 +3834,16 @@ namespace BackTestingFinal
             switch (e.KeyCode)
             {
                 case Keys.Right:
+                case Keys.Left:
+                    if (!DateTime.TryParse(toTextBox.Text, out DateTime dt))
+                        ShowError(form);
+
+                    var vc = mainChart.Tag as ChartValues;
+
+                    toTextBox.Text = dt.AddSeconds((e.KeyCode == Keys.Right ? 1 : -1) * vc.seconds).ToString(TimeFormat);
+                    SetChartNowOrLoad(vc, loadNew: e.KeyCode == Keys.Left);
                     break;
 
-                case Keys.Left:
-                    break;
 
                 default:
                     return;
