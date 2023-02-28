@@ -18,6 +18,7 @@ using TradingLibrary.Base.Settings;
 using TradingLibrary.Base.SticksDB;
 using System.Runtime.InteropServices;
 using static System.Windows.Forms.AxHost;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement.Window;
 
 namespace BackTestingFinal
 {
@@ -158,8 +159,8 @@ namespace BackTestingFinal
             SetAdditionalMainView();
 
             fromTextBox.Text = DateTime.MinValue.ToString(DateTimeFormat);
-            toTextBox.Text = DateTime.MaxValue.ToString(DateTimeFormat);
-            //toTextBox.Text = "2022-04-21 14:35:00";
+            //toTextBox.Text = DateTime.MaxValue.ToString(DateTimeFormat);
+            toTextBox.Text = "2023-02-24 01:51:00";
             //fromTextBox.Text = "2022-01-01";
             //toTextBox.Text = "2022-04-24 16:42:00";
             //fromTextBox.Text = "2021-11-01";
@@ -170,6 +171,8 @@ namespace BackTestingFinal
             //toTextBox.Text = "2022-05-06 19:30:00";
             //fromTextBox.Text = "2022-08-01";
             //toTextBox.Text = "2022-08-07";
+
+            form.KeyDown += Form_KeyDown;
         }
         void SetAdditionalMainView()
         {
@@ -179,7 +182,8 @@ namespace BackTestingFinal
                 var list = showingItemData.listDic[chartValues].list;
 
                 form.Text = showingItemData.Code + "     H:" + list[i].Price[0] + "  L:" + list[i].Price[1] + "  O:" + list[i].Price[2] + "  C:" + list[i].Price[3] + "  Ms:" + list[i].Ms + "  Md:" + list[i].Md + 
-                    " S5:" + Math.Round(mainChart.Series[5].Points[i].YValues[0], 2) + " S6:" + Math.Round(mainChart.Series[6].Points[i].YValues[0], 2);
+                    " S5:" + Math.Round(mainChart.Series[5].Points[i].YValues[0], 2) + " S6:" + Math.Round(mainChart.Series[6].Points[i].YValues[0], 2) +
+                    " Amp:" + Math.Round((list[i].Price[0] / list[i].Price[1] - 1) * 100, 2);
             };
 
             /* test?
@@ -2492,8 +2496,11 @@ namespace BackTestingFinal
             }));
         }
 
-        public override void SetChartNowOrLoad(ChartValues chartValues)
+        public override void SetChartNowOrLoad(ChartValues chartValues, int position = int.MinValue)
         {
+            if (showingItemData != default && !BinanceSticksDB.DBDic.ContainsKey(chartValues))
+                return;
+
             mainChart.Visible = true;
             for (int i = 0; i < Charts.Length; i ++)
             {
@@ -2504,8 +2511,9 @@ namespace BackTestingFinal
             TimeCountChartButton.BackColor = ColorSet.Button;
 
             var from = mainChart.Tag != null ? GetStandardDate() : default;
-            var position = double.IsNaN(mainChart.ChartAreas[0].CursorX.Position) ? chartViewSticksSize / 2
-                : mainChart.ChartAreas[0].CursorX.Position - mainChart.ChartAreas[0].AxisX.ScaleView.ViewMinimum - 1;
+            if (position == int.MinValue)
+                position = double.IsNaN(mainChart.ChartAreas[0].CursorX.Position) ? chartViewSticksSize / 2
+                : (int)(mainChart.ChartAreas[0].CursorX.Position - mainChart.ChartAreas[0].AxisX.ScaleView.ViewMinimum - 1);
 
             ClearMainChartAndSet(chartValues, showingItemData);
 
@@ -2517,7 +2525,7 @@ namespace BackTestingFinal
                 from = firstTime;
 
             var list = showingItemData.listDic[mainChart.Tag as ChartValues].list;
-            ShowChart(showingItemData, (from, (int)position, true), list.Count != 0 && from >= list[0].Time && from <= list[list.Count - 1].Time);
+            ShowChart(showingItemData, (from, position, true), list.Count != 0 && from >= list[0].Time && from <= list[list.Count - 1].Time);
         }
         void ShowChart(BackItemData itemData, (DateTime time, int position, bool on) cursor, bool loaded = false, ChartValues chartValues = default)
         {
@@ -2760,9 +2768,17 @@ namespace BackTestingFinal
                             from.AddSeconds(-chartValues.seconds * (TotalNeedDays - 1)) :
                             from.AddMonths(-(TotalNeedDays - 1))),
                     size + (TotalNeedDays - 1), toPast);
+
                 var startIndex = GetStartIndex(list, toPast ? (chartValues != BaseChartTimeSet.OneMonth ? from.AddSeconds(-chartValues.seconds * (size - 1)) : from.AddMonths(-(size - 1))) : from);
                 if (startIndex == -1)
                     return result;
+
+                if (chartValues.index > BaseChartTimeSet.OneMinute.index)
+                {
+                    var lastTime = GetFirstOrLastTime(false, itemData, chartValues).time;
+                    if (list[list.Count - 1].Time == lastTime)
+                        list[list.Count - 1] = makeLastStick(itemData, chartValues, lastTime);
+                }
 
                 for (int i = startIndex; i < list.Count; i++)
                 {
@@ -3075,6 +3091,63 @@ namespace BackTestingFinal
             }
 
             return result;
+        }
+        TradeStick makeLastStick(BackItemData itemData, ChartValues chartValues, DateTime lastTime)
+        {
+            if (!DateTime.TryParse(toTextBox.Text, out DateTime endTime))
+            {
+                ShowError(form);
+                return null;
+            }
+
+            var oneMinIndex = ChartValuesDic.IndexOfValue(BaseChartTimeSet.OneMinute);
+            var cvIndex = ChartValuesDic.IndexOfValue(chartValues);
+            var midVC = ChartValuesDic.Values[oneMinIndex + (cvIndex - oneMinIndex) / 2];
+
+            var list = LoadSticks(itemData, midVC, lastTime, (int)(endTime.Subtract(lastTime).TotalSeconds / midVC.seconds) + 1, false);
+
+            var minStart = list[list.Count - 1].Time;
+            list.RemoveAt(list.Count - 1);
+            list.AddRange(LoadSticks(itemData, BaseChartTimeSet.OneMinute, minStart, (int)(endTime.Subtract(minStart).TotalSeconds / BaseChartTimeSet.OneMinute.seconds) + 1, false));
+
+            if (lastTime != list[0].Time)
+            {
+                ShowError(form);
+                return null;
+            }
+
+            var lastStick = new BackTradeStick()
+            {
+                Time = lastTime,
+                Price = new decimal[]
+                        {
+                                list[0].Price[2],
+                                list[0].Price[2],
+                                list[0].Price[2],
+                                list[0].Price[2]
+                        }
+            };
+            var nextTime = lastStick.Time.AddSeconds(chartValues.seconds);
+            for (int i = 0; i < list.Count; i++)
+            {
+                if (list[i].Time >= nextTime)
+                {
+                    ShowError(form);
+                    return null;
+                }
+
+                lastStick.Price[3] = list[i].Price[3];
+
+                if (list[i].Price[0] > lastStick.Price[0])
+                    lastStick.Price[0] = list[i].Price[0];
+                if (list[i].Price[1] < lastStick.Price[1])
+                    lastStick.Price[1] = list[i].Price[1];
+
+                lastStick.Ms += list[i].Ms;
+                lastStick.Md += list[i].Md;
+            }
+
+            return lastStick;
         }
         void Run(DateTime start, DateTime end, CR CRType)
         {
@@ -3585,17 +3658,25 @@ namespace BackTestingFinal
             if (size == default)
                 size = baseLoadSticksSize;
 
-            var multiplier = toPast ? -1 : 1;
-
             var conn = BinanceSticksDB.DBDic[chartValues];
 
-            if (from == default)
-                from = GetFirstOrLastTime(!toPast, itemData, chartValues).time;
-            var to = chartValues != BaseChartTimeSet.OneMonth ? from.AddSeconds(multiplier * chartValues.seconds * size) : from.AddMonths(multiplier * size);
+            var to = GetFirstOrLastTime(false, itemData, chartValues).time;
+            if (toPast)
+            {
+                if (from != default && from < to)
+                    to = from;
+                from = chartValues != BaseChartTimeSet.OneMonth ? to.AddSeconds(-chartValues.seconds * size) : to.AddMonths(-size);
+            }
+            else
+            {
+                if (from == default)
+                    from = GetFirstOrLastTime(true, itemData, chartValues).time;
+                var to2 = chartValues != BaseChartTimeSet.OneMonth ? from.AddSeconds(chartValues.seconds * size) : from.AddMonths(size);
+                if (to2 < to)
+                    to = to2;
+            }
 
             var list = new List<TradeStick>();
-            var comp1 = toPast ? "<" : ">";
-            var comp2 = toPast ? ">" : "<";
             //  order by 순서부터 where 조건을 이용해서 limit만큼 찾을때까지 검색하는 모양임. limiit를 못채워서 끝까지 찾는경우를 조심. *and도 속도에 영향을 주는듯
             //  index 생성후 where 조건을 하나에 몰지 않고 select 두 번으로 검색하면 index가 적용되지 않는것 같음 <- 이거아님 범위설정 잘못 했던거임 <- 이거아님 select 두번하면 index적용 안되는듯
             //var reader = new SQLiteCommand("Select *, rowid From (Select *, rowid From '" + itemData.Code + "' where " +         
@@ -3606,7 +3687,7 @@ namespace BackTestingFinal
             try
             {
                 var reader = new SQLiteCommand("Select *, rowid From '" + itemData.Code + "' where " +
-                                "(time" + comp1 + "='" + from.ToString(DBTimeFormat) + "') and (time" + comp2 + "'" + to.ToString(DBTimeFormat) + "') " +
+                                "(time>='" + from.ToString(DBTimeFormat) + "') and (time<='" + to.ToString(DBTimeFormat) + "') " +
                                 "order by rowid " + (toPast ? "desc" : "") + " limit " + size, conn).ExecuteReader();
                 //var reader = new SQLiteCommand("Select *, rowid From (Select *, rowid From '" + itemData.Code + "' where " +
                 //                "(time" + comp1 + "='" + from.ToString(DBTimeFormat) + "') " +
@@ -3711,10 +3792,18 @@ namespace BackTestingFinal
             var conn = BinanceSticksDB.DBDic[chartValues];
 
             var time = first ? DateTime.MaxValue : DateTime.MinValue;
+            if (!DateTime.TryParse(toTextBox.Text, out var end))
+            {
+                ShowError(form);
+                return default;
+            }
+
             if (itemData == default)
                 foreach (BackItemData itemData2 in itemDataDic.Values)
                 {
-                    var reader = new SQLiteCommand("Select *, rowid From '" + itemData2.Code + "' order by rowid " + (first ? "" : "desc") + " limit 1", conn).ExecuteReader();
+                    var reader = new SQLiteCommand("Select *, rowid From '" + itemData2.Code + "'" +
+                        (first ? "" : "where time<='" + end.ToString(DBTimeFormat) + "'") +
+                        " order by rowid " + (first ? "" : "desc") + " limit 1", conn).ExecuteReader();
                     if (!reader.Read())
                         ShowError(form);
                     var stick = GetStickFromSQL(reader);
@@ -3726,7 +3815,9 @@ namespace BackTestingFinal
                 }
             else
             {
-                var reader = new SQLiteCommand("Select *, rowid From '" + itemData.Code + "' order by rowid " + (first ? "" : "desc") + " limit 1", conn).ExecuteReader();
+                var reader = new SQLiteCommand("Select *, rowid From '" + itemData.Code + "'" +
+                    (first ? "" : "where time<='" + end.ToString(DBTimeFormat) + "'") +
+                    " order by rowid " + (first ? "" : "desc") + " limit 1", conn).ExecuteReader();
                 if (!reader.Read())
                     ShowError(form);
                 var stick = GetStickFromSQL(reader);
@@ -3735,6 +3826,23 @@ namespace BackTestingFinal
             }
 
             return (time, itemData);
+        }
+        void Form_KeyDown(object sender, KeyEventArgs e)
+        {
+            switch (e.KeyCode)
+            {
+                case Keys.Right:
+                    break;
+
+                case Keys.Left:
+                    break;
+
+                default:
+                    return;
+            }
+
+            e.SuppressKeyPress = true;
+            e.Handled = true;
         }
     }
 }
