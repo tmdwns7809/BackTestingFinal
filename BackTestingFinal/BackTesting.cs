@@ -2781,6 +2781,16 @@ namespace BackTestingFinal
                     var lastTime = GetFirstOrLastTime(false, itemData, chartValues).time;
                     if (list[list.Count - 1].Time == lastTime)
                         list[list.Count - 1] = makeLastStick(itemData, chartValues, lastTime);
+                    if (!newLoad && !toPast)
+                    {
+                        var list2 = LoadSticks(itemData, chartValues, list[0].Time.AddSeconds(-chartValues.seconds), 1, false);
+                        list.InsertRange(0, list2);
+                        v.list.RemoveAt(v.list.Count - 1);
+                        if (list2.Count == 0)
+                            startIndex--;
+                        if (startIndex == -1)
+                            ShowError(form);
+                    }
                 }
 
                 for (int i = startIndex; i < list.Count; i++)
