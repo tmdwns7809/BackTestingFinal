@@ -247,7 +247,7 @@ namespace BackTestingFinal
                 var e2 = e as MouseEventArgs;
                 if (e2.Button == MouseButtons.Left)
                 {
-                    var result = GetCursorPosition(chart, e2);
+                    var result = GetCursorPositionFromClick(chart, e2);
                     if (!result.isInArea)
                         return;
 
@@ -2705,13 +2705,10 @@ namespace BackTestingFinal
         {
             AdjustChartBasic(chart, showingItemData.hoDiff);
         }
-        protected override void LoadMore(Chart chart, ScrollType scrollType, bool loadNew)
+        protected override void LoadMore(Chart chart, ScrollType scrollType, bool loadNew, int beforeCount)
         {
             if (showingItemData == default)
                 return;
-
-            var zoomStart = chart.ChartAreas[0].AxisX.ScaleView.ViewMinimum + 1;
-            var zoomEnd = chart.ChartAreas[0].AxisX.ScaleView.ViewMaximum - 1;
 
             var chartValue = chart.Tag as ChartValues;
             var toPast = scrollType == ScrollType.SmallDecrement;
@@ -2728,18 +2725,12 @@ namespace BackTestingFinal
 
                 for (int i = addedCount - 1; i >= 0; i--)
                     AddNewChartPoint(chart, showingItemData, i, true);
-
-                zoomStart += addedCount;
-                zoomEnd += addedCount;
-
-                if (!double.IsNaN(chart.ChartAreas[0].CursorX.Position))
-                    chart.ChartAreas[0].CursorX.Position += addedCount;
             }
             else
                 for (int i = countLast; i < countLast + addedCount; i++)
                     AddNewChartPoint(chart, showingItemData, i, false);
 
-            ZoomX(mainChart, (int)zoomStart, (int)zoomEnd);
+            base.LoadMore(chart, scrollType, loadNew, beforeCount);
         }
 
         (DateTime foundTime, ChartValues chartValues) LoadAndCheckSticks(BackItemData itemData, bool newLoad, bool toPast, int size = default, DateTime from = default, ChartValues chartValues = default, bool oneChart = true)
