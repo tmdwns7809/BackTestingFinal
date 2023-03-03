@@ -2510,10 +2510,11 @@ namespace BackTestingFinal
             TimeCountChart.Visible = false;
             TimeCountChartButton.BackColor = ColorSet.Button;
 
-            var from = mainChart.Tag != null ? GetStandardDate() : default;
+            var from = mainChart.Tag != null ? GetStandardDate(chartValues: chartValues) : default;
+            var cursorOn = !double.IsNaN(mainChart.ChartAreas[0].CursorX.Position);
             if (position == int.MinValue)
-                position = double.IsNaN(mainChart.ChartAreas[0].CursorX.Position) ? chartViewSticksSize / 2
-                : (int)(mainChart.ChartAreas[0].CursorX.Position - mainChart.ChartAreas[0].AxisX.ScaleView.ViewMinimum - 1);
+                position = cursorOn ? (int)(mainChart.ChartAreas[0].CursorX.Position - mainChart.ChartAreas[0].AxisX.ScaleView.ViewMinimum - 1)
+                : chartViewSticksSize;
 
             ClearMainChartAndSet(chartValues, showingItemData);
 
@@ -2528,7 +2529,7 @@ namespace BackTestingFinal
                 ShowError(form);
 
             var list = showingItemData.listDic[mainChart.Tag as ChartValues].list;
-            ShowChart(showingItemData, (from, position, true), !loadNew && list.Count != 0 && from >= list[0].Time && from <= list[list.Count - 1].Time);
+            ShowChart(showingItemData, (from, position, cursorOn), !loadNew && list.Count != 0 && from >= list[0].Time && from <= list[list.Count - 1].Time);
         }
         void ShowChart(BackItemData itemData, (DateTime time, int position, bool on) cursor, bool loaded = false, ChartValues chartValues = default)
         {
@@ -3767,18 +3768,15 @@ namespace BackTestingFinal
                 Md = decimal.Parse(reader["baseVolume"].ToString()) - decimal.Parse(reader["takerBuyBaseVolume"].ToString())
             };
         }
-        DateTime GetStandardDate(bool first = false, bool oneChart = true)
+        DateTime GetStandardDate(bool first = false, bool oneChart = true, ChartValues chartValues = default)
         {
             DateTime from = GetCursorTime();
             if (from == default)
             {
-                var chartValues = oneChart ? default : BaseChartTimeSet.OneMinute;
-                var centerViewIndex = (int)mainChart.ChartAreas[0].AxisX.ScaleView.ViewMaximum - 2 - (chartViewSticksSize + 1) / 2;
-                from = (mainChart.Series[0].Points.Count - 1 >= centerViewIndex && centerViewIndex >= 0)
-                        ? DateTime.Parse(mainChart.Series[0].Points[centerViewIndex].AxisLabel)
-                        : (mainChart.Series[0].Points.Count == 0
-                            ? GetFirstOrLastTime(first, default, chartValues).time
-                            : GetFirstOrLastTime(centerViewIndex < 0, showingItemData, chartValues).time);
+                var standardIndex = first ? (int)mainChart.ChartAreas[0].AxisX.ScaleView.ViewMinimum : (int)mainChart.ChartAreas[0].AxisX.ScaleView.ViewMaximum - 2;
+                from = (standardIndex < mainChart.Series[0].Points.Count - 1 && standardIndex > 0)
+                        ? DateTime.Parse(mainChart.Series[0].Points[standardIndex].AxisLabel)
+                        : GetFirstOrLastTime(first, mainChart.Series[0].Points.Count == 0 ? default : showingItemData, oneChart ? chartValues : BaseChartTimeSet.OneMinute).time;
             }
             if (!oneChart && !first)
                 from = from.AddSeconds((mainChart.Tag as ChartValues).seconds - BaseChartTimeSet.OneMinute.seconds);
