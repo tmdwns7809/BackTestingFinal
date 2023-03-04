@@ -161,6 +161,7 @@ namespace BackTestingFinal
             fromTextBox.Text = DateTime.MinValue.ToString(DateTimeFormat);
             //toTextBox.Text = DateTime.MaxValue.ToString(DateTimeFormat);
             toTextBox.Text = "2023-02-24 01:51:00";
+            toTextBox.Text = "2022-10-21 17:03:00";
             //fromTextBox.Text = "2022-01-01";
             //toTextBox.Text = "2022-04-24 16:42:00";
             //fromTextBox.Text = "2021-11-01";
@@ -3783,7 +3784,7 @@ namespace BackTestingFinal
 
             return from;
         }
-        (DateTime time, BackItemData itemData) GetFirstOrLastTime(bool first, BackItemData itemData = default, ChartValues chartValues = default)
+        (DateTime time, BackItemData itemData) GetFirstOrLastTime(bool first, BackItemData itemData = default, ChartValues chartValues = default, DateTime from = default)
         {
             if (chartValues == default)
                 chartValues = mainChart.Tag as ChartValues;
@@ -3797,7 +3798,7 @@ namespace BackTestingFinal
                 return default;
             }
 
-            var endl = end.AddSeconds(-chartValues.seconds);
+            var endl = from == default ? end.AddSeconds(-chartValues.seconds) : from;
 
             if (itemData == default)
                 foreach (BackItemData itemData2 in itemDataDic.Values)
@@ -3820,7 +3821,17 @@ namespace BackTestingFinal
                     (first ? "" : "where (time<='" + end.ToString(DBTimeFormat) + "') and (time>'" + endl.ToString(DBTimeFormat) + "') ") +
                     " order by rowid " + (first ? "" : "desc") + " limit 1", conn).ExecuteReader();
                 if (!reader.Read())
-                    ShowError(form);
+                {
+                    var endll = endl.AddSeconds(-chartValues.seconds);
+                    reader = new SQLiteCommand("Select *, rowid From '" + itemData.Code + "'" +
+                    (first ? "" : "where (time<='" + endl.ToString(DBTimeFormat) + "') and (time>'" + endll.ToString(DBTimeFormat) + "') ") +
+                    " order by rowid " + (first ? "" : "desc") + " limit 1", conn).ExecuteReader();
+
+                    if (!reader.Read())
+                        ShowError(form);
+
+                    toTextBox.Text = endl.ToString(TimeFormat);
+                }
                 var stick = GetStickFromSQL(reader);
                 if (first ? stick.Time < time : stick.Time > time)
                     time = stick.Time;
