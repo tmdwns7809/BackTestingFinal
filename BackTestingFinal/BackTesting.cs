@@ -158,34 +158,21 @@ namespace BackTestingFinal
 
             SetAdditionalMainView();
 
-            fromTextBox.Text = DateTime.MinValue.ToString(DateTimeFormat);
-            //toTextBox.Text = DateTime.MaxValue.ToString(DateTimeFormat);
-            toTextBox.Text = "2023-02-24 01:51:00";
-            toTextBox.Text = "2022-10-21 17:03:00";
-            //fromTextBox.Text = "2022-01-01";
-            //toTextBox.Text = "2022-04-24 16:42:00";
-            //fromTextBox.Text = "2021-11-01";
-            //toTextBox.Text = "2022-02-01";
-            //fromTextBox.Text = "2022-02-01";
-            //fromTextBox.Text = "2022-05-10 09:34:00";
-            //toTextBox.Text = "2022-05-09 06:26:00";
-            //toTextBox.Text = "2022-05-06 19:30:00";
-            //fromTextBox.Text = "2022-08-01";
-            //toTextBox.Text = "2022-08-07";
+            fromTextBox.Text = DateTime.MinValue.ToString(TimeFormat);
+            toTextBox.Text = DateTime.MaxValue.ToString(TimeFormat);
+            //toTextBox.Text = "2023-02-24 01:51:00";
+            //toTextBox.Text = "2022-10-21 17:03:00";
+            //toTextBox.Text = "2022-12-19 00:00:00";
+            //toTextBox.Text = "2022-08-16 00:00:00";
+            //toTextBox.Text = "2021-01-29 00:00:00";
+            //toTextBox.Text = "2021-02-03 00:00:00";
+            //toTextBox.Text = "2021-02-23 00:00:00";
 
             form.KeyDown += Form_KeyDown;
         }
         void SetAdditionalMainView()
         {
-            LeftClickAction += (i) =>
-            {
-                var chartValues = mainChart.Tag as ChartValues;
-                var list = showingItemData.listDic[chartValues].list;
-
-                form.Text = showingItemData.Code + "     H:" + list[i].Price[0] + "  L:" + list[i].Price[1] + "  O:" + list[i].Price[2] + "  C:" + list[i].Price[3] + "  Ms:" + list[i].Ms + "  Md:" + list[i].Md + 
-                    " S5:" + Math.Round(mainChart.Series[5].Points[i].YValues[0], 2) + " S6:" + Math.Round(mainChart.Series[6].Points[i].YValues[0], 2) +
-                    " Amp:" + Math.Round((list[i].Price[0] / list[i].Price[1] - 1) * 100, 2);
-            };
+            LeftClickAction += leftClick;
 
             /* test?
             RightClickAction += (i) =>
@@ -1066,7 +1053,9 @@ namespace BackTestingFinal
             var number = 1;
             while (reader.Read())
             {
-                var itemData = new BackItemData(reader["name"].ToString(), number++);
+                var code = reader["name"].ToString();
+
+                var itemData = new BackItemData(code, number++);
                 codeListView.AddObject(itemData);
                 itemDataDic.Add(itemData.Code, itemData);
             }
@@ -3210,18 +3199,16 @@ namespace BackTestingFinal
                                     v.currentIndex = GetStartIndex(v.list, from2);
                                     v.startIndex = v.currentIndex;
                                     v.lastStick = new BackTradeStick() { Time = v.list[v.currentIndex].Time };
-
-
                                 }
                             }
-                            else if (v.currentIndex == v.list.Count - 1)
+                            else if (v.list[v.list.Count - 1].Time <= from2.AddDays(1))
                             {
-                                if (itemData.firstLastMin.lastMin >= from2)
+                                if (from2 <= itemData.firstLastMin.lastMin)
                                 {
                                     if (v.list.Count - (TotalNeedDays - 1) > 0)
                                         v.list.RemoveRange(0, v.list.Count - (TotalNeedDays - 1));
-                                    v.currentIndex = v.list.Count - 1;
-                                    v.list.AddRange(LoadSticks(itemData, vc, from2, minituesInADay * BaseChartTimeSet.OneMinute.seconds / vc.seconds * (j - BaseChartTimeSet.OneMinute.index + 1), false));
+                                    v.list.AddRange(LoadSticks(itemData, vc, v.list[v.list.Count - 1].Time.AddSeconds(vc.seconds), minituesInADay * BaseChartTimeSet.OneMinute.seconds / vc.seconds * (j - BaseChartTimeSet.OneMinute.index + 1), false));
+                                    v.currentIndex = GetStartIndex(v.list, from2) - 1;
                                 }
                             }
                         }
@@ -3299,7 +3286,8 @@ namespace BackTestingFinal
                         if (!calLater && (j == BaseChartTimeSet.OneMinute.index || !calOnlyFullStick))
                             SetRSIAandDiff(v.list, v.lastStick, v.currentIndex - 1);
 
-                        OneChartFindConditionAndAdd(itemData, vc, vm.lastStick, v.lastStick, vm.currentIndex - 1, v.currentIndex - 1);
+                        if (j >= minCV.index && j <= maxCV.index)
+                            OneChartFindConditionAndAdd(itemData, vc, vm.lastStick, v.lastStick, vm.currentIndex - 1, v.currentIndex - 1);
                     }
                     catch (Exception e)
                     {
@@ -3807,7 +3795,16 @@ namespace BackTestingFinal
                         (first ? "" : "where (time<='" + end.ToString(DBTimeFormat) + "') and (time>'" + endl.ToString(DBTimeFormat) + "') ") +
                         " order by rowid " + (first ? "" : "desc") + " limit 1", conn).ExecuteReader();
                     if (!reader.Read())
-                        ShowError(form);
+                    {
+                        if (first)
+                            ShowError(form);
+
+                        reader = new SQLiteCommand("Select *, rowid From '" + itemData2.Code + "'" +
+                        " order by rowid " + (first ? "" : "desc") + " limit 1", conn).ExecuteReader();
+
+                        if (!reader.Read())
+                            ShowError(form);
+                    }
                     var stick = GetStickFromSQL(reader);
                     if (first ? stick.Time < time : stick.Time >= time)
                     {
@@ -3822,15 +3819,14 @@ namespace BackTestingFinal
                     " order by rowid " + (first ? "" : "desc") + " limit 1", conn).ExecuteReader();
                 if (!reader.Read())
                 {
-                    var endll = endl.AddSeconds(-chartValues.seconds);
+                    if (first)
+                        ShowError(form);
+
                     reader = new SQLiteCommand("Select *, rowid From '" + itemData.Code + "'" +
-                    (first ? "" : "where (time<='" + endl.ToString(DBTimeFormat) + "') and (time>'" + endll.ToString(DBTimeFormat) + "') ") +
                     " order by rowid " + (first ? "" : "desc") + " limit 1", conn).ExecuteReader();
 
                     if (!reader.Read())
                         ShowError(form);
-
-                    toTextBox.Text = endl.ToString(TimeFormat);
                 }
                 var stick = GetStickFromSQL(reader);
                 if (first ? stick.Time < time : stick.Time > time)
@@ -3861,6 +3857,26 @@ namespace BackTestingFinal
 
             e.SuppressKeyPress = true;
             e.Handled = true;
+        }
+
+        void leftClick(int i)
+        {
+            var chartValues = mainChart.Tag as ChartValues;
+            var list = showingItemData.listDic[chartValues].list;
+
+            form.Text = showingItemData.Code + "     H:" + list[i].Price[0] + "  L:" + list[i].Price[1] + "  O:" + list[i].Price[2] + "  C:" + list[i].Price[3] + "  Ms:" + list[i].Ms + "  Md:" + list[i].Md +
+                " S5:" + Math.Round(mainChart.Series[5].Points[i].YValues[0], 2) + " S6:" + Math.Round(mainChart.Series[6].Points[i].YValues[0], 2) +
+                " Amp:" + Math.Round((list[i].Price[0] / list[i].Price[1] - 1) * 100, 2);
+
+            if (Control.ModifierKeys == Keys.Control)
+            {
+                form.Text += " D3P: ";
+
+                var result = Detect3P(list, i - 1, list[i]);
+
+                for (int j = 0; j < result.result.Count; j++)
+                    form.Text += result.result[j].count + ", ";
+            }
         }
     }
 }
