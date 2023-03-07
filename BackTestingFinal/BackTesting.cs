@@ -19,6 +19,7 @@ using TradingLibrary.Base.SticksDB;
 using System.Runtime.InteropServices;
 using static System.Windows.Forms.AxHost;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement.Window;
+using System.Collections;
 
 namespace BackTestingFinal
 {
@@ -140,6 +141,8 @@ namespace BackTestingFinal
 
         CR lastCR;
 
+        int minituesInADay = BaseChartTimeSet.OneDay.seconds / BaseChartTimeSet.OneMinute.seconds;
+
         public BackTesting(Form form, bool isJoo) : base(form, isJoo, 7m)
         {
 
@@ -158,7 +161,7 @@ namespace BackTestingFinal
 
             SetAdditionalMainView();
 
-            fromTextBox.Text = DateTime.MinValue.ToString(TimeFormat);
+            fromTextBox.Text = "2023-01-01 00:00:00";
             toTextBox.Text = DateTime.MaxValue.ToString(TimeFormat);
             //toTextBox.Text = "2023-02-24 01:51:00";
             //toTextBox.Text = "2022-10-21 17:03:00";
@@ -948,7 +951,7 @@ namespace BackTestingFinal
 
                 var data = sender.SelectedObject as BackResultData;
                 var itemData = itemDataDic[data.Code] as BackItemData;
-                var result = LoadAndCheckSticks(itemData, true, false, default, data.OutEnterTime == default ? data.EnterTime : data.OutEnterTime, default, false);
+                var result = LoadAndCheckSticks(itemData:itemData, newLoad:true, toPast:false, size:default, from:data.OutEnterTime == default ? data.EnterTime : data.OutEnterTime, chartValues:default, oneChart:false);
                 //SetChartNowOrLoad(result.chartValues);
                 ShowChart(itemData, (result.foundTime, chartViewSticksSize / 2, true), true, result.chartValues);
             });
@@ -2728,10 +2731,10 @@ namespace BackTestingFinal
         {
             (DateTime foundTime, ChartValues chartValues) result = (DateTime.MinValue, default);
 
-            var multiplier = toPast ? -1 : 1;
-
             if (oneChart)
             {
+                var multiplier = toPast ? -1 : 1;
+
                 if (chartValues == default)
                     chartValues = mainChart.Tag as ChartValues;
                 result.chartValues = chartValues;
@@ -2750,9 +2753,9 @@ namespace BackTestingFinal
                 var list = LoadSticks(itemData, chartValues,
                     toPast ? from :
                         (chartValues != BaseChartTimeSet.OneMonth ?
-                            from.AddSeconds(-chartValues.seconds * (TotalNeedDays - 1)) :
-                            from.AddMonths(-(TotalNeedDays - 1))),
-                    size + (TotalNeedDays - 1), toPast);
+                            from.AddSeconds(-chartValues.seconds * (IndNeedDays - 1)) :
+                            from.AddMonths(-(IndNeedDays - 1))),
+                    size + (IndNeedDays - 1), toPast);
 
                 var startIndex = GetStartIndex(list, toPast ? (chartValues != BaseChartTimeSet.OneMonth ? from.AddSeconds(-chartValues.seconds * (size - 1)) : from.AddMonths(-(size - 1))) : from);
                 if (startIndex == -1)
@@ -2807,80 +2810,76 @@ namespace BackTestingFinal
             }
             else
             {
+                if (toPast)
+                    ShowError(form);
+
+                var tst = GetTestStartTime(from);
+                from = tst.Date;
+
                 if (newLoad)
-                {
-                    itemData.Reset();
-                    foreach (var l in itemData.listDic.Values)
-                        l.Reset();
-                }
-
-                var checkStartTime = from;
-                from = toPast ? from.Date.AddDays(1).AddMinutes(-1) : from.Date;
-
-                var minituesInADay = BaseChartTimeSet.OneDay.seconds / BaseChartTimeSet.OneMinute.seconds;
+                    ResetBeforeRun(itemData, from);
 
                 if (size == default || size % minituesInADay != 0)
                     size = (size / minituesInADay + 1) * minituesInADay;
 
-                var toM = from.AddSeconds(multiplier * BaseChartTimeSet.OneMinute.seconds * (size - 1));
+                var toM = from.AddSeconds(BaseChartTimeSet.OneMinute.seconds * (size - 1));
 
-                if (toPast ? from < itemData.firstLastMin.firstMin || toM > itemData.firstLastMin.lastMin : toM < itemData.firstLastMin.firstMin || from > itemData.firstLastMin.lastMin)
+                if (toM < itemData.firstLastMin.firstMin || from > itemData.firstLastMin.lastMin)
                     return result;
 
-                var vm = itemData.listDic[BaseChartTimeSet.OneMinute];
-                var vmc = BaseChartTimeSet.OneMinute;
+                var m = GetChartListDataAndChartValues(itemData, BaseChartTimeSet.OneMinute);
+                ResetFoundList(itemData);
                 for (int i = BaseChartTimeSet.OneMinute.index; i <= maxCV.index; i++)
                 {
-                    //if (i != BaseChartTimeSet.OneMinute.index && i < minCV.index)
-                    //    continue;
+                    if (i != BaseChartTimeSet.OneMinute.index && i < minCV.index)
+                        continue;
 
-                    var v = itemData.listDic.Values[i];
-                    var vc = itemData.listDic.Keys[i];
-                    var from2 = toPast ? from : from.AddSeconds(-vc.seconds * (TotalNeedDays - 1));
+                    var v = GetChartListDataAndChartValues(itemData, itemData.listDic.Keys[i]);
+                    var from2 = toPast ? from : from.AddSeconds(-v.CV.seconds * (IndNeedDays - 1));
                     if (i == BaseChartTimeSet.OneMinute.index)
                     {
-                        v.list = LoadSticks(itemData, vc, from2, size + (TotalNeedDays - 1), toPast);
+                        v.CLD.list = LoadSticks(itemData, v.CV, from2, size + (IndNeedDays - 1), toPast);
 
-                        if (v.list.Count == 0)
+                        if (v.CLD.list.Count == 0)
                             ShowError(form);
 
-                        v.startIndex = GetStartIndex(v.list, toPast ? toM : from);
+                        v.CLD.startIndex = GetStartIndex(v.CLD.list, toPast ? toM : from);
 
-                        if ((toPast ? v.list[v.startIndex].Time : v.list[v.list.Count - 1].Time) == toM)
+                        if ((toPast ? v.CLD.list[v.CLD.startIndex].Time : v.CLD.list[v.CLD.list.Count - 1].Time) == toM)
                         {
-                            if ((toPast ? v.list[v.startIndex].Time.ToString(HourMinSecTimeFormat) : v.list[v.list.Count - 1].Time.AddSeconds(vc.seconds).ToString(HourMinSecTimeFormat)) != "00:00:00")
+                            if ((toPast ? v.CLD.list[v.CLD.startIndex].Time.ToString(HourMinSecTimeFormat) : v.CLD.list[v.CLD.list.Count - 1].Time.AddSeconds(v.CV.seconds).ToString(HourMinSecTimeFormat)) != "00:00:00")
                                 ShowError(form);
                         }
                     }
                     else
                     {
-                        if (v.list.Count == 0 || vm.list[vm.startIndex].Time < v.list[v.startIndex].Time || vm.list[vm.list.Count - 1].Time > v.list[v.list.Count - 1].Time.AddSeconds(vc.seconds))
+                        if (v.CLD.list.Count == 0 || m.CLD.list[m.CLD.startIndex].Time < v.CLD.list[v.CLD.startIndex].Time || m.CLD.list[m.CLD.list.Count - 1].Time > v.CLD.list[v.CLD.list.Count - 1].Time.AddSeconds(v.CV.seconds))
                         {
-                            var size2 = minituesInADay * BaseChartTimeSet.OneMinute.seconds / vc.seconds * (i - BaseChartTimeSet.OneMinute.index + 1) + (TotalNeedDays - 1);
-                            v.list = LoadSticks(itemData, vc, from2, size2, toPast);
+                            var size2 = minituesInADay * BaseChartTimeSet.OneMinute.seconds / v.CV.seconds * (i - BaseChartTimeSet.OneMinute.index + 1) + (IndNeedDays - 1);
+                            v.CLD.list = LoadSticks(itemData, v.CV, from2, size2, toPast);
 
-                            var to = from.AddSeconds(multiplier * vc.seconds * (size2 - 1));
-                            v.startIndex = GetStartIndex(v.list, toPast ? to : from);
+                            var to = from.AddSeconds(multiplier * v.CV.seconds * (size2 - 1));
+                            v.CLD.startIndex = GetStartIndex(v.CLD.list, toPast ? to : from);
 
-                            if ((toPast ? v.list[v.startIndex].Time : v.list[v.list.Count - 1].Time) == to)
+                            if ((toPast ? v.CLD.list[v.CLD.startIndex].Time : v.CLD.list[v.CLD.list.Count - 1].Time) == to)
                             {
-                                if ((toPast ? v.list[v.startIndex].Time.ToString(HourMinSecTimeFormat) : v.list[v.list.Count - 1].Time.AddSeconds(vc.seconds).ToString(HourMinSecTimeFormat)) != "00:00:00")
+                                if ((toPast ? v.CLD.list[v.CLD.startIndex].Time.ToString(HourMinSecTimeFormat) : v.CLD.list[v.CLD.list.Count - 1].Time.AddSeconds(v.CV.seconds).ToString(HourMinSecTimeFormat)) != "00:00:00")
                                     ShowError(form);
                             }
                         }
-                        v.currentIndex = (int)(vm.list[vm.startIndex].Time.Subtract(v.list[v.startIndex].Time).TotalSeconds / vc.seconds) + v.startIndex;
-                        v.lastStick = new BackTradeStick() { Time = v.list[v.currentIndex].Time };
+                        v.CLD.currentIndex = (int)(m.CLD.list[m.CLD.startIndex].Time.Subtract(v.CLD.list[v.CLD.startIndex].Time).TotalSeconds / v.CV.seconds) + v.CLD.startIndex;
+                        v.CLD.lastStick = new BackTradeStick() { Time = v.CLD.list[v.CLD.currentIndex].Time };
 
-                        if (vm.list[vm.startIndex].Time.Subtract(v.lastStick.Time).TotalSeconds >= vc.seconds)
+                        if (m.CLD.list[m.CLD.startIndex].Time.Subtract(v.CLD.lastStick.Time).TotalSeconds >= v.CV.seconds)
                             ShowError(form);
                     }
                 }
 
                 List<(DateTime foundTime, ChartValues chartValues)> fixedFoundList = default;
                 List<(DateTime foundTime, ChartValues chartValues)> fixedFoundList2 = default;
-                for (vm.currentIndex = vm.startIndex; vm.currentIndex < vm.list.Count; vm.currentIndex++)
+                for (m.CLD.currentIndex = m.CLD.startIndex; m.CLD.currentIndex < m.CLD.list.Count; m.CLD.currentIndex++)
                 {
-                    vm.lastStick = vm.list[vm.currentIndex] as BackTradeStick;
+                    m.CLD.lastStick = m.CLD.list[m.CLD.currentIndex] as BackTradeStick;
                     for (int j = (int)Position.Long; j <= (int)Position.Short; j++)
                     {
                         itemData.positionData[j].foundList = new List<(DateTime foundTime, ChartValues chartValues)>();
@@ -2893,7 +2892,7 @@ namespace BackTestingFinal
                         var vc = itemData.listDic.Keys[j];
                         if (j != BaseChartTimeSet.OneMinute.index)
                         {
-                            var timeDiff = vm.lastStick.Time.Subtract(v.lastStick.Time).TotalSeconds;
+                            var timeDiff = m.CLD.lastStick.Time.Subtract(v.lastStick.Time).TotalSeconds;
                             if (timeDiff == vc.seconds)
                             {
                                 if (!BackTradeStick.isEqual(v.lastStick as BackTradeStick, v.list[v.currentIndex] as BackTradeStick))
@@ -2909,27 +2908,27 @@ namespace BackTestingFinal
 
                             if (v.lastStick.Price[1] == 0)
                             {
-                                v.lastStick.Price[1] = vm.lastStick.Price[1];
-                                v.lastStick.Price[2] = vm.lastStick.Price[2];
+                                v.lastStick.Price[1] = m.CLD.lastStick.Price[1];
+                                v.lastStick.Price[2] = m.CLD.lastStick.Price[2];
                             }
 
-                            if (vm.lastStick.Price[0] > v.lastStick.Price[0])
-                                v.lastStick.Price[0] = vm.lastStick.Price[0];
-                            if (vm.lastStick.Price[1] < v.lastStick.Price[1])
-                                v.lastStick.Price[1] = vm.lastStick.Price[1];
-                            v.lastStick.Price[3] = vm.lastStick.Price[3];
+                            if (m.CLD.lastStick.Price[0] > v.lastStick.Price[0])
+                                v.lastStick.Price[0] = m.CLD.lastStick.Price[0];
+                            if (m.CLD.lastStick.Price[1] < v.lastStick.Price[1])
+                                v.lastStick.Price[1] = m.CLD.lastStick.Price[1];
+                            v.lastStick.Price[3] = m.CLD.lastStick.Price[3];
 
-                            v.lastStick.Ms += vm.lastStick.Ms;
-                            v.lastStick.Md += vm.lastStick.Md;
+                            v.lastStick.Ms += m.CLD.lastStick.Ms;
+                            v.lastStick.Md += m.CLD.lastStick.Md;
 
-                            v.lastStick.TCount += vm.lastStick.TCount;
+                            v.lastStick.TCount += m.CLD.lastStick.TCount;
                         }
 
                         if (!calLater && (j == BaseChartTimeSet.OneMinute.index || !calOnlyFullStick))
                             SetRSIAandDiff(v.list, v.lastStick, v.currentIndex - 1);
 
-                        if (toPast ? vm.lastStick.Time <= checkStartTime : vm.lastStick.Time >= checkStartTime)
-                            OneChartFindConditionAndAdd(itemData, vc, vm.lastStick, v.lastStick, vm.currentIndex - 1, v.currentIndex - 1);
+                        if (toPast ? m.CLD.lastStick.Time <= tst : m.CLD.lastStick.Time >= tst)
+                            OneChartFindConditionAndAdd(itemData, vc, m.CLD.lastStick, v.lastStick, m.CLD.currentIndex - 1, v.currentIndex - 1);
                     }
 
                     for (int j = (int)Position.Long; j <= (int)Position.Short; j++)
@@ -2939,7 +2938,7 @@ namespace BackTestingFinal
                         {
                             if (positionData.found && (toPast || result.foundTime == DateTime.MinValue))
                             {
-                                EnterSetting(positionData, vm.lastStick);
+                                EnterSetting(positionData, m.CLD.lastStick);
 
                                 if (inside)
                                     InsideFirstSetting(itemData, (Position)j);
@@ -2948,7 +2947,7 @@ namespace BackTestingFinal
                         else if (positionData.Enter)
                         {
                             var v = itemData.listDic[positionData.EnterFoundForExit.chartValues];
-                            if (ExitConditionFinal(itemData, (Position)j, vm.lastStick, v.lastStick, v.currentIndex - 1))
+                            if (ExitConditionFinal(itemData, (Position)j, m.CLD.lastStick, v.lastStick, v.currentIndex - 1))
                             {
                                 positionData.Enter = false;
 
@@ -2961,9 +2960,9 @@ namespace BackTestingFinal
                                 {
                                     Code = itemData.Code,
                                     EnterTime = positionData.EnterTime,
-                                    ExitTime = vm.lastStick.Time,
-                                    ProfitRate = Math.Round((double)(((Position)j == Position.Long ? vm.lastStick.Price[3] / positionData.EnterPrice : positionData.EnterPrice / vm.lastStick.Price[3]) - 1) * 100, 2),
-                                    Duration = vm.lastStick.Time.Subtract(positionData.EnterTime).ToString(TimeSpanFormat),
+                                    ExitTime = m.CLD.lastStick.Time,
+                                    ProfitRate = Math.Round((double)(((Position)j == Position.Long ? m.CLD.lastStick.Price[3] / positionData.EnterPrice : positionData.EnterPrice / m.CLD.lastStick.Price[3]) - 1) * 100, 2),
+                                    Duration = m.CLD.lastStick.Time.Subtract(positionData.EnterTime).ToString(TimeSpanFormat),
                                     LorS = (Position)j
                                 };
 
@@ -2985,7 +2984,7 @@ namespace BackTestingFinal
                             {
                                 if (positionData.Enter && InsideEnterCondition(itemData, (Position)j))
                                 {
-                                    EnterSetting(positionData2, vm.lastStick);
+                                    EnterSetting(positionData2, m.CLD.lastStick);
                                     positionData2.OutEnterTime = positionData.EnterTime;
                                 }
                             }
@@ -2998,9 +2997,9 @@ namespace BackTestingFinal
                                     Code = itemData.Code,
                                     OutEnterTime = positionData2.OutEnterTime,
                                     EnterTime = positionData2.EnterTime,
-                                    ExitTime = vm.lastStick.Time,
-                                    ProfitRate = Math.Round((double)(((Position)j == Position.Long ? vm.lastStick.Price[3] / positionData2.EnterPrice : positionData2.EnterPrice / vm.lastStick.Price[3]) - 1) * 100, 2),
-                                    Duration = vm.lastStick.Time.Subtract(positionData2.EnterTime).ToString(TimeSpanFormat),
+                                    ExitTime = m.CLD.lastStick.Time,
+                                    ProfitRate = Math.Round((double)(((Position)j == Position.Long ? m.CLD.lastStick.Price[3] / positionData2.EnterPrice : positionData2.EnterPrice / m.CLD.lastStick.Price[3]) - 1) * 100, 2),
+                                    Duration = m.CLD.lastStick.Time.Subtract(positionData2.EnterTime).ToString(TimeSpanFormat),
                                     LorS = (Position)j
                                 };
 
@@ -3022,11 +3021,11 @@ namespace BackTestingFinal
                         }
                     }
 
-                    if (vm.currentIndex == vm.list.Count - 1 && 
+                    if (m.CLD.currentIndex == m.CLD.list.Count - 1 && 
                         (itemData.positionData[(int)Position.Long].Enter || itemData.positionData[(int)Position.Short].Enter || itemData.positionData2[(int)Position.Long].Enter || itemData.positionData2[(int)Position.Short].Enter) && 
-                        vm.lastStick.Time.AddMinutes(1) == vm.lastStick.Time.Date.AddDays(1))
+                        m.CLD.lastStick.Time.AddMinutes(1) == m.CLD.lastStick.Time.Date.AddDays(1))
                     {
-                        var to = vm.lastStick.Time.Date.AddDays(2);
+                        var to = m.CLD.lastStick.Time.Date.AddDays(2);
                         for (int i = BaseChartTimeSet.OneMinute.index; i <= maxCV.index; i++)
                         {
                             if (i != BaseChartTimeSet.OneMinute.index && i < minCV.index)
@@ -3036,7 +3035,7 @@ namespace BackTestingFinal
                             var vc = itemData.listDic.Keys[i];
                             var from2 = v.list[v.list.Count - 1].Time.AddSeconds(vc.seconds);
                             if (from2 < to)
-                                v.list.AddRange(LoadSticks(itemData, vc, from2, minituesInADay / (vc.seconds / vmc.seconds), false));
+                                v.list.AddRange(LoadSticks(itemData, vc, from2, minituesInADay / (vc.seconds / m.CV.seconds), false));
                         }
                     }
                 }
@@ -3141,6 +3140,29 @@ namespace BackTestingFinal
 
             return lastStick;
         }
+        void ResetBeforeRun(BackItemData itemData, DateTime start)
+        {
+            itemData.Reset();
+            itemData.BeforeExitTime = start;
+            foreach (var l in itemData.listDic.Values)
+                l.Reset();
+        }
+        (ChartListData CLD, ChartValues CV) GetChartListDataAndChartValues(BackItemData itemData, ChartValues cv)
+        {
+            return (itemData.listDic[cv], cv);
+        }
+        void ResetFoundList(BackItemData itemData)
+        {
+            for (int j = (int)Position.Long; j <= (int)Position.Short; j++)
+            {
+                itemData.positionData[j].foundList = new List<(DateTime foundTime, ChartValues chartValues)>();
+                itemData.positionData[j].found = false;
+            }
+        }
+        DateTime GetTestStartTime(DateTime start)
+        {
+            return calSimul ? start.Subtract(ReadyTimeToCheckBeforeStart) : start;
+        }
         void Run(DateTime start, DateTime end, CR CRType)
         {
             if (TestAll)
@@ -3148,36 +3170,22 @@ namespace BackTestingFinal
             else
                 threadN = 6;
 
-            var simulStartTime = calSimul ? start.Subtract(ReadyTimeToCheckBeforeStart) : start;
-            var from = simulStartTime.Date;
+            var tst = GetTestStartTime(start);
+            var from = tst.Date;
             var size = (int)end.Date.AddDays(1).Subtract(from).TotalSeconds / BaseChartTimeSet.OneMinute.seconds;
 
             AddOrChangeLoadingText("Simulating ST" + ST + " ...(" + from.ToString(DateTimeFormat) + ")", true);
 
             foreach (BackItemData itemData in itemDataDic.Values)
-            {
-                itemData.Reset();
-                itemData.BeforeExitTime = start;
+                ResetBeforeRun(itemData, from);
 
-                foreach (var l in itemData.listDic.Values)
-                    l.Reset();
-            }
-
-            var minituesInADay = BaseChartTimeSet.OneDay.seconds / BaseChartTimeSet.OneMinute.seconds;
-            
             var action = new Action<BackItemData, int, DateTime>((itemData, i, from2) =>
             {
                 if (itemData.firstLastMin.lastMin < from2)
                     return;
 
-                var vm = itemData.listDic[BaseChartTimeSet.OneMinute];
-                var vmc = BaseChartTimeSet.OneMinute;
-                for (int j = (int)Position.Long; j <= (int)Position.Short; j++)
-                {
-                    itemData.positionData[j].foundList = new List<(DateTime foundTime, ChartValues chartValues)>();
-                    itemData.positionData[j].found = false;
-                }
-
+                var m = GetChartListDataAndChartValues(itemData, BaseChartTimeSet.OneMinute);
+                ResetFoundList(itemData);
                 for (int j = BaseChartTimeSet.OneMinute.index; j <= maxCV.index; j++)
                 {
                     try
@@ -3185,30 +3193,29 @@ namespace BackTestingFinal
                         if (j != BaseChartTimeSet.OneMinute.index && j < minCV.index)
                             continue;
 
-                        var v = itemData.listDic.Values[j];
-                        var vc = itemData.listDic.Keys[j];
+                        var v = GetChartListDataAndChartValues(itemData, itemData.listDic.Keys[j]);
 
                         if (i % minituesInADay == 0)
                         {
-                            if (v.list.Count == 0)
+                            if (v.CLD.list.Count == 0)
                             {
                                 if (itemData.firstLastMin.firstMin < from2.AddMinutes(minituesInADay))
                                 {
-                                    v.list = LoadSticks(itemData, vc, from2.AddSeconds(-vc.seconds * (TotalNeedDays - 1)),
-                                        minituesInADay * BaseChartTimeSet.OneMinute.seconds / vc.seconds * (j - BaseChartTimeSet.OneMinute.index + 1) + (TotalNeedDays - 1), false);
-                                    v.currentIndex = GetStartIndex(v.list, from2);
-                                    v.startIndex = v.currentIndex;
-                                    v.lastStick = new BackTradeStick() { Time = v.list[v.currentIndex].Time };
+                                    v.CLD.list = LoadSticks(itemData, v.CV, from2.AddSeconds(-v.CV.seconds * (IndNeedDays - 1)),
+                                        minituesInADay * BaseChartTimeSet.OneMinute.seconds / v.CV.seconds * (j - BaseChartTimeSet.OneMinute.index + 1) + (IndNeedDays - 1), false);
+                                    v.CLD.currentIndex = GetStartIndex(v.CLD.list, from2);
+                                    v.CLD.startIndex = v.CLD.currentIndex;
+                                    v.CLD.lastStick = new BackTradeStick() { Time = v.CLD.list[v.CLD.currentIndex].Time };
                                 }
                             }
-                            else if (v.list[v.list.Count - 1].Time <= from2.AddDays(1))
+                            else if (v.CLD.list[v.CLD.list.Count - 1].Time <= from2.AddDays(1))
                             {
                                 if (from2 <= itemData.firstLastMin.lastMin)
                                 {
-                                    if (v.list.Count - (TotalNeedDays - 1) > 0)
-                                        v.list.RemoveRange(0, v.list.Count - (TotalNeedDays - 1));
-                                    v.list.AddRange(LoadSticks(itemData, vc, v.list[v.list.Count - 1].Time.AddSeconds(vc.seconds), minituesInADay * BaseChartTimeSet.OneMinute.seconds / vc.seconds * (j - BaseChartTimeSet.OneMinute.index + 1), false));
-                                    v.currentIndex = GetStartIndex(v.list, from2) - 1;
+                                    if (v.CLD.list.Count - (IndNeedDays + CompareNeedDays - 1) > 0)
+                                        v.CLD.list.RemoveRange(0, v.CLD.list.Count - (IndNeedDays + CompareNeedDays - 1));
+                                    v.CLD.list.AddRange(LoadSticks(itemData, v.CV, v.CLD.list[v.CLD.list.Count - 1].Time.AddSeconds(v.CV.seconds), minituesInADay * BaseChartTimeSet.OneMinute.seconds / v.CV.seconds * (j - BaseChartTimeSet.OneMinute.index + 1), false));
+                                    v.CLD.currentIndex = GetStartIndex(v.CLD.list, from2) - 1;
                                 }
                             }
                         }
@@ -3218,76 +3225,76 @@ namespace BackTestingFinal
 
                         if (j != BaseChartTimeSet.OneMinute.index)
                         {
-                            var timeDiff = from2.Subtract(v.lastStick.Time).TotalSeconds;
-                            if (timeDiff >= vc.seconds)
+                            var timeDiff = from2.Subtract(v.CLD.lastStick.Time).TotalSeconds;
+                            if (timeDiff >= v.CV.seconds)
                             {
-                                if (vm.list[vm.currentIndex - 1].Time.Subtract(v.lastStick.Time).TotalSeconds >= vc.seconds)
+                                if (m.CLD.list[m.CLD.currentIndex - 1].Time.Subtract(v.CLD.lastStick.Time).TotalSeconds >= v.CV.seconds)
                                     ShowError(form);
 
-                                if (!BackTradeStick.isEqual(v.lastStick as BackTradeStick, v.list[v.currentIndex] as BackTradeStick)
-                                    && (itemData.Code != "BTCUSDT" || v.lastStick.Time.ToString(DateTimeFormat) != "2019-09-24")
-                                    && (itemData.Code != "ETHUSDT" || v.lastStick.Time.ToString(DateTimeFormat) != "2019-12-11")
-                                    && (itemData.Code != "XRPUSDT" || v.lastStick.Time.ToString(DateTimeFormat) != "2020-01-16")
-                                    && (itemData.Code != "XRPUSDT" || v.lastStick.Time.ToString(DateTimeFormat) != "2020-01-17")
-                                    && (itemData.Code != "EOSUSDT" || v.lastStick.Time.ToString(DateTimeFormat) != "2020-01-19")
-                                    && (itemData.Code != "PEOPLEUSDT" || v.lastStick.Time.ToString(DateTimeFormat) != "2022-04-18")
-                                    && (v.lastStick.Time.ToString(DateTimeFormat) != "2021-01-12")
-                                    && (v.lastStick.Time.ToString(DateTimeFormat) != "2021-05-15"))
+                                if (!BackTradeStick.isEqual(v.CLD.lastStick as BackTradeStick, v.CLD.list[v.CLD.currentIndex] as BackTradeStick)
+                                    && (itemData.Code != "BTCUSDT" || v.CLD.lastStick.Time.ToString(DateTimeFormat) != "2019-09-24")
+                                    && (itemData.Code != "ETHUSDT" || v.CLD.lastStick.Time.ToString(DateTimeFormat) != "2019-12-11")
+                                    && (itemData.Code != "XRPUSDT" || v.CLD.lastStick.Time.ToString(DateTimeFormat) != "2020-01-16")
+                                    && (itemData.Code != "XRPUSDT" || v.CLD.lastStick.Time.ToString(DateTimeFormat) != "2020-01-17")
+                                    && (itemData.Code != "EOSUSDT" || v.CLD.lastStick.Time.ToString(DateTimeFormat) != "2020-01-19")
+                                    && (itemData.Code != "PEOPLEUSDT" || v.CLD.lastStick.Time.ToString(DateTimeFormat) != "2022-04-18")
+                                    && (v.CLD.lastStick.Time.ToString(DateTimeFormat) != "2021-01-12")
+                                    && (v.CLD.lastStick.Time.ToString(DateTimeFormat) != "2021-05-15"))
                                 {
                                     ShowError(form);
-                                    BackTradeStick.isEqual(v.lastStick as BackTradeStick, v.list[v.currentIndex] as BackTradeStick);
+                                    BackTradeStick.isEqual(v.CLD.lastStick as BackTradeStick, v.CLD.list[v.CLD.currentIndex] as BackTradeStick);
                                 }
 
-                                SetRSIAandDiff(v.list, v.list[v.currentIndex], v.currentIndex - 1);
+                                SetRSIAandDiff(v.CLD.list, v.CLD.list[v.CLD.currentIndex], v.CLD.currentIndex - 1);
 
-                                v.currentIndex++;
+                                v.CLD.currentIndex++;
 
-                                if (v.currentIndex == v.list.Count)
+                                if (v.CLD.currentIndex == v.CLD.list.Count)
                                     continue;
 
-                                v.lastStick = new BackTradeStick() { Time = v.list[v.currentIndex].Time };
+                                v.CLD.lastStick = new BackTradeStick() { Time = v.CLD.list[v.CLD.currentIndex].Time };
 
-                                if (from2 < v.lastStick.Time || from2 >= v.lastStick.Time.AddSeconds(vc.seconds))
+                                if (from2 < v.CLD.lastStick.Time || from2 >= v.CLD.lastStick.Time.AddSeconds(v.CV.seconds))
                                     ShowError(form);
                             }
-                            else if (timeDiff > vc.seconds)
+                            else if (timeDiff > v.CV.seconds)
                                 ShowError(form);
 
-                            if (v.lastStick.Price[1] == 0)
+                            if (v.CLD.lastStick.Price[1] == 0)
                             {
-                                v.lastStick.Price[1] = vm.lastStick.Price[1];
-                                v.lastStick.Price[2] = vm.lastStick.Price[2];
+                                v.CLD.lastStick.Price[1] = m.CLD.lastStick.Price[1];
+                                v.CLD.lastStick.Price[2] = m.CLD.lastStick.Price[2];
                             }
 
-                            if (vm.lastStick.Price[0] > v.lastStick.Price[0])
-                                v.lastStick.Price[0] = vm.lastStick.Price[0];
-                            if (vm.lastStick.Price[1] < v.lastStick.Price[1])
-                                v.lastStick.Price[1] = vm.lastStick.Price[1];
-                            v.lastStick.Price[3] = vm.lastStick.Price[3];
+                            if (m.CLD.lastStick.Price[0] > v.CLD.lastStick.Price[0])
+                                v.CLD.lastStick.Price[0] = m.CLD.lastStick.Price[0];
+                            if (m.CLD.lastStick.Price[1] < v.CLD.lastStick.Price[1])
+                                v.CLD.lastStick.Price[1] = m.CLD.lastStick.Price[1];
+                            v.CLD.lastStick.Price[3] = m.CLD.lastStick.Price[3];
 
-                            v.lastStick.Ms += vm.lastStick.Ms;
-                            v.lastStick.Md += vm.lastStick.Md;
+                            v.CLD.lastStick.Ms += m.CLD.lastStick.Ms;
+                            v.CLD.lastStick.Md += m.CLD.lastStick.Md;
 
-                            v.lastStick.TCount += vm.lastStick.TCount;
+                            v.CLD.lastStick.TCount += m.CLD.lastStick.TCount;
                         }
                         else
                         {
-                            if (from2 > v.lastStick.Time)
-                                v.currentIndex++;
+                            if (from2 > v.CLD.lastStick.Time)
+                                v.CLD.currentIndex++;
 
-                            v.lastStick = v.list[v.currentIndex] as BackTradeStick;
+                            v.CLD.lastStick = v.CLD.list[v.CLD.currentIndex] as BackTradeStick;
 
-                            if (v.lastStick.Time > from2)
+                            if (v.CLD.lastStick.Time > from2)
                                 break;
-                            else if (v.lastStick.Time != from2)
+                            else if (v.CLD.lastStick.Time != from2)
                                 ShowError(form);
                         }
 
                         if (!calLater && (j == BaseChartTimeSet.OneMinute.index || !calOnlyFullStick))
-                            SetRSIAandDiff(v.list, v.lastStick, v.currentIndex - 1);
+                            SetRSIAandDiff(v.CLD.list, v.CLD.lastStick, v.CLD.currentIndex - 1);
 
                         if (j >= minCV.index && j <= maxCV.index)
-                            OneChartFindConditionAndAdd(itemData, vc, vm.lastStick, v.lastStick, vm.currentIndex - 1, v.currentIndex - 1);
+                            OneChartFindConditionAndAdd(itemData, v.CV, m.CLD.lastStick, v.CLD.lastStick, m.CLD.currentIndex - 1, v.CLD.currentIndex - 1);
                     }
                     catch (Exception e)
                     {
@@ -3305,18 +3312,18 @@ namespace BackTestingFinal
                     else if (positionData.Enter)
                     {
                         var v = itemData.listDic[positionData.EnterFoundForExit.chartValues];
-                        if (ExitConditionFinal(itemData, (Position)j, vm.lastStick, v.lastStick, v.currentIndex - 1) || itemData.firstLastMin.lastMin == from2)
+                        if (ExitConditionFinal(itemData, (Position)j, m.CLD.lastStick, v.lastStick, v.currentIndex - 1) || itemData.firstLastMin.lastMin == from2)
                         {
                             positionData.Enter = false;
 
-                            var profitRow = (double)((Position)j == Position.Long ? vm.lastStick.Price[3] / positionData.EnterPrice : positionData.EnterPrice / vm.lastStick.Price[3]);
+                            var profitRow = (double)((Position)j == Position.Long ? m.CLD.lastStick.Price[3] / positionData.EnterPrice : positionData.EnterPrice / m.CLD.lastStick.Price[3]);
                             var resultData = new BackResultData()
                             {
                                 Code = itemData.Code,
                                 EnterTime = positionData.EnterTime,
-                                ExitTime = vm.lastStick.Time,
+                                ExitTime = m.CLD.lastStick.Time,
                                 ProfitRate = Math.Round((profitRow - 1) * 100, 2),
-                                Duration = vm.lastStick.Time.Subtract(positionData.EnterTime).ToString(TimeSpanFormat),
+                                Duration = m.CLD.lastStick.Time.Subtract(positionData.EnterTime).ToString(TimeSpanFormat),
                                 BeforeGap = positionData.EnterTime.Subtract(itemData.BeforeExitTime).ToString(TimeSpanFormat),
                                 LorS = (Position)j,
                                 EnterMarketLastMin = positionData.EnterMarketLastMin,
@@ -3407,7 +3414,7 @@ namespace BackTestingFinal
                         {
                             if (positionData.Enter && InsideEnterCondition(itemData, (Position)j))
                             {
-                                EnterSetting(positionData2, vm.lastStick);
+                                EnterSetting(positionData2, m.CLD.lastStick);
                                 positionData2.OutEnterTime = positionData.EnterTime;
                             }
                         }
@@ -3420,9 +3427,9 @@ namespace BackTestingFinal
                                 Code = itemData.Code,
                                 OutEnterTime = positionData2.OutEnterTime,
                                 EnterTime = positionData2.EnterTime,
-                                ExitTime = vm.lastStick.Time,
-                                ProfitRate = Math.Round((double)(((Position)j == Position.Long ? vm.lastStick.Price[3] / positionData2.EnterPrice : positionData2.EnterPrice / vm.lastStick.Price[3]) - 1) * 100, 2),
-                                Duration = vm.lastStick.Time.Subtract(positionData2.EnterTime).ToString(TimeSpanFormat),
+                                ExitTime = m.CLD.lastStick.Time,
+                                ProfitRate = Math.Round((double)(((Position)j == Position.Long ? m.CLD.lastStick.Price[3] / positionData2.EnterPrice : positionData2.EnterPrice / m.CLD.lastStick.Price[3]) - 1) * 100, 2),
+                                Duration = m.CLD.lastStick.Time.Subtract(positionData2.EnterTime).ToString(TimeSpanFormat),
                                 BeforeGap = positionData2.EnterTime.Subtract(itemData.BeforeExitTime).ToString(TimeSpanFormat),
                                 LorS = (Position)j
                             };
@@ -3521,7 +3528,7 @@ namespace BackTestingFinal
                 block.Complete();
                 block.Completion.Wait();
 
-                if (from2 >= simulStartTime)
+                if (from2 >= tst)
                 {
                     var conditionResult = AllItemFindCondition();
                     if (conditionResult.found)
