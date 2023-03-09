@@ -162,7 +162,7 @@ namespace BackTestingFinal
             SetAdditionalMainView();
 
             fromTextBox.Text = "2023-01-01 00:00:00";
-            fromTextBox.Text = DateTime.MinValue.ToString(TimeFormat);
+            //fromTextBox.Text = DateTime.MinValue.ToString(TimeFormat);
             toTextBox.Text = DateTime.MaxValue.ToString(TimeFormat);
             //toTextBox.Text = "2023-02-24 01:51:00";
             //toTextBox.Text = "2022-10-21 17:03:00";
@@ -2877,6 +2877,9 @@ namespace BackTestingFinal
 
                                 foreach (var cl in itemData.listDic)
                                 {
+                                    if (cl.Key.index > BaseChartTimeSet.OneMinute.index && cl.Key.index < minCV.index)
+                                        continue;
+
                                     if (cl.Key.index > positionData.EnterFoundList.Last().chartValues.index)
                                         break;
 
@@ -3073,7 +3076,7 @@ namespace BackTestingFinal
                                 v.CLD.lastStick = new BackTradeStick() { Time = v.CLD.list[v.CLD.currentIndex].Time };
 
                                 for (int k = IndNeedDays - 1; k < v.CLD.startIndex; k++)
-                                    SetRSIAandDiff(v.CLD.list, v.CLD.list[k]);
+                                    SetRSIAandDiff(v.CLD.list, v.CLD.list[k], k - 1);
                             }
                         }
                         else if (v.CLD.list[v.CLD.list.Count - 1].Time <= from2.AddDays(1))
