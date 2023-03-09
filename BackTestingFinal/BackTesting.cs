@@ -2395,20 +2395,19 @@ namespace BackTestingFinal
                 (DateTime foundTime, ChartValues chartValues) result = default;
                 var limitTime = GetFirstOrLastTime(toPast, itemData, chartValues).time;
 
-                int baseLoadSizeForSearch = BaseChartTimeSet.OneDay.seconds / BaseChartTimeSet.OneMinute.seconds;
-                int firstLoadSizeForSearch = oneChart ? baseLoadSizeForSearch : ((int)from.TimeOfDay.TotalMinutes + 1);
+                int firstLoadSizeForSearch = oneChart ? minituesInADay : ((int)from.TimeOfDay.TotalMinutes + 1);
                 if (!oneChart && !toPast)
-                    firstLoadSizeForSearch = BaseChartTimeSet.OneDay.seconds / BaseChartTimeSet.OneMinute.seconds - firstLoadSizeForSearch + 1;
+                    firstLoadSizeForSearch = minituesInADay - firstLoadSizeForSearch + 1;
                 var count = 1;
                 int continueAskingCount = 10;
 
                 while (result.foundTime == DateTime.MinValue
                     && (toPast ? from >= limitTime : from <= limitTime)
-                    && (count % continueAskingCount != 0 || MessageBox.Show("Keep searching?", (count * baseLoadSizeForSearch).ToString(), MessageBoxButtons.YesNo) == DialogResult.Yes))
+                    && (count % continueAskingCount != 0 || MessageBox.Show("Keep searching?", (count * minituesInADay).ToString(), MessageBoxButtons.YesNo) == DialogResult.Yes))
                 {
                     AddOrChangeLoadingText("Finding...(" + from.ToString(TimeFormat) + ")   " + sw.Elapsed.ToString(TimeSpanFormat), false);
 
-                    var size = from == firstFrom ? firstLoadSizeForSearch : baseLoadSizeForSearch;
+                    var size = from == firstFrom ? firstLoadSizeForSearch : minituesInADay;
                     var loadNew = oneChart || from == firstFrom;
 
                     if (all)
@@ -2544,14 +2543,14 @@ namespace BackTestingFinal
             else
             {
                 if (cursor.time < v.list[0].Time)
-                    LoadAndCheckSticks(itemData, false, true, (int)v.list[0].Time.Subtract(cursor.time).TotalSeconds / chartValues.seconds + chartViewSticksSize);
+                    LoadAndCheckSticks(itemData, false, true, (int)v.list[0].Time.Subtract(cursor.time).TotalSeconds / chartValues.seconds + chartViewSticksSize, chartValues: chartValues);
                 else if (cursor.time > v.list[v.list.Count - 1].Time)
-                    LoadAndCheckSticks(itemData, false, true, (int)cursor.time.Subtract(v.list[v.list.Count - 1].Time).TotalSeconds / chartValues.seconds + chartViewSticksSize);
+                    LoadAndCheckSticks(itemData, false, true, (int)cursor.time.Subtract(v.list[v.list.Count - 1].Time).TotalSeconds / chartValues.seconds + chartViewSticksSize, chartValues: chartValues);
 
                 if (cursor.time.Subtract(v.list[0].Time).TotalSeconds / chartValues.seconds < chartViewSticksSize)
-                    LoadAndCheckSticks(itemData, false, true);
+                    LoadAndCheckSticks(itemData, false, true, chartValues: chartValues);
                 if (v.list[v.list.Count - 1].Time.Subtract(cursor.time).TotalSeconds / chartValues.seconds < chartViewSticksSize)
-                    LoadAndCheckSticks(itemData, false, false);
+                    LoadAndCheckSticks(itemData, false, false, chartValues: chartValues);
 
                 var foundIndex = 0;
                 var exitIndex = -1;
@@ -3075,7 +3074,7 @@ namespace BackTestingFinal
                                 v.CLD.startIndex = v.CLD.currentIndex;
                                 v.CLD.lastStick = new BackTradeStick() { Time = v.CLD.list[v.CLD.currentIndex].Time };
 
-                                for (int k = IndNeedDays - 1; k < v.CLD.startIndex; k++)
+                                for (int k = IndNeedDays - 1; k < v.CLD.list.Count; k++)
                                     SetRSIAandDiff(v.CLD.list, v.CLD.list[k], k - 1);
                             }
                         }
@@ -3087,6 +3086,9 @@ namespace BackTestingFinal
                                     v.CLD.list.RemoveRange(0, v.CLD.list.Count - (IndNeedDays + CompareNeedDays - 1));
                                 v.CLD.list.AddRange(LoadSticks(itemData, v.CV, v.CLD.list[v.CLD.list.Count - 1].Time.AddSeconds(v.CV.seconds), minituesInADay * BaseChartTimeSet.OneMinute.seconds / v.CV.seconds * (j - BaseChartTimeSet.OneMinute.index + 1), false));
                                 v.CLD.currentIndex = GetStartIndex(v.CLD.list, from2) - 1;
+
+                                for (int k = v.CLD.currentIndex; k < v.CLD.list.Count; k++)
+                                    SetRSIAandDiff(v.CLD.list, v.CLD.list[k], k - 1);
                             }
                         }
                     }
