@@ -143,7 +143,7 @@ namespace BackTestingFinal
 
         int minituesInADay = BaseChartTimeSet.OneDay.seconds / BaseChartTimeSet.OneMinute.seconds;
 
-        public BackTesting(Form form, bool isJoo) : base(form, isJoo, 7m)
+        public BackTesting(Form form, bool isJoo) : base(form, isJoo, 7.34m)
         {
 
             sticksDBpath = BaseSticksDB.path;
@@ -161,16 +161,10 @@ namespace BackTestingFinal
 
             SetAdditionalMainView();
 
-            fromTextBox.Text = "2023-01-01 00:00:00";
-            //fromTextBox.Text = DateTime.MinValue.ToString(TimeFormat);
+            fromTextBox.Text = DateTime.MinValue.ToString(TimeFormat);
+            //fromTextBox.Text = "2020-11-21 00:00:00";
             toTextBox.Text = DateTime.MaxValue.ToString(TimeFormat);
-            //toTextBox.Text = "2023-02-24 01:51:00";
-            //toTextBox.Text = "2022-10-21 17:03:00";
-            //toTextBox.Text = "2022-12-19 00:00:00";
-            //toTextBox.Text = "2022-08-16 00:00:00";
-            //toTextBox.Text = "2021-01-29 00:00:00";
-            //toTextBox.Text = "2021-02-03 00:00:00";
-            //toTextBox.Text = "2021-02-23 00:00:00";
+            //toTextBox.Text = "2021-08-01 00:00:00";
 
             form.KeyDown += Form_KeyDown;
         }
@@ -1196,7 +1190,7 @@ namespace BackTestingFinal
 
             form.BeginInvoke(new Action(() =>
             {
-                form.Text += ST + " done : " + sw.Elapsed.ToString(TimeSpanFormat);
+                form.Text += "  " + sttext + " done : " + sw.Elapsed.ToString(TimeSpanFormat);
                 CalculateMetric(start, end, isAllLongShort);
                 if (!Charts[2].Visible)
                     Buttons[2].PerformClick();
@@ -1431,7 +1425,7 @@ namespace BackTestingFinal
                         if (isAllLongShort != Position.All || j == (int)Position.Long)
                         {
                             var date = simulDaysDetail[j].Keys[i];
-                            if (date >= market1DayDetail[0].Time && date <= market1DayDetail[market1DayDetail.Count - 1].Time)
+                            if (market1DayDetail.Count > 0 && date >= market1DayDetail[0].Time && date <= market1DayDetail[market1DayDetail.Count - 1].Time)
                             {
                                 Charts[3].Series[2].Points.AddXY(axisLabel, Math.Round((market1DayDetail[m1DDI].Price[3] / market1DayDetail[0].Price[3] - 1) * 100, 0));
                                 Charts[3].Series[4].Points.AddXY(axisLabel, market1DayDetail[m1DDI].Ms + market1DayDetail[m1DDI].Md);
@@ -1442,7 +1436,7 @@ namespace BackTestingFinal
                                 Charts[3].Series[2].Points.AddXY(axisLabel, 0);
                                 Charts[3].Series[4].Points.AddXY(axisLabel, 0);
                             }
-                            if (date >= market2DayDetail[0].Time && date <= market2DayDetail[market2DayDetail.Count - 1].Time)
+                            if (market2DayDetail.Count > 0 && date >= market2DayDetail[0].Time && date <= market2DayDetail[market2DayDetail.Count - 1].Time)
                             {
                                 Charts[3].Series[3].Points.AddXY(axisLabel, Math.Round((market2DayDetail[m2DDI].Price[3] / market2DayDetail[0].Price[3] - 1) * 100, 0));
                                 Charts[3].Series[5].Points.AddXY(axisLabel, market2DayDetail[m2DDI].Ms + market2DayDetail[m2DDI].Md);
@@ -1511,7 +1505,7 @@ namespace BackTestingFinal
                             if (isAllLongShort != Position.All || j == (int)Position.Long)
                             {
                                 var date = simulDays[j].Keys[di];
-                                if (date >= market1Day[0].Time && date <= market1Day[market1Day.Count - 1].Time)
+                                if (market1Day.Count > 0 && date >= market1Day[0].Time && date <= market1Day[market1Day.Count - 1].Time)
                                 {
                                     Charts[2].Series[2].Points.AddXY(axisLabel, Math.Round((market1Day[m1DI].Price[3] / market1Day[0].Price[3] - 1) * 100, 0));
                                     Charts[2].Series[4].Points.AddXY(axisLabel, market1Day[m1DI].Ms + market1Day[m1DI].Md);
@@ -1522,7 +1516,7 @@ namespace BackTestingFinal
                                     Charts[2].Series[2].Points.AddXY(axisLabel, 0);
                                     Charts[2].Series[4].Points.AddXY(axisLabel, 0);
                                 }
-                                if (date >= market2Day[0].Time && date <= market2Day[market2Day.Count - 1].Time)
+                                if (market2Day.Count > 0 && date >= market2Day[0].Time && date <= market2Day[market2Day.Count - 1].Time)
                                 {
                                     Charts[2].Series[3].Points.AddXY(axisLabel, Math.Round((market2Day[m2DI].Price[3] / market2Day[0].Price[3] - 1) * 100, 0));
                                     Charts[2].Series[5].Points.AddXY(axisLabel, market2Day[m2DI].Ms + market2Day[m2DI].Md);
@@ -2979,9 +2973,14 @@ namespace BackTestingFinal
 
             var oneMinIndex = ChartValuesDic.IndexOfValue(BaseChartTimeSet.OneMinute);
             var cvIndex = ChartValuesDic.IndexOfValue(chartValues);
-            var midVC = ChartValuesDic.Values[oneMinIndex + (cvIndex - oneMinIndex) / 2];
 
+            var midVC = ChartValuesDic.Values[oneMinIndex + (cvIndex - oneMinIndex) / 2];
             var list = LoadSticks(itemData, midVC, lastTime, (int)(endTime.Subtract(lastTime).TotalSeconds / midVC.seconds) + 1, false);
+            while (list.Count == 0)
+            {
+                midVC = ChartValuesDic.Values[midVC.index - 1];
+                list = LoadSticks(itemData, midVC, lastTime, (int)(endTime.Subtract(lastTime).TotalSeconds / midVC.seconds) + 1, false);
+            }
 
             var minStart = list[list.Count - 1].Time;
             list.RemoveAt(list.Count - 1);
@@ -3074,7 +3073,7 @@ namespace BackTestingFinal
                                 v.CLD.startIndex = v.CLD.currentIndex;
                                 v.CLD.lastStick = new BackTradeStick() { Time = v.CLD.list[v.CLD.currentIndex].Time };
 
-                                for (int k = IndNeedDays - 1; k < v.CLD.list.Count; k++)
+                                for (int k = 0; k < v.CLD.list.Count; k++)
                                     SetRSIAandDiff(v.CLD.list, v.CLD.list[k], k - 1);
                             }
                         }
