@@ -38,6 +38,9 @@ namespace BackTestingFinal
             Count = 0;
             Win = 0;
             ExitException = false;
+
+            beforeResult = null;
+
         }
     }
 }
