@@ -161,7 +161,7 @@ namespace BackTestingFinal
             SetAdditionalMainView();
 
             fromTextBox.Text = DateTime.MinValue.ToString(TimeFormat);
-            fromTextBox.Text = "2023-02-24 00:00:00";
+            //fromTextBox.Text = "2023-02-24 00:00:00";
             toTextBox.Text = DateTime.MaxValue.ToString(TimeFormat);
             //toTextBox.Text = "2021-08-01 00:00:00";
 
