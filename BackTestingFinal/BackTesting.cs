@@ -2664,9 +2664,9 @@ namespace BackTestingFinal
             }
         }
          
-        public override void AdjustChart(Chart chart)
+        public override void AdjustChart(Chart chart, bool update = false)
         {
-            AdjustChartBasic(chart, (showingItemData as BackItemData).hoDiff);
+            AdjustChartBasic(chart, (showingItemData as BackItemData).hoDiff, update);
         }
         protected override void LoadMore(Chart chart, ScrollType scrollType, bool loadNew, int beforeCount)
         {
