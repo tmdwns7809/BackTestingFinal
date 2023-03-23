@@ -163,7 +163,8 @@ namespace BackTestingFinal
             fromTextBox.Text = DateTime.MinValue.ToString(TimeFormat);
             //fromTextBox.Text = "2023-02-24 00:00:00";
             toTextBox.Text = DateTime.MaxValue.ToString(TimeFormat);
-            //toTextBox.Text = "2021-08-01 00:00:00";
+            toTextBox.Text = "2019-09-08 17:57:00"; //첫봉
+            toTextBox.Text = "2023-02-09 05:00:00"; // 차트선생 매매
 
             form.KeyDown += Form_KeyDown;
         }
@@ -644,7 +645,7 @@ namespace BackTestingFinal
 
             SetButton(Buttons[2], "T", (sender, e) => { charButton(Charts[2], Buttons[2]); });
             Buttons[2].Size = buttonDic.Values.Last().Size;
-            Buttons[2].Location = new Point(buttonDic.Values.Last().Location.X, buttonDic.Values.Last().Location.Y + buttonDic.Values.Last().Height + 5);
+            Buttons[2].Location = new Point(buttonDic.Values.Last().Location.X, buttonDic.Values.Last().Location.Y + buttonDic.Values.Last().Height + 35);
 
             SetButton(Buttons[3], "TD", (sender, e) => { charButton(Charts[3], Buttons[3]); });
             Buttons[3].Size = Buttons[2].Size;
@@ -757,9 +758,8 @@ namespace BackTestingFinal
             #region Controller
             var ca = mainChart.ChartAreas[1];
             SetButton(beforeButton, "<", (sender, e) => { FindSimulAndShow(true); });
-            beforeButton.Size = new Size((int)((mainChart.Width * (ca.Position.X + ca.Position.Width * ca.InnerPlotPosition.X / 100) / 100 - 15) / 2), Buttons[3].Height);
-            beforeButton.Location = new Point(mainChart.Location.X + 5,
-                (int)(mainChart.Location.Y + mainChart.Height * (ca.Position.Y + ca.Position.Height * (ca.InnerPlotPosition.Y + ca.InnerPlotPosition.Height) / 100) / 100 - beforeButton.Height));
+            beforeButton.Size = Buttons[0].Size;
+            beforeButton.Location = new Point(TimeCountChartButton.Location.X, TimeCountChartButton.Location.Y + TimeCountChartButton.Height + 5);
 
             SetButton(afterButton, ">", (sender, e) => { FindSimulAndShow(false); });
             afterButton.Size = beforeButton.Size;
@@ -767,7 +767,7 @@ namespace BackTestingFinal
 
             SetButton(beforeAllChartButton, "<A", (sender, e) => { FindSimulAndShow(true, false); });
             beforeAllChartButton.Size = beforeButton.Size;
-            beforeAllChartButton.Location = new Point(beforeButton.Location.X, beforeButton.Location.Y - 5 - beforeButton.Height);
+            beforeAllChartButton.Location = new Point(beforeButton.Location.X, beforeButton.Location.Y + beforeButton.Height + 5);
             beforeAllChartButton.Font = new Font(beforeAllChartButton.Font.FontFamily, 7);
 
             SetButton(afterAllChartButton, "A>", (sender, e) => { FindSimulAndShow(false, false); });
@@ -781,7 +781,7 @@ namespace BackTestingFinal
                 ShowChart(result.itemData, (result.time, 0, true));
             });
             firstButton.Size = beforeButton.Size;
-            firstButton.Location = new Point(beforeAllChartButton.Location.X, beforeAllChartButton.Location.Y - 5 - beforeAllChartButton.Height);
+            firstButton.Location = new Point(beforeAllChartButton.Location.X, beforeAllChartButton.Location.Y + 5 + beforeAllChartButton.Height);
 
             SetButton(lastButton, "L", (sender, e) =>
             {
@@ -862,12 +862,14 @@ namespace BackTestingFinal
                     ShowError(form, "input error");
             });
 
+            var firstButton = buttonDic.ElementAt(0).Value;
             #region From_To_Run
+
             SetTextBox(fromTextBox, "");
             fromTextBox.ReadOnly = false;
             fromTextBox.BorderStyle = BorderStyle.Fixed3D;
-            fromTextBox.Size = new Size((GetFormWidth(form) - mainChart.Location.X - mainChart.Width) / 2 - 20, 30);
-            fromTextBox.Location = new Point(mainChart.Location.X + mainChart.Width + 5, mainChart.Location.Y + 5);
+            fromTextBox.Size = new Size((GetFormWidth(form) - firstButton.Location.X - firstButton.Width) / 2 - 20, 30);
+            fromTextBox.Location = new Point(firstButton.Location.X + firstButton.Width + 5, mainChart.Location.Y + 5);
 
             SetTextBox(midTextBox, "~");
             midTextBox.Size = new Size(10, fromTextBox.Height);
@@ -909,9 +911,9 @@ namespace BackTestingFinal
                     ("Long", "Long", 4),
                     ("Short", "Short", 4)
                 });
-            metricListView.Size = new Size(GetFormWidth(form) - mainChart.Location.X - mainChart.Width - 5,
+            metricListView.Size = new Size(GetFormWidth(form) - fromTextBox.Location.X - 5,
                 (GetFormHeight(form) - CRComboBox.Location.Y - CRComboBox.Height) / 10 * 7 - 10);
-            metricListView.Location = new Point(mainChart.Location.X + mainChart.Size.Width, CRComboBox.Location.Y + CRComboBox.Height + 5);
+            metricListView.Location = new Point(fromTextBox.Location.X, CRComboBox.Location.Y + CRComboBox.Height + 5);
             #endregion
 
             #region Code_List_Result
@@ -2593,7 +2595,9 @@ namespace BackTestingFinal
             else
                 cursorTimeTextBox.Text = "";
 
-            OneChartFindAndShow(showingItemData);
+            //OneChartFindAndShow(showingItemData);
+
+            RecalculateChart(mainChart);
         }
 
         void AddNewChartPoint(Chart chart, BackItemData itemData, int index, bool insert)
@@ -2616,7 +2620,7 @@ namespace BackTestingFinal
                         TextLineAlignment = StringAlignment.Near,
                         TextAlignment = StringAlignment.Center,
                         TextOrientation = TextOrientation.Horizontal,
-                        Text = ca.Name == PriceChartAreaName ? "1" : ""
+                        Text = ca.Name == ChartAreaNamePrice ? "1" : ""
                     });
             if ((v.list[index] as BackTradeStick).resultData != default)
             {
@@ -2637,7 +2641,7 @@ namespace BackTestingFinal
                         TextLineAlignment = StringAlignment.Near,
                         TextAlignment = StringAlignment.Center,
                         TextOrientation = TextOrientation.Horizontal,
-                        Text = ca.Name == PriceChartAreaName ? "\n2" : ""
+                        Text = ca.Name == ChartAreaNamePrice ? "\n2" : ""
                     });
             }
             if ((v.list[index] as BackTradeStick).resultData2 != default)
@@ -2659,15 +2663,11 @@ namespace BackTestingFinal
                         TextLineAlignment = StringAlignment.Near,
                         TextAlignment = StringAlignment.Center,
                         TextOrientation = TextOrientation.Horizontal,
-                        Text = ca.Name == PriceChartAreaName ? "\n2" : ""
+                        Text = ca.Name == ChartAreaNamePrice ? "\n2" : ""
                     });
             }
         }
          
-        public override void AdjustChart(Chart chart, bool update = false)
-        {
-            AdjustChartBasic(chart, (showingItemData as BackItemData).hoDiff, update);
-        }
         protected override void LoadMore(Chart chart, ScrollType scrollType, bool loadNew, int beforeCount)
         {
             if (showingItemData == default)
