@@ -163,9 +163,8 @@ namespace BackTestingFinal
             fromTextBox.Text = DateTime.MinValue.ToString(TimeFormat);
             //fromTextBox.Text = "2023-02-24 00:00:00";
             //toTextBox.Text = DateTime.MaxValue.ToString(TimeFormat);
-            //toTextBox.Text = "2019-09-08 17:57:00"; //첫봉
+            toTextBox.Text = "2019-09-08 20:03:00"; //과거시뮬진행중
             //toTextBox.Text = "2023-02-09 05:00:00"; // 차트선생 매매
-            toTextBox.Text = "2020-03-10 00:00:00";
 
             form.KeyDown += Form_KeyDown;
         }
