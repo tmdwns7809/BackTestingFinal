@@ -162,9 +162,10 @@ namespace BackTestingFinal
 
             fromTextBox.Text = DateTime.MinValue.ToString(TimeFormat);
             //fromTextBox.Text = "2023-02-24 00:00:00";
-            toTextBox.Text = DateTime.MaxValue.ToString(TimeFormat);
-            toTextBox.Text = "2019-09-08 17:57:00"; //첫봉
-            toTextBox.Text = "2023-02-09 05:00:00"; // 차트선생 매매
+            //toTextBox.Text = DateTime.MaxValue.ToString(TimeFormat);
+            //toTextBox.Text = "2019-09-08 17:57:00"; //첫봉
+            //toTextBox.Text = "2023-02-09 05:00:00"; // 차트선생 매매
+            toTextBox.Text = "2020-03-10 00:00:00";
 
             form.KeyDown += Form_KeyDown;
         }
@@ -2518,6 +2519,8 @@ namespace BackTestingFinal
 
             var list = showingItemData.listDic[mainChart.Tag as ChartValues].list;
             ShowChart(showingItemData as BackItemData, (from, position, cursorOn), !loadNew && list.Count != 0 && from >= list[0].Time && from <= list[list.Count - 1].Time);
+
+            base.SetChartNowOrLoad(chartValues);
         }
         void ShowChart(BackItemData itemData, (DateTime time, int position, bool on) cursor, bool loaded = false, ChartValues chartValues = default)
         {
