@@ -3732,7 +3732,19 @@ namespace BackTestingFinal
                     var vc = mainChart.Tag as ChartValues;
 
                     toTextBox.Text = dt.AddSeconds((e.KeyCode == Keys.Right ? 1 : -1) * vc.seconds).ToString(TimeFormat);
+
+                    var priceArea = mainChart.ChartAreas[ChartAreaNamePrice];
+                    var ScaleYMinimum = priceArea.AxisY.ScaleView.ViewMinimum;
+                    var ScaleYMaximum = priceArea.AxisY.ScaleView.ViewMaximum;
+                    var YMinimum = priceArea.AxisY.Minimum;
+                    var YMaximum = priceArea.AxisY.Maximum;
+
                     SetChartNowOrLoad(vc, loadNew: e.KeyCode == Keys.Left);
+
+                    var change = Math.Abs(priceArea.AxisY.Maximum - YMaximum) > Math.Abs(priceArea.AxisY.Minimum - YMinimum) ?
+                        priceArea.AxisY.Maximum - YMaximum : priceArea.AxisY.Minimum - YMinimum;
+
+                    ZoomY(priceArea.AxisY, ScaleYMinimum + change, ScaleYMaximum + change);
                     break;
 
                 default:
