@@ -162,7 +162,13 @@ namespace BackTestingFinal
 
             fromTextBox.Text = DateTime.MinValue.ToString(TimeFormat);
             toTextBox.Text = DateTime.MaxValue.ToString(TimeFormat);
-            toTextBox.Text = "2019-09-08 17:57:00"; //과거시뮬시작
+            fromTextBox.Text = "2019-09-22 08:00:00"; //과거시뮬시작
+            toTextBox.Text = "2019-09-22 08:00:00"; //과거시뮬시작
+            fromTextBox.Text = "2022-11-01 00:00:00"; //과거시뮬시작
+            toTextBox.Text = "2022-11-01 00:00:00"; //과거시뮬시작
+            fromTextBox.Text = "2020-10-26 00:00:00";
+            toTextBox.Text = "2021-04-05 00:00:00";
+
             //toTextBox.Text = "2023-02-09 05:00:00"; // 차트선생 매매
 
             form.KeyDown += Form_KeyDown;
@@ -2577,6 +2583,9 @@ namespace BackTestingFinal
             //if (mainChart.Series[0].Points.Count != 0)
             ClearMainChartAndSet(chartValues, itemData);
 
+            if (v.list.Count == 0)
+                return;
+
             var cursorIndex = v.list.Count - 1;
             for (int i = 0; i < v.list.Count; i++)
             {
@@ -3537,11 +3546,13 @@ namespace BackTestingFinal
             var conn = BinanceSticksDB.DBDic[chartValues];
 
             var to = GetFirstOrLastTime(false, itemData, chartValues).time;
+            var start = GetFirstOrLastTime(true, itemData, chartValues).time;
             if (toPast)
             {
                 if (from != default && from < to)
                     to = from;
-                from = chartValues != BaseChartTimeSet.OneMonth ? to.AddSeconds(-chartValues.seconds * size) : to.AddMonths(-size);
+                var from2 = chartValues != BaseChartTimeSet.OneMonth ? to.AddSeconds(-chartValues.seconds * size) : to.AddMonths(-size);
+                from = from2 < start ? start : from2;
             }
             else
             {
@@ -3665,25 +3676,24 @@ namespace BackTestingFinal
             var conn = BinanceSticksDB.DBDic[chartValues];
 
             var time = first ? DateTime.MaxValue : DateTime.MinValue;
-            if (!DateTime.TryParse(toTextBox.Text, out var end))
+            if (!DateTime.TryParse(toTextBox.Text, out var end) || !DateTime.TryParse(fromTextBox.Text, out var start))
             {
                 ShowError(form);
                 return default;
             }
 
             var endl = from == default ? end.AddSeconds(-chartValues.seconds) : from;
+            var startl = from == default ? start.AddSeconds(chartValues.seconds) : from;
 
             if (itemData == default)
                 foreach (BackItemData itemData2 in itemDataDic.Values)
                 {
                     var reader = new SQLiteCommand("Select *, rowid From '" + itemData2.Code + "'" +
-                        (first ? "" : "where (time<='" + end.ToString(DBTimeFormat) + "') and (time>'" + endl.ToString(DBTimeFormat) + "') ") +
+                        (first ? "where (time>='" + start.ToString(DBTimeFormat) + "') and (time<'" + startl.ToString(DBTimeFormat) + "') "
+                        : "where (time<='" + end.ToString(DBTimeFormat) + "') and (time>'" + endl.ToString(DBTimeFormat) + "') ") +
                         " order by rowid " + (first ? "" : "desc") + " limit 1", conn).ExecuteReader();
                     if (!reader.Read())
                     {
-                        if (first)
-                            ShowError(form);
-
                         reader = new SQLiteCommand("Select *, rowid From '" + itemData2.Code + "'" +
                         " order by rowid " + (first ? "" : "desc") + " limit 1", conn).ExecuteReader();
 
@@ -3700,13 +3710,11 @@ namespace BackTestingFinal
             else
             {
                 var reader = new SQLiteCommand("Select *, rowid From '" + itemData.Code + "'" +
-                    (first ? "" : "where (time<='" + end.ToString(DBTimeFormat) + "') and (time>'" + endl.ToString(DBTimeFormat) + "') ") +
+                    (first ? "where (time>='" + start.ToString(DBTimeFormat) + "') and (time<'" + startl.ToString(DBTimeFormat) + "') "
+                    : "where (time<='" + end.ToString(DBTimeFormat) + "') and (time>'" + endl.ToString(DBTimeFormat) + "') ") +
                     " order by rowid " + (first ? "" : "desc") + " limit 1", conn).ExecuteReader();
                 if (!reader.Read())
                 {
-                    if (first)
-                        ShowError(form);
-
                     reader = new SQLiteCommand("Select *, rowid From '" + itemData.Code + "'" +
                     " order by rowid " + (first ? "" : "desc") + " limit 1", conn).ExecuteReader();
 
@@ -3744,7 +3752,7 @@ namespace BackTestingFinal
                     var change = Math.Abs(priceArea.AxisY.Maximum - YMaximum) > Math.Abs(priceArea.AxisY.Minimum - YMinimum) ?
                         priceArea.AxisY.Maximum - YMaximum : priceArea.AxisY.Minimum - YMinimum;
 
-                    ZoomY(priceArea.AxisY, ScaleYMinimum + change, ScaleYMaximum + change);
+                    ZoomY(priceArea.AxisY, ScaleYMinimum, ScaleYMaximum);
                     break;
 
                 default:
