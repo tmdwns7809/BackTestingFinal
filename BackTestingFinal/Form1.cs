@@ -25,6 +25,11 @@ namespace BackTestingFinal
             BackTesting.instance = new BackTesting(this, setting.market[Settings.MarketsName] == Markets.KRX);
         }
 
+        private void Form1_Load(object sender, EventArgs e)
+        {
+
+        }
+
         //protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
         //{
         //    switch (keyData)
