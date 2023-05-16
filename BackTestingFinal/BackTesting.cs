@@ -142,7 +142,7 @@ namespace BackTestingFinal
 
         int minituesInADay = BaseChartTimeSet.OneDay.seconds / BaseChartTimeSet.OneMinute.seconds;
 
-        public BackTesting(Form form, bool isJoo) : base(form, isJoo, 8.1m)
+        public BackTesting(Form form, bool isJoo) : base(form, isJoo, 8m)
         {
 
             sticksDBpath = BaseSticksDB.path;
