@@ -3777,6 +3777,25 @@ namespace BackTestingFinal
             form.Text = showingItemData.Code + "     H:" + list[i].Price[0] + "  L:" + list[i].Price[1] + "  O:" + list[i].Price[2] + "  C:" + list[i].Price[3] + "  Ms:" + list[i].Ms + "  Md:" + list[i].Md +
                 " S5:" + Math.Round(mainChart.Series[5].Points[i].YValues[0], 2) + " S6:" + Math.Round(mainChart.Series[6].Points[i].YValues[0], 2) +
                 " Amp:" + Math.Round((list[i].Price[0] / list[i].Price[1] - 1) * 100, 2);
+
+            var a = list[i].indicator.IndNew[ChartAxisYNameRVMAP][0];
+            var b = list[i].indicator.IndNew[ChartAxisYNameRVMAP][1];
+
+            var count = 0;
+            var sum = 0D;
+            var list2 = new List<(DateTime, double)>();
+
+            for (int j = i; j > i - 30; j--)
+            {
+                if (!double.IsNaN(list[j].indicator.IndNew[ChartAxisYNameRVMAP][0]))
+                {
+                    count++;
+                    sum += list[j].indicator.IndNew[ChartAxisYNameRVMAP][0];
+                    list2.Add((list[j].Time, list[j].indicator.IndNew[ChartAxisYNameRVMAP][0]));
+                }
+            }
+
+            var c = sum / count;
         }
 
         public override void OneChartFindAndShow(BaseItemData itemData, int cursorIndex = default, List<TradeStick> list = null)
