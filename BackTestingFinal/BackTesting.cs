@@ -164,10 +164,9 @@ namespace BackTestingFinal
             toTextBox.Text = "2019-09-22 08:00:00"; //과거시뮬시작
             fromTextBox.Text = "2022-11-01 00:00:00"; //과거시뮬시작
             toTextBox.Text = "2022-11-01 00:00:00"; //과거시뮬시작
-            fromTextBox.Text = "2020-10-26 00:00:00";
-            toTextBox.Text = "2021-04-05 00:00:00";
             fromTextBox.Text = DateTime.MinValue.ToString(TimeFormat);
             toTextBox.Text = DateTime.MaxValue.ToString(TimeFormat);
+            toTextBox.Text = "2023-05-16 07:30:00";
 
             //toTextBox.Text = "2023-02-09 05:00:00"; // 차트선생 매매
 
