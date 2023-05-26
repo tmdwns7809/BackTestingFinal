@@ -2733,8 +2733,8 @@ namespace BackTestingFinal
                     toPast ? from :
                         (chartValues != BaseChartTimeSet.OneMonth ?
                             from.AddSeconds(-chartValues.seconds * (IndNeedDays - 1)) :
-                            from.AddMonths(-(IndNeedDays - 1))),
-                    minSize + (IndNeedDays - 1), toPast);
+                            from.AddMonths(-(IndNeedDays + CompareNeedDays - 1))),
+                    minSize + (IndNeedDays + CompareNeedDays - 1), toPast);
 
                 var startIndex = GetStartIndex(list, toPast ? (chartValues != BaseChartTimeSet.OneMonth ? from.AddSeconds(-chartValues.seconds * (minSize - 1)) : from.AddMonths(-(minSize - 1))) : from);
                 if (startIndex == -1)
@@ -2757,8 +2757,11 @@ namespace BackTestingFinal
                     }
                 }
 
-                for (int i = startIndex; i < list.Count; i++)
+                for (int i = startIndex - CompareNeedDays; i < list.Count; i++)
                 {
+                    if (i < 0)
+                        continue;
+
                     SetRSIAandDiff(list, list[i], i - 1);
                     if (SuddenBurst(list[i]).found)
                     {
