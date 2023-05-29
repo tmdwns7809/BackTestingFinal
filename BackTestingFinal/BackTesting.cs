@@ -937,9 +937,15 @@ namespace BackTestingFinal
                     return;
 
                 var itemData = codeListView.SelectedObject as BackItemData;
+
+                var s = new Stopwatch();
+                s.Start();
                 ShowChart(itemData, (GetFirstOrLastTime(false, itemData).time, chartViewSticksSize, false));
+                s.Stop();
 
                 ShowCodeResult(itemData);
+
+                form.Text += s.Elapsed.ToString();
             };
             #endregion
 
