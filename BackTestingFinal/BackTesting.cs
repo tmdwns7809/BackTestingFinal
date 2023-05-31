@@ -144,7 +144,6 @@ namespace BackTestingFinal
 
         public BackTesting(Form form, bool isJoo) : base(form, isJoo, 8.2m)
         {
-
             sticksDBpath = BaseSticksDB.path;
             sticksDBbaseName = BaseSticksDB.BaseName;
             BinanceSticksDB.SetDB();
