@@ -2737,11 +2737,13 @@ namespace BackTestingFinal
                 var list = LoadSticks(itemData, chartValues,
                     toPast ? from :
                         (chartValues != BaseChartTimeSet.OneMonth ?
-                            from.AddSeconds(-chartValues.seconds * (IndNeedDays - 1)) :
-                            from.AddMonths(-(IndNeedDays + CompareNeedDays - 1))),
-                    minSize + (IndNeedDays + CompareNeedDays - 1), toPast);
+                            from.AddSeconds(-chartValues.seconds * (minSize + IndNeedDays - 1)) :
+                            from.AddMonths(-(minSize + IndNeedDays - 1))),
+                    minSize + IndNeedDays - 1, toPast);
 
-                var startIndex = GetStartIndex(list, toPast ? (chartValues != BaseChartTimeSet.OneMonth ? from.AddSeconds(-chartValues.seconds * (minSize - 1)) : from.AddMonths(-(minSize - 1))) : from);
+                var startIndex = GetStartIndex(list, toPast ? 
+                    (chartValues != BaseChartTimeSet.OneMonth ? from.AddSeconds(-chartValues.seconds * (minSize - 1)) : from.AddMonths(-(minSize - 1))) : 
+                    from);
                 if (startIndex == -1)
                     return result;
 
@@ -2762,11 +2764,8 @@ namespace BackTestingFinal
                     }
                 }
 
-                for (int i = startIndex - CompareNeedDays; i < list.Count; i++)
+                for (int i = 0; i < list.Count; i++)
                 {
-                    if (i < 0)
-                        continue;
-
                     SetRSIAandDiff(list, list[i], i - 1);
                     if (SuddenBurst(list[i]).found)
                     {
