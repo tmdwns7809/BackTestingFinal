@@ -142,7 +142,7 @@ namespace BackTestingFinal
 
         int minituesInADay = BaseChartTimeSet.OneDay.seconds / BaseChartTimeSet.OneMinute.seconds;
 
-        public BackTesting(Form form, bool isJoo) : base(form, isJoo, 8.2m)
+        public BackTesting(Form form, bool isJoo) : base(form, isJoo, 8.3m)
         {
             sticksDBpath = BaseSticksDB.path;
             sticksDBbaseName = BaseSticksDB.BaseName;
@@ -914,8 +914,7 @@ namespace BackTestingFinal
                     ("Long", "Long", 4),
                     ("Short", "Short", 4)
                 });
-            metricListView.Size = new Size(GetFormWidth(form) - fromTextBox.Location.X - 5,
-                (GetFormHeight(form) - CRComboBox.Location.Y - CRComboBox.Height) / 10 * 7 - 10);
+            metricListView.Size = new Size(GetFormWidth(form) - fromTextBox.Location.X - 5, 300);
             metricListView.Location = new Point(fromTextBox.Location.X, CRComboBox.Location.Y + CRComboBox.Height + 5);
             #endregion
 
@@ -928,7 +927,7 @@ namespace BackTestingFinal
                     ("WR(%)", "WinRate", 3),
                     ("SBG", "ShortestBeforeGapText", 5)
                 });
-            codeListView.Size = new Size(metricListView.Width, GetFormHeight(form) - metricListView.Location.Y - metricListView.Height - GetFormUpBarSize(form) - 10);
+            codeListView.Size = new Size(metricListView.Width, 300);
             codeListView.Location = new Point(metricListView.Location.X, metricListView.Location.Y + metricListView.Height + 5);
             codeListView.SelectionChanged += (sender, e) =>
             {
@@ -963,8 +962,8 @@ namespace BackTestingFinal
 
             var tab_page_list = new List<TabPage>() { new TabPage("Metric Result"), new TabPage("Day Result") };
 
-            SetTabControl(resultTabControl, new Size((mainChart.Width - 20) / 2 - 10, GetFormHeight(form) - mainChart.Location.Y - mainChart.Height - GetFormUpBarSize(form) - 10),
-                new Point(mainChart.Location.X + 10, mainChart.Location.Y + mainChart.Height + 5), tab_page_list);
+            SetTabControl(resultTabControl, new Size(codeListView.Width, 300),
+                new Point(codeListView.Location.X, codeListView.Location.Y + codeListView.Height + 10), tab_page_list);
 
             var tabPage = resultTabControl.TabPages[0];
             SetListView(metricResultListView, new (string, string, int)[]
@@ -1018,8 +1017,8 @@ namespace BackTestingFinal
 
             tab_page_list = new List<TabPage>() { new TabPage("Code Result") };
 
-            SetTabControl(resultTabControl2, new Size(resultTabControl.Width, resultTabControl.Height),
-                new Point(resultTabControl.Location.X + resultTabControl.Width + 10, resultTabControl.Location.Y), tab_page_list);
+            SetTabControl(resultTabControl2, new Size(resultTabControl.Width, mainChart.Location.Y + mainChart.Height - resultTabControl.Location.Y - resultTabControl.Height - 10),
+                new Point(resultTabControl.Location.X, resultTabControl.Location.Y + resultTabControl.Height + 10), tab_page_list);
 
             tabPage = resultTabControl2.TabPages[0];
             SetListView(codeResultListView, new (string, string, int)[]
@@ -3783,25 +3782,6 @@ namespace BackTestingFinal
             form.Text = showingItemData.Code + "     H:" + list[i].Price[0] + "  L:" + list[i].Price[1] + "  O:" + list[i].Price[2] + "  C:" + list[i].Price[3] + "  Ms:" + list[i].Ms + "  Md:" + list[i].Md +
                 " S5:" + Math.Round(mainChart.Series[5].Points[i].YValues[0], 2) + " S6:" + Math.Round(mainChart.Series[6].Points[i].YValues[0], 2) +
                 " Amp:" + Math.Round((list[i].Price[0] / list[i].Price[1] - 1) * 100, 2);
-
-            var a = list[i].indicator.IndNew[ChartAxisYNameRVMAP][0];
-            var b = list[i].indicator.IndNew[ChartAxisYNameRVMAP][1];
-
-            var count = 0;
-            var sum = 0D;
-            var list2 = new List<(DateTime, double)>();
-
-            for (int j = i; j > i - 30; j--)
-            {
-                if (!double.IsNaN(list[j].indicator.IndNew[ChartAxisYNameRVMAP][0]))
-                {
-                    count++;
-                    sum += list[j].indicator.IndNew[ChartAxisYNameRVMAP][0];
-                    list2.Add((list[j].Time, list[j].indicator.IndNew[ChartAxisYNameRVMAP][0]));
-                }
-            }
-
-            var c = sum / count;
         }
 
         public override void OneChartFindAndShow(BaseItemData itemData, int cursorIndex = default, List<TradeStick> list = null)
