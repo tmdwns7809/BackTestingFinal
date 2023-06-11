@@ -3782,6 +3782,34 @@ namespace BackTestingFinal
             form.Text = showingItemData.Code + "     H:" + list[i].Price[0] + "  L:" + list[i].Price[1] + "  O:" + list[i].Price[2] + "  C:" + list[i].Price[3] + "  Ms:" + list[i].Ms + "  Md:" + list[i].Md +
                 " S5:" + Math.Round(mainChart.Series[5].Points[i].YValues[0], 2) + " S6:" + Math.Round(mainChart.Series[6].Points[i].YValues[0], 2) +
                 " Amp:" + Math.Round((list[i].Price[0] / list[i].Price[1] - 1) * 100, 2);
+
+            var o = list[i].Price[0];
+            var o2 = mainChart.Series[ChartSeriesNamePrice].Points[i].YValues[0];
+
+            (double[] plus, double[] minus) longList = (new double[8000], new double[8000]);
+            (double[] plus, double[] minus) shortList = (new double[2000], new double[2000]);
+
+            for (int j = 0; j < longList.plus.Length; j++)
+            {
+                var index = i - j;
+                if (index < 0)
+                    break;
+
+                if (j < shortList.plus.Length)
+                {
+                    var a = list[index].indicator.IndNew[ChartAxisYNameRVMAP][1];
+                    shortList.plus[j] = mainChart.Series[ChartAxisYSeries[ChartAxisYNameRVMAP].Keys[1]].Points[index].YValues[0];
+                    var b = list[index].indicator.IndNew[ChartAxisYNameRVMAM][1];
+                    shortList.minus[j] = mainChart.Series[ChartAxisYSeries[ChartAxisYNameRVMAM].Keys[1]].Points[index].YValues[0];
+                }
+
+                var c = list[index].indicator.IndNew[ChartAxisYNameRVMAP][2];
+                longList.plus[j] = mainChart.Series[ChartAxisYSeries[ChartAxisYNameRVMAP].Keys[2]].Points[index].YValues[0];
+                var d = list[index].indicator.IndNew[ChartAxisYNameRVMAM][2];
+                longList.minus[j] = mainChart.Series[ChartAxisYSeries[ChartAxisYNameRVMAM].Keys[2]].Points[index].YValues[0];
+            }
+
+
         }
 
         public override void OneChartFindAndShow(BaseItemData itemData, int cursorIndex = default, List<TradeStick> list = null)
