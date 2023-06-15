@@ -166,7 +166,7 @@ namespace BackTestingFinal
             toTextBox.Text = "2022-11-01 00:00:00"; //과거시뮬시작
             fromTextBox.Text = DateTime.MinValue.ToString(TimeFormat);
             toTextBox.Text = DateTime.MaxValue.ToString(TimeFormat);
-            //toTextBox.Text = "2023-05-15 10:20:00";
+            toTextBox.Text = "2023-06-09 04:16:00";
 
             //toTextBox.Text = "2023-02-09 05:00:00"; // 차트선생 매매
 
@@ -3789,8 +3789,17 @@ namespace BackTestingFinal
             (Func<double, double> plus, Func<double, double> minus) longFunc = default;
             (Func<double, double> plus, Func<double, double> minus) shortFunc = default;
 
+            var longC = 500;
+            var longD = 1;
+            var shortC = 50;
+            var shortD = 1;
+
+
+            var s = new Stopwatch();
+            s.Start();
+
             var full = true;
-            for (int j = 0; j < 8000; j++)
+            for (int j = 0; j < longC; j++)
             {
                 var index = i - j;
                 if (index < 0)
@@ -3803,54 +3812,54 @@ namespace BackTestingFinal
                 var b = list[index].indicator.IndNew[ChartAxisYNameRVMAM][0];
                 var p = mainChart.Series[ChartAxisYSeries[ChartAxisYNameRVMAP].Keys[0]].Points[index].YValues[0];
                 var m = mainChart.Series[ChartAxisYSeries[ChartAxisYNameRVMAM].Keys[0]].Points[index].YValues[0];
-                if (longList.plus.x.Count > 0 && p != 0 && longList.plus.x.Count != j)
+                if (longList.plus.x.Count > 0 && p != 0 && longList.plus.x[longList.plus.x.Count - 1] != j - 1)
                 {
-                    if (j < 2000)
+                    if (j < shortC)
                     {
                         shortList.plus.y.Add(shortList.plus.y.Last() + (p - shortList.plus.y.Last()) / (j - shortList.plus.x.Last()));
-                        shortList.plus.x.Add(shortList.plus.x.Count);
-                        for (int k = shortList.plus.x.Count; k < j; k++)
+                        shortList.plus.x.Add(shortList.plus.x.Last() + 1);
+                        for (int k = (int)shortList.plus.x.Last() + 1; k < j; k++)
                         {
-                            shortList.plus.y.Add(shortList.plus.y[shortList.plus.y.Count - 1] - shortList.plus.y[shortList.plus.y.Count - 2]);
+                            shortList.plus.y.Add(2 * shortList.plus.y[shortList.plus.y.Count - 1] - shortList.plus.y[shortList.plus.y.Count - 2]);
                             shortList.plus.x.Add(k);
                         }
                     }
 
                     longList.plus.y.Add(longList.plus.y.Last() + (p - longList.plus.y.Last()) / (j - longList.plus.x.Last()));
-                    longList.plus.x.Add(longList.plus.x.Count);
-                    mainChart.Series[ChartAxisYSeries[ChartAxisYNameRVMAP].Keys[0]].Points[i - (int)longList.plus.x[longList.plus.x.Count - 1]].YValues[0] = longList.plus.y.Last();
-                    for (int k = longList.plus.x.Count; k < j; k++)
+                    longList.plus.x.Add(longList.plus.x.Last() + 1);
+                    //mainChart.Series[ChartAxisYSeries[ChartAxisYNameRVMAP].Keys[0]].Points[i - (int)longList.plus.x[longList.plus.x.Count - 1]].YValues[0] = longList.plus.y.Last();
+                    for (int k = (int)longList.plus.x.Last() + 1; k < j; k++)
                     {
-                        longList.plus.y.Add(longList.plus.y[longList.plus.y.Count - 1] - longList.plus.y[longList.plus.y.Count - 2]);
+                        longList.plus.y.Add(2 * longList.plus.y[longList.plus.y.Count - 1] - longList.plus.y[longList.plus.y.Count - 2]);
                         longList.plus.x.Add(k);
-                        mainChart.Series[ChartAxisYSeries[ChartAxisYNameRVMAP].Keys[0]].Points[i - k].YValues[0] = longList.plus.y.Last();
+                        //mainChart.Series[ChartAxisYSeries[ChartAxisYNameRVMAP].Keys[0]].Points[i - k].YValues[0] = longList.plus.y.Last();
                     }
                 }
-                if (longList.minus.x.Count > 0 && m != 0 && longList.minus.x.Count != j)
+                if (longList.minus.x.Count > 0 && m != 0 && longList.minus.x[longList.minus.x.Count - 1] != j - 1)
                 {
-                    if (j < 2000)
+                    if (j < shortC)
                     {
                         shortList.minus.y.Add(shortList.minus.y.Last() + (m - shortList.minus.y.Last()) / (j - shortList.minus.x.Last()));
-                        shortList.minus.x.Add(shortList.minus.x.Count);
-                        for (int k = shortList.minus.x.Count; k < j; k++)
+                        shortList.minus.x.Add(shortList.minus.x.Last() + 1);
+                        for (int k = (int)shortList.minus.x.Last() + 1; k < j; k++)
                         {
-                            shortList.minus.y.Add(shortList.minus.y[shortList.minus.y.Count - 1] - shortList.minus.y[shortList.minus.y.Count - 2]);
+                            shortList.minus.y.Add(2 * shortList.minus.y[shortList.minus.y.Count - 1] - shortList.minus.y[shortList.minus.y.Count - 2]);
                             shortList.minus.x.Add(k);
                         }
                     }
 
                     longList.minus.y.Add(longList.minus.y.Last() + (m - longList.minus.y.Last()) / (j - longList.minus.x.Last()));
-                    longList.minus.x.Add(longList.minus.x.Count);
-                    mainChart.Series[ChartAxisYSeries[ChartAxisYNameRVMAM].Keys[0]].Points[i - (int)longList.minus.x.Last()].YValues[0] = longList.minus.y.Last();
-                    for (int k = longList.minus.x.Count; k < j; k++)
+                    longList.minus.x.Add(longList.minus.x.Last() + 1);
+                    //mainChart.Series[ChartAxisYSeries[ChartAxisYNameRVMAM].Keys[0]].Points[i - (int)longList.minus.x.Last()].YValues[0] = longList.minus.y.Last();
+                    for (int k = (int)longList.minus.x.Last() + 1; k < j; k++)
                     {
-                        longList.minus.y.Add(longList.minus.y[longList.minus.y.Count - 1] - longList.minus.y[longList.minus.y.Count - 2]);
+                        longList.minus.y.Add(2 * longList.minus.y[longList.minus.y.Count - 1] - longList.minus.y[longList.minus.y.Count - 2]);
                         longList.minus.x.Add(k);
-                        mainChart.Series[ChartAxisYSeries[ChartAxisYNameRVMAM].Keys[0]].Points[i - k].YValues[0] = longList.minus.y.Last();
+                        //mainChart.Series[ChartAxisYSeries[ChartAxisYNameRVMAM].Keys[0]].Points[i - k].YValues[0] = longList.minus.y.Last();
                     }
                 }
 
-                if (j < 2000)
+                if (j < shortC)
                 {
                     if (p != 0)
                     {
@@ -3879,10 +3888,12 @@ namespace BackTestingFinal
             if (!full)
                 return;
 
-            longFunc.plus = Fit.PolynomialFunc(longList.plus.x.ToArray(), longList.plus.y.ToArray(), 8);
-            longFunc.minus = Fit.PolynomialFunc(longList.minus.x.ToArray(), longList.minus.y.ToArray(), 8);
-            shortFunc.plus = Fit.PolynomialFunc(shortList.plus.x.ToArray(), shortList.plus.y.ToArray(), 20);
-            shortFunc.minus = Fit.PolynomialFunc(shortList.minus.x.ToArray(), shortList.minus.y.ToArray(), 20);
+            longFunc.plus = Fit.PolynomialFunc(longList.plus.x.ToArray(), longList.plus.y.ToArray(), longD);
+            longFunc.minus = Fit.PolynomialFunc(longList.minus.x.ToArray(), longList.minus.y.ToArray(), longD);
+            shortFunc.plus = Fit.PolynomialFunc(shortList.plus.x.ToArray(), shortList.plus.y.ToArray(), shortD);
+            shortFunc.minus = Fit.PolynomialFunc(shortList.minus.x.ToArray(), shortList.minus.y.ToArray(), shortD);
+
+
 
             for (int j = 0; j < mainChart.Series[0].Points.Count; j++)
             {
@@ -3892,11 +3903,11 @@ namespace BackTestingFinal
                 mainChart.Series[ChartAxisYSeries[ChartAxisYNameRVMAM].Keys[2]].Points[j].IsEmpty = true;
             }
 
-            for (int j = 0; j < 8000; j++)
+            for (int j = 0; j < longC; j++)
             {
                 var index = i - j;
 
-                if (j < 2000)
+                if (j < shortC)
                 {
                     mainChart.Series[ChartAxisYSeries[ChartAxisYNameRVMAP].Keys[1]].Points[index].IsEmpty = false;
                     mainChart.Series[ChartAxisYSeries[ChartAxisYNameRVMAM].Keys[1]].Points[index].IsEmpty = false;
@@ -3909,6 +3920,9 @@ namespace BackTestingFinal
                 mainChart.Series[ChartAxisYSeries[ChartAxisYNameRVMAP].Keys[2]].Points[index].YValues[0] = longFunc.plus(j);
                 mainChart.Series[ChartAxisYSeries[ChartAxisYNameRVMAM].Keys[2]].Points[index].YValues[0] = longFunc.minus(j);
             }
+
+            s.Stop();
+            form.Text += "    " + s.Elapsed.ToString();
         }
 
         public override void OneChartFindAndShow(BaseItemData itemData, int cursorIndex = default, List<TradeStick> list = null)
