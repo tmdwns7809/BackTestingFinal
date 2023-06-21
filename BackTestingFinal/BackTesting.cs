@@ -166,7 +166,7 @@ namespace BackTestingFinal
             toTextBox.Text = "2022-11-01 00:00:00"; //과거시뮬시작
             fromTextBox.Text = DateTime.MinValue.ToString(TimeFormat);
             toTextBox.Text = DateTime.MaxValue.ToString(TimeFormat);
-            toTextBox.Text = "2023-06-09 04:16:00";
+            //toTextBox.Text = "2023-06-09 04:16:00";
 
             //toTextBox.Text = "2023-02-09 05:00:00"; // 차트선생 매매
 
@@ -3783,6 +3783,9 @@ namespace BackTestingFinal
             form.Text = showingItemData.Code + "     H:" + list[i].Price[0] + "  L:" + list[i].Price[1] + "  O:" + list[i].Price[2] + "  C:" + list[i].Price[3] + "  Ms:" + list[i].Ms + "  Md:" + list[i].Md +
                 " S5:" + Math.Round(mainChart.Series[5].Points[i].YValues[0], 2) + " S6:" + Math.Round(mainChart.Series[6].Points[i].YValues[0], 2) +
                 " Amp:" + Math.Round((list[i].Price[0] / list[i].Price[1] - 1) * 100, 2);
+
+
+            return;
 
             ((List<double> x, List<double> y) plus, (List<double> x, List<double> y) minus) longList = ((new List<double>(), new List<double>()), (new List<double>(), new List<double>()));
             ((List<double> x, List<double> y) plus, (List<double> x, List<double> y) minus) shortList = ((new List<double>(), new List<double>()), (new List<double>(), new List<double>()));
