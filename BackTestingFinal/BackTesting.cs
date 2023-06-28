@@ -3785,24 +3785,33 @@ namespace BackTestingFinal
                 " Amp:" + Math.Round((list[i].Price[0] / list[i].Price[1] - 1) * 100, 2);
 
 
-            return;
-
             ((List<double> x, List<double> y) plus, (List<double> x, List<double> y) minus) longList = ((new List<double>(), new List<double>()), (new List<double>(), new List<double>()));
             ((List<double> x, List<double> y) plus, (List<double> x, List<double> y) minus) shortList = ((new List<double>(), new List<double>()), (new List<double>(), new List<double>()));
             (Func<double, double> plus, Func<double, double> minus) longFunc = default;
             (Func<double, double> plus, Func<double, double> minus) shortFunc = default;
 
+            ((List<double> x, List<double> y) plus, (List<double> x, List<double> y) minus) longList2 = ((new List<double>(), new List<double>()), (new List<double>(), new List<double>()));
+            ((List<double> x, List<double> y) plus, (List<double> x, List<double> y) minus) shortList2 = ((new List<double>(), new List<double>()), (new List<double>(), new List<double>()));
+            (Func<double, double> plus, Func<double, double> minus) longFunc2 = default;
+            (Func<double, double> plus, Func<double, double> minus) shortFunc2 = default;
+
             var longC = 500;
-            var longD = 1;
+            var longD = 2;
             var shortC = 50;
-            var shortD = 1;
+            var shortD = 2;
+
+            var longC2 = 90;
+            var longD2 = 2;
+            var shortC2 = 30;
+            var shortD2 = 2;
 
 
             var s = new Stopwatch();
             s.Start();
 
+            var longest = longC > longC2 ? longC : longC2;
             var full = true;
-            for (int j = 0; j < longC; j++)
+            for (int j = 0; j < longest; j++)
             {
                 var index = i - j;
                 if (index < 0)
@@ -3876,15 +3885,38 @@ namespace BackTestingFinal
                     }
                 }
 
-                if (p != 0)
+                if (j < longC)
                 {
-                    longList.plus.y.Add(p);
-                    longList.plus.x.Add(j);
+                    if (p != 0)
+                    {
+                        longList.plus.y.Add(p);
+                        longList.plus.x.Add(j);
+                    }
+                    if (m != 0)
+                    {
+                        longList.minus.y.Add(m);
+                        longList.minus.x.Add(j);
+                    }
                 }
-                if (m != 0)
+
+                var p2 = mainChart.Series[ChartAxisYSeries[ChartAxisYNameRVR2].Keys[0]].Points[index].YValues[0];
+                var p3 = mainChart.Series[ChartAxisYSeries[ChartAxisYNameRVR2].Keys[1]].Points[index].YValues[0];
+                if (j < shortC2)
                 {
-                    longList.minus.y.Add(m);
-                    longList.minus.x.Add(j);
+                    if (p2 != 0)
+                    {
+                        shortList2.plus.y.Add(p2);
+                        shortList2.plus.x.Add(j);
+                    }
+                }
+
+                if (j < longC2)
+                {
+                    if (p3 != 0)
+                    {
+                        longList2.plus.y.Add(p3);
+                        longList2.plus.x.Add(j);
+                    }
                 }
             }
 
@@ -3896,6 +3928,8 @@ namespace BackTestingFinal
             shortFunc.plus = Fit.PolynomialFunc(shortList.plus.x.ToArray(), shortList.plus.y.ToArray(), shortD);
             shortFunc.minus = Fit.PolynomialFunc(shortList.minus.x.ToArray(), shortList.minus.y.ToArray(), shortD);
 
+            longFunc2.plus = Fit.PolynomialFunc(longList2.plus.x.ToArray(), longList2.plus.y.ToArray(), longD2);
+            shortFunc2.plus = Fit.PolynomialFunc(shortList2.plus.x.ToArray(), shortList2.plus.y.ToArray(), shortD2);
 
 
             for (int j = 0; j < mainChart.Series[0].Points.Count; j++)
@@ -3904,9 +3938,12 @@ namespace BackTestingFinal
                 mainChart.Series[ChartAxisYSeries[ChartAxisYNameRVMAM].Keys[1]].Points[j].IsEmpty = true;
                 mainChart.Series[ChartAxisYSeries[ChartAxisYNameRVMAP].Keys[2]].Points[j].IsEmpty = true;
                 mainChart.Series[ChartAxisYSeries[ChartAxisYNameRVMAM].Keys[2]].Points[j].IsEmpty = true;
+
+                mainChart.Series[ChartAxisYSeries[ChartAxisYNameRVR2].Keys[2]].Points[j].IsEmpty = true;
+                mainChart.Series[ChartAxisYSeries[ChartAxisYNameRVR2].Keys[3]].Points[j].IsEmpty = true;
             }
 
-            for (int j = 0; j < longC; j++)
+            for (int j = 0; j < longest; j++)
             {
                 var index = i - j;
 
@@ -3918,10 +3955,25 @@ namespace BackTestingFinal
                     mainChart.Series[ChartAxisYSeries[ChartAxisYNameRVMAM].Keys[1]].Points[index].YValues[0] = shortFunc.minus(j);
                 }
 
-                mainChart.Series[ChartAxisYSeries[ChartAxisYNameRVMAP].Keys[2]].Points[index].IsEmpty = false;
-                mainChart.Series[ChartAxisYSeries[ChartAxisYNameRVMAM].Keys[2]].Points[index].IsEmpty = false;
-                mainChart.Series[ChartAxisYSeries[ChartAxisYNameRVMAP].Keys[2]].Points[index].YValues[0] = longFunc.plus(j);
-                mainChart.Series[ChartAxisYSeries[ChartAxisYNameRVMAM].Keys[2]].Points[index].YValues[0] = longFunc.minus(j);
+                if (j < longC)
+                {
+                    mainChart.Series[ChartAxisYSeries[ChartAxisYNameRVMAP].Keys[2]].Points[index].IsEmpty = false;
+                    mainChart.Series[ChartAxisYSeries[ChartAxisYNameRVMAM].Keys[2]].Points[index].IsEmpty = false;
+                    mainChart.Series[ChartAxisYSeries[ChartAxisYNameRVMAP].Keys[2]].Points[index].YValues[0] = longFunc.plus(j);
+                    mainChart.Series[ChartAxisYSeries[ChartAxisYNameRVMAM].Keys[2]].Points[index].YValues[0] = longFunc.minus(j);
+                }
+
+                if (j < shortC2)
+                {
+                    mainChart.Series[ChartAxisYSeries[ChartAxisYNameRVR2].Keys[2]].Points[index].IsEmpty = false;
+                    mainChart.Series[ChartAxisYSeries[ChartAxisYNameRVR2].Keys[2]].Points[index].YValues[0] = shortFunc2.plus(j);
+                }
+
+                if (j < longC2)
+                {
+                    mainChart.Series[ChartAxisYSeries[ChartAxisYNameRVR2].Keys[3]].Points[index].IsEmpty = false;
+                    mainChart.Series[ChartAxisYSeries[ChartAxisYNameRVR2].Keys[3]].Points[index].YValues[0] = longFunc2.plus(j);
+                }
             }
 
             s.Stop();
