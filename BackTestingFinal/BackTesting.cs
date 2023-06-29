@@ -166,6 +166,7 @@ namespace BackTestingFinal
             toTextBox.Text = "2022-11-01 00:00:00"; //과거시뮬시작
             fromTextBox.Text = DateTime.MinValue.ToString(TimeFormat);
             toTextBox.Text = DateTime.MaxValue.ToString(TimeFormat);
+            fromTextBox.Text = "2023-06-17 00:00:00";
             //toTextBox.Text = "2023-06-09 04:16:00";
 
             //toTextBox.Text = "2023-02-09 05:00:00"; // 차트선생 매매
@@ -969,15 +970,15 @@ namespace BackTestingFinal
             var tabPage = resultTabControl.TabPages[0];
             SetListView(metricResultListView, new (string, string, int)[]
                 {
-                    ("No.", "Number", 2),
-                    ("Date", "Date", 7),
-                    ("L", "isL", 2),
-                    ("C", "Count", 2),
-                    ("WR(%)", "WinRate", 3),
-                    ("PRA(%)", "ProfitRateAvg", 3),
-                    ("WPRA(%)", "WinProfitRateAvg", 3),
-                    ("LPRA(%)", "LoseProfitRateAvg", 3),
-                });
+                    ("No.", "Number", 30),
+                    ("Date", "Date", 150),
+                    ("L", "isL", 30),
+                    ("C", "Count", 30),
+                    ("WR(%)", "WinRate", 60),
+                    ("PRA(%)", "ProfitRateAvg", 60),
+                    ("WPRA(%)", "WinProfitRateAvg", 80),
+                    ("LPRA(%)", "LoseProfitRateAvg", 80),
+                }, isFillProportion: false);
             metricResultListView.Size = new Size(tabPage.Width - 12, tabPage.Height - 6);
             metricResultListView.Location = new Point(6, 6);
             metricResultListView.SelectionChanged += (sender, e) =>
@@ -994,16 +995,16 @@ namespace BackTestingFinal
             tabPage = resultTabControl.TabPages[1];
             SetListView(dayResultListView, new (string, string, int)[]
                 {
-                    ("No.", "NumberForClick", 2),
-                    ("Code", "Code", 4),
-                    ("EnterTime", "EnterTime", 6),
-                    ("ExitTime", "ExitTime", 6),
-                    ("Dura", "Duration", 4),
-                    ("Long", "LorS", 2),
-                    ("PR(%)", "ProfitRate", 3),
-                    ("LM", "EnterMarketLastMin", 3),
-                    ("LMs", "EnterMarketLastMins", 3)
-                });
+                    ("No.", "NumberForClick", 30),
+                    ("Code", "Code", 80),
+                    ("EnterTime", "EnterTime", 150),
+                    ("ExitTime", "ExitTime", 150),
+                    ("Dura", "Duration", 60),
+                    ("Long", "LorS", 60),
+                    ("PR(%)", "ProfitRate", 60),
+                    ("LM", "EnterMarketLastMin", 60),
+                    ("LMs", "EnterMarketLastMins", 60)
+                }, isFillProportion: false);
             dayResultListView.Size = new Size(tabPage.Width - 12, tabPage.Height - 6);
             dayResultListView.Location = new Point(6, 6);
             dayResultListView.SelectionChanged += (sender, e) =>
@@ -1024,14 +1025,14 @@ namespace BackTestingFinal
             tabPage = resultTabControl2.TabPages[0];
             SetListView(codeResultListView, new (string, string, int)[]
                 {
-                    ("No.", "NumberForSingle", 2),
-                    ("EnterTime", "EnterTime", 7),
-                    ("ExitTime", "ExitTime", 7),
-                    ("Long", "LorS", 2),
-                    ("PR(%)", "ProfitRate", 3),
-                    ("Dura", "Duration", 5),
-                    ("BefGap", "BeforeGap", 5)
-                });
+                    ("No.", "NumberForSingle", 30),
+                    ("EnterTime", "EnterTime", 150),
+                    ("ExitTime", "ExitTime", 150),
+                    ("Long", "LorS", 60),
+                    ("PR(%)", "ProfitRate", 60),
+                    ("Dura", "Duration", 60),
+                    ("BefGap", "BeforeGap", 60)
+                }, isFillProportion: false);
             codeResultListView.Size = new Size(tabPage.Width - 12, tabPage.Height - 6);
             codeResultListView.Location = new Point(6, 6);
             codeResultListView.SelectionChanged += (sender, e) => { action(codeResultListView); };
@@ -2737,9 +2738,9 @@ namespace BackTestingFinal
                 var list = LoadSticks(itemData, chartValues,
                     toPast ? from :
                         (chartValues != BaseChartTimeSet.OneMonth ?
-                            from.AddSeconds(-chartValues.seconds * (minSize + IndNeedDays - 1)) :
-                            from.AddMonths(-(minSize + IndNeedDays - 1))),
-                    minSize + IndNeedDays - 1, toPast);
+                            from.AddSeconds(-chartValues.seconds * (minSize + IndNeedDays + CompareNeedDays - 1)) :
+                            from.AddMonths(-(minSize + IndNeedDays + CompareNeedDays - 1))),
+                    minSize + IndNeedDays + CompareNeedDays - 1, toPast);
 
                 var startIndex = GetStartIndex(list, toPast ? 
                     (chartValues != BaseChartTimeSet.OneMonth ? from.AddSeconds(-chartValues.seconds * (minSize - 1)) : from.AddMonths(-(minSize - 1))) : 
@@ -3073,9 +3074,16 @@ namespace BackTestingFinal
                         {
                             if (from2 <= itemData.firstLastMin.lastMin)
                             {
-                                if (v.CLD.list.Count - (IndNeedDays + CompareNeedDays - 1) > 0 && !itemData.positionData[(int)Position.Long].Enter && !itemData.positionData[(int)Position.Short].Enter)
-                                    v.CLD.list.RemoveRange(0, v.CLD.list.Count - (IndNeedDays + CompareNeedDays - 1));
-                                v.CLD.list.AddRange(LoadSticks(itemData, v.CV, v.CLD.list[v.CLD.list.Count - 1].Time.AddSeconds(v.CV.seconds), minituesInADay * BaseChartTimeSet.OneMinute.seconds / v.CV.seconds * (j - BaseChartTimeSet.OneMinute.index + 1), false));
+                                v.CLD.list.AddRange(
+                                    LoadSticks(itemData, v.CV, v.CLD.list[v.CLD.list.Count - 1].Time.AddSeconds(v.CV.seconds)
+                                    , minituesInADay * BaseChartTimeSet.OneMinute.seconds / v.CV.seconds * (j - BaseChartTimeSet.OneMinute.index + 1), false));
+                                v.CLD.currentIndex = GetStartIndex(v.CLD.list, from2) - 1;
+
+                                if (v.CLD.currentIndex - (IndNeedDays + CompareNeedDays - 1) > 0
+                                    && !itemData.positionData[(int)Position.Long].Enter
+                                    && !itemData.positionData[(int)Position.Short].Enter)
+                                    v.CLD.list.RemoveRange(0, v.CLD.currentIndex - (IndNeedDays + CompareNeedDays - 1));
+
                                 v.CLD.currentIndex = GetStartIndex(v.CLD.list, from2) - 1;
 
                                 for (int k = v.CLD.currentIndex; k < v.CLD.list.Count; k++)
