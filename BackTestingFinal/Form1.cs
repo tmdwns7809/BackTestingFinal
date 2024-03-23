@@ -1,8 +1,7 @@
 ﻿using System.Windows.Forms;
 using TradingLibrary.Base;
 using TradingLibrary.Base.Enum;
-using TradingLibrary.Base.Settings;
-using TradingLibrary.Base.SticksDB;
+using TradingLibrary.Base.DB;
 using System;
 
 namespace BackTestingFinal
@@ -13,16 +12,9 @@ namespace BackTestingFinal
         {
             InitializeComponent();
 
-            Settings.Load(Settings.ProgramBackTesting);
-            var setting = Settings.settings[Settings.ProgramName];
+            DBManager.Manage(Settings.ProgramBackTesting);
 
-            if (setting.market[Settings.MarketsName] == Markets.KRX)
-                new JooSticksDB(this, setting.others[Settings.DoUpdate], setting.others[Settings.DoCheckError]);
-            else
-                new BinanceSticksDB(this, setting.others[Settings.DoUpdate], setting.others[Settings.DoCheckError],
-                    setting.market[Settings.MarketsName] == Markets.BinancenFuturesUSDT);
-
-            BackTesting.instance = new BackTesting(this, setting.market[Settings.MarketsName] == Markets.KRX);
+            BackTesting.instance = new BackTesting(this, Settings.values[Settings.ProgramName].market[Settings.MarketsName] == Markets.KRX);
         }
 
         private void Form1_Load(object sender, EventArgs e)

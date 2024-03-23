@@ -14,14 +14,15 @@ using System.Windows.Forms.DataVisualization.Charting;
 using TradingLibrary;
 using TradingLibrary.Base;
 using TradingLibrary.Base.Enum;
-using TradingLibrary.Base.Settings;
-using TradingLibrary.Base.SticksDB;
+using TradingLibrary.Base.DB;
+using TradingLibrary.Base.DB.Binance;
 using System.Runtime.InteropServices;
 using static System.Windows.Forms.AxHost;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement.Window;
 using System.Collections;
 using System.Reflection;
 using MathNet.Numerics;
+using TradingLibrary.Base.Values;
 
 namespace BackTestingFinal
 {
@@ -131,7 +132,7 @@ namespace BackTestingFinal
         bool AlertOn = MessageBox.Show("AlertOn?", "caption", MessageBoxButtons.YesNo) == DialogResult.Yes;
         int threadN;
 
-        static string STResultDBPath = PathString.Base + @"BackTestingFinal\전략결과\";
+        static string STResultDBPath = TradingLibrary.Base.Values.Path.DB_BASE + @"BackTestingFinal\전략결과\";
         SQLiteConnection STResultDB = new SQLiteConnection(@"Data Source=" + STResultDBPath + "strategy_result.db");
 
         DateTime startDone = DateTime.MaxValue;
@@ -145,9 +146,9 @@ namespace BackTestingFinal
 
         public BackTesting(Form form, bool isJoo) : base(form, isJoo, 8.5m)
         {
-            sticksDBpath = BaseSticksDB.path;
-            sticksDBbaseName = BaseSticksDB.BaseName;
-            BinanceSticksDB.SetDB();
+            sticksDBpath = DBManager.path;
+            sticksDBbaseName = DBManager.BaseName;
+            TradingLibrary.Base.DB.Binance.FuturesUSD.SetDB();
 
             var start = sticksDBpath.LastIndexOf('\\'); 
             var image_folder = sticksDBpath.Substring(0, start) + "image";
@@ -164,8 +165,8 @@ namespace BackTestingFinal
             toTextBox.Text = "2019-09-22 08:00:00"; //과거시뮬시작
             fromTextBox.Text = "2022-11-01 00:00:00"; //과거시뮬시작
             toTextBox.Text = "2022-11-01 00:00:00"; //과거시뮬시작
-            fromTextBox.Text = DateTime.MinValue.ToString(TimeFormat);
-            toTextBox.Text = DateTime.MaxValue.ToString(TimeFormat);
+            fromTextBox.Text = DateTime.MinValue.ToString(TradingLibrary.Base.Values.Formats.TIME);
+            toTextBox.Text = DateTime.MaxValue.ToString(TradingLibrary.Base.Values.Formats.TIME);
             fromTextBox.Text = "2023-06-17 00:00:00";
             //toTextBox.Text = "2023-06-09 04:16:00";
 
@@ -840,7 +841,7 @@ namespace BackTestingFinal
                     var CRType = (CR)Enum.Parse(typeof(CR), CRComboBox.Text);
                     Task.Run(new Action(() =>
                     {
-                        BinanceSticksDB.SetDB();
+                        FuturesUSD.SetDB();
 
                         foreach (BackItemData itemData in itemDataDic.Values)
                             itemData.firstLastMin = (GetFirstOrLastTime(true, itemData, BaseChartTimeSet.OneMinute).time, GetFirstOrLastTime(false, itemData, BaseChartTimeSet.OneMinute).time);
@@ -848,12 +849,12 @@ namespace BackTestingFinal
                         var first = GetFirstOrLastTime(true, default, BaseChartTimeSet.OneMinute).time;
                         if (from < first)
                             from = first;
-                        form.BeginInvoke(new Action(() => { fromTextBox.Text = from.ToString(TimeFormat); }));
+                        form.BeginInvoke(new Action(() => { fromTextBox.Text = from.ToString(Formats.TIME); }));
 
                         var last = GetFirstOrLastTime(false, default, BaseChartTimeSet.OneMinute).time;
                         if (to > last)
                             to = last;
-                        form.BeginInvoke(new Action(() => { toTextBox.Text = to.ToString(TimeFormat); }));
+                        form.BeginInvoke(new Action(() => { toTextBox.Text = to.ToString(Formats.TIME); }));
 
                         if (from > to)
                         {
@@ -1055,7 +1056,7 @@ namespace BackTestingFinal
 
         void LoadCodeListAndMetric()
         {
-            var conn = BinanceSticksDB.DBDic[BaseChartTimeSet.OneMinute];
+            var conn = FuturesUSD.DBDic[BaseChartTimeSet.OneMinute];
 
             var reader = new SQLiteCommand("Select name From sqlite_master where type='table'", conn).ExecuteReader();
 
@@ -1191,7 +1192,7 @@ namespace BackTestingFinal
                 sw.Stop();
                 HideLoading();
                 if (AlertOn)
-                    AlertStart("done : " + sw.Elapsed.ToString(TimeSpanFormat), Settings.settings[Settings.ProgramName].others[Settings.AlertSoundName]);
+                    AlertStart("done : " + sw.Elapsed.ToString(Formats.TIME_SPAN), Settings.values[Settings.ProgramName].others[Settings.AlertSoundName]);
 
                 startDone = start;
                 endDone = end;
@@ -1201,7 +1202,7 @@ namespace BackTestingFinal
 
             form.BeginInvoke(new Action(() =>
             {
-                form.Text += "  " + sttext + " done : " + sw.Elapsed.ToString(TimeSpanFormat);
+                form.Text += "  " + sttext + " done : " + sw.Elapsed.ToString(Formats.TIME_SPAN);
                 CalculateMetric(start, end, isAllLongShort);
                 if (!Charts[2].Visible)
                     Buttons[2].PerformClick();
@@ -1235,7 +1236,7 @@ namespace BackTestingFinal
             #endregion
 
             foreach (var tc in TimeCount)
-                TimeCountChart.Series[0].Points.AddXY(tc.Key.ToString(TimeSpanFormatdX), tc.Value);
+                TimeCountChart.Series[0].Points.AddXY(tc.Key.ToString(Formats.TIME_SPAN_DX), tc.Value);
 
             foreach (BackItemData itemData in itemDataDic.Values)
                 itemData.Reset();
@@ -1342,7 +1343,7 @@ namespace BackTestingFinal
                                     MetricVars[j].AverageProfitWinRateSum += avgPR;
                                 }
 
-                                var xLabel = resultData.EnterTime.ToString(TimeFormat);
+                                var xLabel = resultData.EnterTime.ToString(Formats.TIME);
                                 Charts2[j].Series[0].Points.AddXY(xLabel, Math.Round((MetricVars[j].CR - 1) * 100, 1));
                                 Charts2[j].Series[1].Points.AddXY(xLabel, Math.Round(avgPR, 2));
                                 Charts2[j].Series[2].Points.AddXY(xLabel, resultData.Count);
@@ -1425,7 +1426,7 @@ namespace BackTestingFinal
                         //    metricResultListView.AddObject(simulDaysDetail[j].Values[i]);
                         //}
 
-                        var axisLabel = simulDaysDetail[j].Keys[i].ToString(TimeFormat);
+                        var axisLabel = simulDaysDetail[j].Keys[i].ToString(Formats.TIME);
                         Charts[3].Series[j].Points.AddXY(axisLabel, Math.Round((MetricVars[j].CR - 1) * 100, 0));
                         Charts[3].Series[j + 6].Points.AddXY(axisLabel, simulDaysDetail[j].Values[i].ProfitRateAvg);
                         Charts[3].Series[j + 8].Points.AddXY(axisLabel, simulDaysDetail[j].Values[i].Count);
@@ -1505,7 +1506,7 @@ namespace BackTestingFinal
                                 metricResultListView.AddObject(simulDays[j].Values[di]);
                             }
 
-                            axisLabel = simulDays[j].Keys[di].ToString(DateTimeFormat);
+                            axisLabel = simulDays[j].Keys[di].ToString(Formats.DATE_TIME);
                             Charts[2].Series[j].Points.AddXY(axisLabel, Math.Round((MetricVars[j].CR - 1) * 100, 0));
                             Charts[2].Series[j + 6].Points.AddXY(axisLabel, simulDays[j].Values[di].ProfitRateAvg);
                             Charts[2].Series[j + 8].Points.AddXY(axisLabel, simulDays[j].Values[di].Count);
@@ -1817,21 +1818,21 @@ namespace BackTestingFinal
 
                     MDD = Math.Round((MetricVars[i].MDD.LowestCumulativeReturn / MetricVars[i].MDD.HighestCumulativeReturn - 1) * 100, 0) + "%";
                     MDDDays = MetricVars[i].MDD.LastCumulativeReturnIndex - MetricVars[i].MDD.HighestCumulativeReturnIndex + " days";
-                    MDDStart = simulDays[i].Keys[MetricVars[i].MDD.HighestCumulativeReturnIndex].ToString(DateTimeFormat);
-                    MDDLow = simulDays[i].Keys[MetricVars[i].MDD.LowestCumulativeReturnIndex].ToString(DateTimeFormat);
-                    MDDEnd = simulDays[i].Keys[MetricVars[i].MDD.LastCumulativeReturnIndex].ToString(DateTimeFormat);
+                    MDDStart = simulDays[i].Keys[MetricVars[i].MDD.HighestCumulativeReturnIndex].ToString(Formats.DATE_TIME);
+                    MDDLow = simulDays[i].Keys[MetricVars[i].MDD.LowestCumulativeReturnIndex].ToString(Formats.DATE_TIME);
+                    MDDEnd = simulDays[i].Keys[MetricVars[i].MDD.LastCumulativeReturnIndex].ToString(Formats.DATE_TIME);
                     LDD = Math.Round((MetricVars[i].LDD.LowestCumulativeReturn / MetricVars[i].LDD.HighestCumulativeReturn - 1) * 100, 0) + "%";
                     LDDDays = MetricVars[i].LDD.LastCumulativeReturnIndex - MetricVars[i].LDD.HighestCumulativeReturnIndex + " days";
-                    LDDStart = simulDays[i].Keys[MetricVars[i].LDD.HighestCumulativeReturnIndex].ToString(DateTimeFormat);
-                    LDDLow = simulDays[i].Keys[MetricVars[i].LDD.LowestCumulativeReturnIndex].ToString(DateTimeFormat);
-                    LDDEnd = simulDays[i].Keys[MetricVars[i].LDD.LastCumulativeReturnIndex].ToString(DateTimeFormat);
+                    LDDStart = simulDays[i].Keys[MetricVars[i].LDD.HighestCumulativeReturnIndex].ToString(Formats.DATE_TIME);
+                    LDDLow = simulDays[i].Keys[MetricVars[i].LDD.LowestCumulativeReturnIndex].ToString(Formats.DATE_TIME);
+                    LDDEnd = simulDays[i].Keys[MetricVars[i].LDD.LastCumulativeReturnIndex].ToString(Formats.DATE_TIME);
 
                     DayMaxHas = MetricVars[i].highestHasItemsAtADay.ToString("#,0");
-                    DayMaxHasDay = MetricVars[i].highestHasItemsDate.ToString(DateTimeFormat);
+                    DayMaxHasDay = MetricVars[i].highestHasItemsDate.ToString(Formats.DATE_TIME);
 
-                    LongestHasTime = MetricVars[i].longestHasTime.ToString(TimeSpanFormat);
+                    LongestHasTime = MetricVars[i].longestHasTime.ToString(Formats.TIME_SPAN);
                     LongestHasTimeCode = MetricVars[i].longestHasCode;
-                    LongestHasTimeStart = MetricVars[i].longestHasTimeStart.ToString(TimeFormat);
+                    LongestHasTimeStart = MetricVars[i].longestHasTimeStart.ToString(Formats.TIME);
 
                     MinKelly = Math.Round(MetricVars[i].minKelly, 2) + "(" + Math.Round(MetricVars[i].lowestKelly, 2) + ")";
                     MaxKelly = Math.Round(MetricVars[i].maxKelly, 2) + "(" + Math.Round(MetricVars[i].highestKelly, 2) + ")";
@@ -1958,8 +1959,8 @@ namespace BackTestingFinal
                             columnDic[strategyName] = "'" + ST.ToString() + "'";
                             columnDic[CRName] = "'" + CRType.ToString() + "'";
                             columnDic[isLongName] = "'" + Enum.GetName(typeof(Position), i2).ToString() + "'";
-                            columnDic[start_dayName] = "'" + start.ToString(DateTimeFormat) + "'";
-                            columnDic[end_dayName] = "'" + end.ToString(DateTimeFormat) + "'";
+                            columnDic[start_dayName] = "'" + start.ToString(Formats.DATE_TIME) + "'";
+                            columnDic[end_dayName] = "'" + end.ToString(Formats.DATE_TIME) + "'";
                             columnDic[daysName] = "'" + Math.Round(end.Subtract(start).TotalDays, 0) + " days'";
                             columnDic[Cumulative_ReturnName] = "'" + CR + "'";
                             columnDic[Win_RateName] = "'" + SingleWinRate + "'";
@@ -1989,9 +1990,9 @@ namespace BackTestingFinal
                             columnDic[Min_KellyName] = "'" + MinKelly + "'";
                             columnDic[Max_KellyName] = "'" + MaxKelly + "'";
                             columnDic[ImageName] = "@image";
-                            columnDic[test_timeName] = "'" + DateTime.Now.ToString(TimeFormat) + "'";
+                            columnDic[test_timeName] = "'" + DateTime.Now.ToString(Formats.TIME) + "'";
                             columnDic[threadName] = "'" + threadN.ToString() + "'";
-                            columnDic[test_spend_timeName] = "'" + sw.Elapsed.ToString(TimeSpanFormat) + "'";
+                            columnDic[test_spend_timeName] = "'" + sw.Elapsed.ToString(Formats.TIME_SPAN) + "'";
 
                         ////Total Screen Capture
                         var image = new Bitmap(Screen.PrimaryScreen.Bounds.Width,
@@ -2237,7 +2238,7 @@ namespace BackTestingFinal
                     Thread.Sleep(3000);
 
                     //form.BeginInvoke(new Action(() => {
-                    //    fromTextBox.Text = DateTime.MinValue.ToString(DateTimeFormat);
+                    //    fromTextBox.Text = DateTime.MinValue.ToString(Formats.DATE_TIME);
                     //    toTextBox.Text = "2021-04-29";
                     //    runShortButton.PerformClick(); 
                     //}));
@@ -2393,7 +2394,7 @@ namespace BackTestingFinal
 
                 var from = GetStandardDate(!toPast, oneChart);
                 var firstFrom = from;
-                AddOrChangeLoadingText("Finding...(" + from.ToString(TimeFormat) + ")", true);
+                AddOrChangeLoadingText("Finding...(" + from.ToString(Formats.TIME) + ")", true);
 
                 var chartValues = oneChart ? mainChart.Tag as ChartValues : BaseChartTimeSet.OneMinute;
 
@@ -2410,7 +2411,7 @@ namespace BackTestingFinal
                     && (toPast ? from >= limitTime : from <= limitTime)
                     && (count % continueAskingCount != 0 || MessageBox.Show("Keep searching?", (count * minituesInADay).ToString(), MessageBoxButtons.YesNo) == DialogResult.Yes))
                 {
-                    AddOrChangeLoadingText("Finding...(" + from.ToString(TimeFormat) + ")   " + sw.Elapsed.ToString(TimeSpanFormat), false);
+                    AddOrChangeLoadingText("Finding...(" + from.ToString(Formats.TIME) + ")   " + sw.Elapsed.ToString(Formats.TIME_SPAN), false);
 
                     var size = from == firstFrom ? firstLoadSizeForSearch : minituesInADay;
                     var loadNew = oneChart || from == firstFrom;
@@ -2490,13 +2491,13 @@ namespace BackTestingFinal
 
                 sw.Stop();
                 HideLoading();
-                AlertStart("done : " + sw.Elapsed.ToString(TimeSpanFormat), Settings.settings[Settings.ProgramName].others[Settings.AlertSoundName]);
+                AlertStart("done : " + sw.Elapsed.ToString(Formats.TIME_SPAN), Settings.values[Settings.ProgramName].others[Settings.AlertSoundName]);
             }));
         }
 
         public override void SetChartNowOrLoad(ChartValues chartValues, int position = int.MinValue, bool loadNew = false)
         {
-            if (showingItemData != default && !BinanceSticksDB.DBDic.ContainsKey(chartValues))
+            if (showingItemData != default && !FuturesUSD.DBDic.ContainsKey(chartValues))
                 return;
 
             mainChart.Visible = true;
@@ -2857,7 +2858,7 @@ namespace BackTestingFinal
                                     EnterTime = positionData.EnterTime,
                                     ExitTime = m.CLD.lastStick.Time,
                                     ProfitRate = Math.Round((profitRow - 1) * 100, 2),
-                                    Duration = m.CLD.lastStick.Time.Subtract(positionData.EnterTime).ToString(TimeSpanFormat),
+                                    Duration = m.CLD.lastStick.Time.Subtract(positionData.EnterTime).ToString(Formats.TIME_SPAN),
                                     LorS = (Position)j
                                 };
 
@@ -2898,7 +2899,7 @@ namespace BackTestingFinal
                                     EnterTime = positionData2.EnterTime,
                                     ExitTime = m.CLD.lastStick.Time,
                                     ProfitRate = Math.Round((profitRow - 1) * 100, 2),
-                                    Duration = m.CLD.lastStick.Time.Subtract(positionData2.EnterTime).ToString(TimeSpanFormat),
+                                    Duration = m.CLD.lastStick.Time.Subtract(positionData2.EnterTime).ToString(Formats.TIME_SPAN),
                                     LorS = (Position)j
                                 };
 
@@ -3104,14 +3105,14 @@ namespace BackTestingFinal
                                 ShowError(form);
 
                             if (!BackTradeStick.isEqual(v.CLD.lastStick as BackTradeStick, v.CLD.list[v.CLD.currentIndex] as BackTradeStick)
-                                && (itemData.Code != "BTCUSDT" || v.CLD.lastStick.Time.ToString(DateTimeFormat) != "2019-09-24")
-                                && (itemData.Code != "ETHUSDT" || v.CLD.lastStick.Time.ToString(DateTimeFormat) != "2019-12-11")
-                                && (itemData.Code != "XRPUSDT" || v.CLD.lastStick.Time.ToString(DateTimeFormat) != "2020-01-16")
-                                && (itemData.Code != "XRPUSDT" || v.CLD.lastStick.Time.ToString(DateTimeFormat) != "2020-01-17")
-                                && (itemData.Code != "EOSUSDT" || v.CLD.lastStick.Time.ToString(DateTimeFormat) != "2020-01-19")
-                                && (itemData.Code != "PEOPLEUSDT" || v.CLD.lastStick.Time.ToString(DateTimeFormat) != "2022-04-18")
-                                && (v.CLD.lastStick.Time.ToString(DateTimeFormat) != "2021-01-12")
-                                && (v.CLD.lastStick.Time.ToString(DateTimeFormat) != "2021-05-15"))
+                                && (itemData.Code != "BTCUSDT" || v.CLD.lastStick.Time.ToString(Formats.DATE_TIME) != "2019-09-24")
+                                && (itemData.Code != "ETHUSDT" || v.CLD.lastStick.Time.ToString(Formats.DATE_TIME) != "2019-12-11")
+                                && (itemData.Code != "XRPUSDT" || v.CLD.lastStick.Time.ToString(Formats.DATE_TIME) != "2020-01-16")
+                                && (itemData.Code != "XRPUSDT" || v.CLD.lastStick.Time.ToString(Formats.DATE_TIME) != "2020-01-17")
+                                && (itemData.Code != "EOSUSDT" || v.CLD.lastStick.Time.ToString(Formats.DATE_TIME) != "2020-01-19")
+                                && (itemData.Code != "PEOPLEUSDT" || v.CLD.lastStick.Time.ToString(Formats.DATE_TIME) != "2022-04-18")
+                                && (v.CLD.lastStick.Time.ToString(Formats.DATE_TIME) != "2021-01-12")
+                                && (v.CLD.lastStick.Time.ToString(Formats.DATE_TIME) != "2021-05-15"))
                             {
                                 ShowError(form);
                                 BackTradeStick.isEqual(v.CLD.lastStick as BackTradeStick, v.CLD.list[v.CLD.currentIndex] as BackTradeStick);
@@ -3188,7 +3189,7 @@ namespace BackTestingFinal
             var from = tst.Date;
             var size = (int)end.Date.AddDays(1).Subtract(from).TotalSeconds / BaseChartTimeSet.OneMinute.seconds;
 
-            AddOrChangeLoadingText("Simulating ST" + ST + " ...(" + from.ToString(DateTimeFormat) + ")", true);
+            AddOrChangeLoadingText("Simulating ST" + ST + " ...(" + from.ToString(Formats.DATE_TIME) + ")", true);
 
             foreach (BackItemData itemData in itemDataDic.Values)
                 ResetBeforeRun(itemData, from);
@@ -3221,8 +3222,8 @@ namespace BackTestingFinal
                                 EnterTime = positionData.EnterTime,
                                 ExitTime = m.CLD.lastStick.Time,
                                 ProfitRate = Math.Round((profitRow - 1) * 100, 2),
-                                Duration = m.CLD.lastStick.Time.Subtract(positionData.EnterTime).ToString(TimeSpanFormat),
-                                BeforeGap = positionData.EnterTime.Subtract(itemData.BeforeExitTime).ToString(TimeSpanFormat),
+                                Duration = m.CLD.lastStick.Time.Subtract(positionData.EnterTime).ToString(Formats.TIME_SPAN),
+                                BeforeGap = positionData.EnterTime.Subtract(itemData.BeforeExitTime).ToString(Formats.TIME_SPAN),
                                 LorS = (Position)j,
                                 EnterMarketLastMin = positionData.EnterMarketLastMin,
                                 EnterMarketLastMins = positionData.EnterMarketLastMins
@@ -3279,7 +3280,7 @@ namespace BackTestingFinal
                                         PutResultDataToSimulDays(resultData, simulDays[j], ResultDatasType.Normal);
                                         PutResultDataToSimulDays(resultData, simulDaysDetail[j], ResultDatasType.Normal, true);
 
-                                        var BeforeGap = TimeSpan.ParseExact(resultData.BeforeGap, TimeSpanFormat, null);
+                                        var BeforeGap = TimeSpan.ParseExact(resultData.BeforeGap, Formats.TIME_SPAN, null);
                                         if (BeforeGap < itemData.ShortestBeforeGap)
                                         {
                                             itemData.ShortestBeforeGap = BeforeGap;
@@ -3330,8 +3331,8 @@ namespace BackTestingFinal
                                 EnterTime = positionData2.EnterTime,
                                 ExitTime = m.CLD.lastStick.Time,
                                 ProfitRate = Math.Round((profitRow - 1) * 100, 2),
-                                Duration = m.CLD.lastStick.Time.Subtract(positionData2.EnterTime).ToString(TimeSpanFormat),
-                                BeforeGap = positionData2.EnterTime.Subtract(itemData.BeforeExitTime).ToString(TimeSpanFormat),
+                                Duration = m.CLD.lastStick.Time.Subtract(positionData2.EnterTime).ToString(Formats.TIME_SPAN),
+                                BeforeGap = positionData2.EnterTime.Subtract(itemData.BeforeExitTime).ToString(Formats.TIME_SPAN),
                                 LorS = (Position)j
                             };
 
@@ -3352,7 +3353,7 @@ namespace BackTestingFinal
                             PutResultDataToSimulDays(resultData, simulDays[j], ResultDatasType.Normal);
                             PutResultDataToSimulDays(resultData, simulDaysDetail[j], ResultDatasType.Normal, true);
 
-                            var BeforeGap = TimeSpan.ParseExact(resultData.BeforeGap, TimeSpanFormat, null);
+                            var BeforeGap = TimeSpan.ParseExact(resultData.BeforeGap, Formats.TIME_SPAN, null);
                             if (BeforeGap < itemData.ShortestBeforeGap)
                             {
                                 itemData.ShortestBeforeGap = BeforeGap;
@@ -3401,7 +3402,7 @@ namespace BackTestingFinal
                         openDaysPerYear.Add(year, 0);
                     openDaysPerYear[year]++;
 
-                    AddOrChangeLoadingText("Simulating ST" + ST + " ...(" + from2.ToString(DateTimeFormat) + ")   " + sw.Elapsed.ToString(TimeSpanFormat), false);
+                    AddOrChangeLoadingText("Simulating ST" + ST + " ...(" + from2.ToString(Formats.DATE_TIME) + ")   " + sw.Elapsed.ToString(Formats.TIME_SPAN), false);
                 }
 
                 var detailStartTime = GetDetailStartTime(from2);
@@ -3557,7 +3558,7 @@ namespace BackTestingFinal
             if (size == default)
                 size = baseLoadSticksSize;
 
-            var conn = BinanceSticksDB.DBDic[chartValues];
+            var conn = FuturesUSD.DBDic[chartValues];
 
             var to = GetFirstOrLastTime(false, itemData, chartValues).time;
             var start = GetFirstOrLastTime(true, itemData, chartValues).time;
@@ -3588,12 +3589,12 @@ namespace BackTestingFinal
             try
             {
                 var reader = new SQLiteCommand("Select *, rowid From '" + itemData.Code + "' where " +
-                                "(time>='" + from.ToString(DBTimeFormat) + "') and (time<='" + to.ToString(DBTimeFormat) + "') " +
+                                "(time>='" + from.ToString(Formats.DB_TIME) + "') and (time<='" + to.ToString(Formats.DB_TIME) + "') " +
                                 "order by rowid " + (toPast ? "desc" : "") + " limit " + size, conn).ExecuteReader();
                 //var reader = new SQLiteCommand("Select *, rowid From (Select *, rowid From '" + itemData.Code + "' where " +
-                //                "(time" + comp1 + "='" + from.ToString(DBTimeFormat) + "') " +
+                //                "(time" + comp1 + "='" + from.ToString(Formats.DB_TIME) + "') " +
                 //                "order by rowid " + (toPast ? "desc" : "") + " limit " + size + ") where " +
-                //                "(time" + comp2 + "'" + to.ToString(DBTimeFormat) + "') " +
+                //                "(time" + comp2 + "'" + to.ToString(Formats.DB_TIME) + "') " +
                 //                "order by rowid", conn).ExecuteReader();
                 //if (!toPast)
                 {   //속도테스트
@@ -3654,8 +3655,8 @@ namespace BackTestingFinal
         {
             return new BackTradeStick()
             {
-                //Time = DateTime.ParseExact(reader["date"].ToString() + reader["time"].ToString(), DBTimeFormat, null),
-                Time = DateTime.ParseExact(reader["time"].ToString(), DBTimeFormat, null),
+                //Time = DateTime.ParseExact(reader["date"].ToString() + reader["time"].ToString(), Formats.DB_TIME, null),
+                Time = DateTime.ParseExact(reader["time"].ToString(), Formats.DB_TIME, null),
                 Price = new decimal[]
                         {
                                 decimal.Parse(reader["high"].ToString()),
@@ -3687,7 +3688,7 @@ namespace BackTestingFinal
             if (chartValues == default)
                 chartValues = mainChart.Tag as ChartValues;
 
-            var conn = BinanceSticksDB.DBDic[chartValues];
+            var conn = FuturesUSD.DBDic[chartValues];
 
             var time = first ? DateTime.MaxValue : DateTime.MinValue;
             if (!DateTime.TryParse(toTextBox.Text, out var end) || !DateTime.TryParse(fromTextBox.Text, out var start))
@@ -3703,8 +3704,8 @@ namespace BackTestingFinal
                 foreach (BackItemData itemData2 in itemDataDic.Values)
                 {
                     var reader = new SQLiteCommand("Select *, rowid From '" + itemData2.Code + "'" +
-                        (first ? "where (time>='" + start.ToString(DBTimeFormat) + "') and (time<'" + startl.ToString(DBTimeFormat) + "') "
-                        : "where (time<='" + end.ToString(DBTimeFormat) + "') and (time>'" + endl.ToString(DBTimeFormat) + "') ") +
+                        (first ? "where (time>='" + start.ToString(Formats.DB_TIME) + "') and (time<'" + startl.ToString(Formats.DB_TIME) + "') "
+                        : "where (time<='" + end.ToString(Formats.DB_TIME) + "') and (time>'" + endl.ToString(Formats.DB_TIME) + "') ") +
                         " order by rowid " + (first ? "" : "desc") + " limit 1", conn).ExecuteReader();
                     if (!reader.Read())
                     {
@@ -3724,8 +3725,8 @@ namespace BackTestingFinal
             else
             {
                 var reader = new SQLiteCommand("Select *, rowid From '" + itemData.Code + "'" +
-                    (first ? "where (time>='" + start.ToString(DBTimeFormat) + "') and (time<'" + startl.ToString(DBTimeFormat) + "') "
-                    : "where (time<='" + end.ToString(DBTimeFormat) + "') and (time>'" + endl.ToString(DBTimeFormat) + "') ") +
+                    (first ? "where (time>='" + start.ToString(Formats.DB_TIME) + "') and (time<'" + startl.ToString(Formats.DB_TIME) + "') "
+                    : "where (time<='" + end.ToString(Formats.DB_TIME) + "') and (time>'" + endl.ToString(Formats.DB_TIME) + "') ") +
                     " order by rowid " + (first ? "" : "desc") + " limit 1", conn).ExecuteReader();
                 if (!reader.Read())
                 {
@@ -3746,14 +3747,14 @@ namespace BackTestingFinal
         {
             switch (e.KeyCode)
             {
-                case Keys.Right:
-                case Keys.Left:
+                case System.Windows.Forms.Keys.Right:
+                case System.Windows.Forms.Keys.Left:
                     if (!DateTime.TryParse(toTextBox.Text, out DateTime dt))
                         ShowError(form);
 
                     var vc = mainChart.Tag as ChartValues;
 
-                    toTextBox.Text = dt.AddSeconds((e.KeyCode == Keys.Right ? 1 : -1) * vc.seconds).ToString(TimeFormat);
+                    toTextBox.Text = dt.AddSeconds((e.KeyCode == System.Windows.Forms.Keys.Right ? 1 : -1) * vc.seconds).ToString(Formats.TIME);
 
                     var priceArea = mainChart.ChartAreas[ChartAreaNamePrice];
                     var ScaleYMinimum = priceArea.AxisY.ScaleView.ViewMinimum;
@@ -3761,7 +3762,7 @@ namespace BackTestingFinal
                     var YMinimum = priceArea.AxisY.Minimum;
                     var YMaximum = priceArea.AxisY.Maximum;
 
-                    SetChartNowOrLoad(vc, loadNew: e.KeyCode == Keys.Left);
+                    SetChartNowOrLoad(vc, loadNew: e.KeyCode == System.Windows.Forms.Keys.Left);
 
                     var change = Math.Abs(priceArea.AxisY.Maximum - YMaximum) > Math.Abs(priceArea.AxisY.Minimum - YMinimum) ?
                         priceArea.AxisY.Maximum - YMaximum : priceArea.AxisY.Minimum - YMinimum;
