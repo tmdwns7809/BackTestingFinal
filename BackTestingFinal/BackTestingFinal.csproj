@@ -137,8 +137,10 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="BackItemData.cs" />
+    <Compile Include="FundingRateBackTesting.cs" />
     <Compile Include="BackTesting.cs" />
     <Compile Include="BackTradeStick.cs" />
+    <Compile Include="CandleBackTesting.cs" />
     <Compile Include="CR.cs" />
     <Compile Include="DayStick.cs" />
     <Compile Include="DrawDownData.cs" />

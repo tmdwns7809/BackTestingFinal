@@ -12,7 +12,7 @@ namespace BackTestingFinal
         {
             InitializeComponent();
 
-            BackTesting.instance = new BackTesting(this, Settings.values[Settings.ProgramName].market[Settings.MarketsName] == Markets.KRX);
+            BackTesting.instance = new BackTesting(this, Settings.ProgramBackTesting, 8.5m);
         }
     }
 }
