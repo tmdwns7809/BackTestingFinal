@@ -168,7 +168,7 @@ namespace BackTestingFinal
             toTextBox.Text = "2022-11-01 00:00:00"; //과거시뮬시작
             fromTextBox.Text = DateTime.MinValue.ToString(Formats.TIME);
             toTextBox.Text = DateTime.MaxValue.ToString(Formats.TIME);
-            fromTextBox.Text = "2023-06-17 00:00:00";
+            //fromTextBox.Text = "2023-06-17 00:00:00";
             //toTextBox.Text = "2023-06-09 04:16:00";
 
             //toTextBox.Text = "2023-02-09 05:00:00"; // 차트선생 매매
@@ -2613,7 +2613,8 @@ namespace BackTestingFinal
                 cursorTimeTextBox.Text = "";
 
             //OneChartFindAndShow(showingItemData);
-            RecalOBVandSignandUpdateChart();
+            //RecalOBVandSignandUpdateChart();
+            RecalROBVandSignandUpdateChart();
 
             RecalculateChart(mainChart);
         }

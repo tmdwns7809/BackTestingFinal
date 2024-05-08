@@ -223,8 +223,9 @@ namespace BackTestingFinal
         {
             var conn = FuturesCoinFundingRate.DB;
 
-            var start = DateTime.Parse("2022-11-01 00:00:00");
-            var end = DateTime.Parse("2022-11-01 00:00:00");
+            var start = DateTime.Parse("2000-01-01 00:00:00");
+            //var start = DateTime.Parse("2024-01-01 00:00:00");
+            var end = DateTime.Parse("2100-11-01 00:00:00");
 
             var list = new List<TradeStick>();
             try
