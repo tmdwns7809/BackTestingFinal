@@ -2533,7 +2533,9 @@ namespace BackTestingFinal
 
             base.SetChartNowOrLoad(chartValues);
         }
-        void ShowChart(BackItemData itemData, (DateTime time, int position, bool on) cursor, bool loaded = false, ChartValues chartValues = default)
+        void ShowChart(
+            BackItemData itemData, (DateTime time, int position, bool on) cursor
+            , bool loaded = false, ChartValues chartValues = default)
         {
             if (chartValues == default)
                 chartValues = mainChart.Tag as ChartValues;
@@ -2617,6 +2619,8 @@ namespace BackTestingFinal
             RecalROBVandSignandUpdateChart();
 
             RecalculateChart(mainChart);
+
+            SetFrontZoomRatio();
         }
 
         void AddNewChartPoint(Chart chart, BackItemData itemData, int index, bool insert)
@@ -3795,6 +3799,9 @@ namespace BackTestingFinal
                 " S5:" + Math.Round(mainChart.Series[5].Points[i].YValues[0], 2) + " S6:" + Math.Round(mainChart.Series[6].Points[i].YValues[0], 2) +
                 " Amp:" + Math.Round((list[i].Price[0] / list[i].Price[1] - 1) * 100, 2);
 
+            return;
+
+            // 선형회귀 계산하여 보여주는 로직
 
             ((List<double> x, List<double> y) plus, (List<double> x, List<double> y) minus) longList = ((new List<double>(), new List<double>()), (new List<double>(), new List<double>()));
             ((List<double> x, List<double> y) plus, (List<double> x, List<double> y) minus) shortList = ((new List<double>(), new List<double>()), (new List<double>(), new List<double>()));
