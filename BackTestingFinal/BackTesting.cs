@@ -24,6 +24,7 @@ using System.Reflection;
 using MathNet.Numerics;
 using TradingLibrary.Base.Values;
 using TradingLibrary.Base.Values.Chart;
+using TradingLibrary.Trading;
 
 namespace BackTestingFinal
 {
@@ -2616,7 +2617,7 @@ namespace BackTestingFinal
 
             //OneChartFindAndShow(showingItemData);
             //RecalOBVandSignandUpdateChart();
-            RecalROBVandSignandUpdateChart();
+            //RecalROBVandSignandUpdateChart();
 
             RecalculateChart(mainChart);
 
@@ -2699,27 +2700,35 @@ namespace BackTestingFinal
             var chartValue = chart.Tag as ChartValues;
             var toPast = scrollType == ScrollType.SmallDecrement;
             var v = showingItemData.listDic[chartValue];
-            var countLast = v.list.Count;
+            //var countLast = v.list.Count;
             LoadAndCheckSticks(showingItemData as BackItemData, false, toPast, default, default, chartValue);
-            var addedCount = v.list.Count - countLast;
+            //var addedCount = v.list.Count - countLast;
 
-            if (toPast)
-            {
-                foreach (var ca in chart.ChartAreas)
-                    foreach (var strip in ca.AxisX.StripLines)
-                        strip.IntervalOffset += addedCount;
+            ClearChart(chart);
 
-                for (int i = addedCount - 1; i >= 0; i--)
-                    AddNewChartPoint(chart, showingItemData as BackItemData, i, true);
-            }
-            else
-                for (int i = countLast; i < countLast + addedCount; i++)
-                    AddNewChartPoint(chart, showingItemData as BackItemData, i, false);
+            for (int i = 0; i < v.list.Count; i++)
+                AddFullChartPoint(chart, v.list[i]);
+
+            //if (toPast)
+            //{
+            //    foreach (var ca in chart.ChartAreas)
+            //        foreach (var strip in ca.AxisX.StripLines)
+            //            strip.IntervalOffset += addedCount;
+
+            //    for (int i = addedCount - 1; i >= 0; i--)
+            //        AddNewChartPoint(chart, showingItemData as BackItemData, i, true);
+            //}
+            //else
+            //    for (int i = countLast; i < countLast + addedCount; i++)
+            //        AddNewChartPoint(chart, showingItemData as BackItemData, i, false);
 
             base.LoadMore(chart, scrollType, loadNew, beforeCount);
         }
 
-        (DateTime foundTime, ChartValues chartValues) LoadAndCheckSticks(BackItemData itemData, bool newLoad, bool toPast, int minSize = default, DateTime from = default, ChartValues chartValues = default, bool oneChart = true)
+        (DateTime foundTime, ChartValues chartValues) LoadAndCheckSticks(
+            BackItemData itemData, bool newLoad, bool toPast
+            , int minSize = default, DateTime from = default
+            , ChartValues chartValues = default, bool oneChart = true)
         {
             (DateTime foundTime, ChartValues chartValues) result = (DateTime.MinValue, default);
 
@@ -2759,7 +2768,11 @@ namespace BackTestingFinal
                 {
                     var lastTime = GetFirstOrLastTime(false, itemData, chartValues).time;
                     if (list[list.Count - 1].Time == lastTime)
-                        list[list.Count - 1] = makeLastStick(itemData, chartValues, lastTime);
+                    {
+                        var madeStick = makeLastStick(itemData, chartValues, lastTime);
+                        if (madeStick != null)
+                            list[list.Count - 1] = madeStick;
+                    }
                     if (!newLoad && !toPast)
                     {
                         var list2 = LoadSticks(itemData, chartValues, list[0].Time.AddSeconds(-chartValues.seconds), 1, false);
@@ -2772,21 +2785,12 @@ namespace BackTestingFinal
                     }
                 }
 
-                for (int i = 0; i < list.Count; i++)
-                {
-                    Strategy.SetRSIAandDiff(list, list[i], i - 1);
-                    if (strategy.SuddenBurst(list[i]).found)
-                    {
-                        (list[i] as BackTradeStick).suddenBurst = true;
-                        if (toPast || result.foundTime == DateTime.MinValue)
-                            result.foundTime = list[i].Time;
-                    }
-                }
-
-                list.RemoveRange(0, startIndex);
-
                 if (!newLoad && !toPast)
+                {
+                    list.RemoveRange(0, startIndex);
                     v.list.AddRange(list);
+                    startIndex = 0;
+                }
                 else
                 {
                     if (!newLoad)
@@ -2794,6 +2798,19 @@ namespace BackTestingFinal
 
                     v.list = list;
                 }
+
+                for (int i = startIndex; i < v.list.Count; i++)
+                {
+                    Strategy.SetRSIAandDiff(v.list, v.list[i], i - 1);
+                    if (strategy.SuddenBurst(v.list[i]).found)
+                    {
+                        (v.list[i] as BackTradeStick).suddenBurst = true;
+                        if (toPast || result.foundTime == DateTime.MinValue)
+                            result.foundTime = v.list[i].Time;
+                    }
+                }
+
+                v.list.RemoveRange(0, startIndex);
 
                 if (newLoad)
                     foreach (var p in itemData.listDic)
@@ -2978,6 +2995,9 @@ namespace BackTestingFinal
             var list = LoadSticks(itemData, midVC, lastTime, (int)(endTime.Subtract(lastTime).TotalSeconds / midVC.seconds) + 1, false);
             while (list.Count == 0)
             {
+                if (midVC.index == 0)
+                    return null;
+
                 midVC = ChartValuesDic.Values[midVC.index - 1];
                 list = LoadSticks(itemData, midVC, lastTime, (int)(endTime.Subtract(lastTime).TotalSeconds / midVC.seconds) + 1, false);
             }
@@ -3570,9 +3590,9 @@ namespace BackTestingFinal
             var start = GetFirstOrLastTime(true, itemData, chartValues).time;
             if (toPast)
             {
+                var from2 = chartValues != ChartTimeSet.OneMonth ? from.AddSeconds(-chartValues.seconds * size) : from.AddMonths(-size);
                 if (from != default && from < to)
                     to = from;
-                var from2 = chartValues != ChartTimeSet.OneMonth ? to.AddSeconds(-chartValues.seconds * size) : to.AddMonths(-size);
                 from = from2 < start ? start : from2;
             }
             else
@@ -3583,6 +3603,8 @@ namespace BackTestingFinal
                 if (to2 < to)
                     to = to2;
             }
+
+            size = (int)(to.Subtract(from).TotalSeconds / chartValues.seconds);
 
             var list = new List<TradeStick>();
             //  order by 순서부터 where 조건을 이용해서 limit만큼 찾을때까지 검색하는 모양임. limiit를 못채워서 끝까지 찾는경우를 조심. *and도 속도에 영향을 주는듯
