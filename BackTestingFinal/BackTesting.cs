@@ -2799,7 +2799,7 @@ namespace BackTestingFinal
                     v.list = list;
                 }
 
-                for (int i = startIndex; i < v.list.Count; i++)
+                for (int i = 0; i < v.list.Count; i++)
                 {
                     Strategy.SetRSIAandDiff(v.list, v.list[i], i - 1);
                     if (strategy.SuddenBurst(v.list[i]).found)
