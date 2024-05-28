@@ -130,8 +130,8 @@ namespace BackTestingFinal
 
         Stopwatch sw = new Stopwatch();
 
-        bool TestAll = MessageBox.Show("TestAll?", "caption", MessageBoxButtons.YesNo) == DialogResult.Yes;
-        bool AlertOn = MessageBox.Show("AlertOn?", "caption", MessageBoxButtons.YesNo) == DialogResult.Yes;
+        bool TestAll;
+        bool AlertOn;
         int threadN;
 
         static string STResultDBPath = TradingLibrary.Base.Values.Path.DB_BASE + @"BackTestingFinal\전략결과\";
@@ -148,6 +148,9 @@ namespace BackTestingFinal
 
         public BackTesting(Form form, string programName, decimal st) : base(form, programName, st)
         {
+            TestAll = Settings.values[Settings.ProgramName].others[Settings.TestAll];
+            TestAll = Settings.values[Settings.ProgramName].others[Settings.AlertOn];
+
             sticksDBpath = DBManager.path;
             sticksDBbaseName = DBManager.BaseName;
             FuturesUSD.SetDB();
@@ -163,16 +166,17 @@ namespace BackTestingFinal
 
             SetAdditionalMainView();
 
-            fromTextBox.Text = "2019-09-22 08:00:00"; //과거시뮬시작
-            toTextBox.Text = "2019-09-22 08:00:00"; //과거시뮬시작
-            fromTextBox.Text = "2022-11-01 00:00:00"; //과거시뮬시작
-            toTextBox.Text = "2022-11-01 00:00:00"; //과거시뮬시작
+            // 큰 상승 부터 큰 하락까지 포함한 범위
+            fromTextBox.Text = "2020-07-01 00:00:00";
+            toTextBox.Text = "2022-12-01 00:00:00";
+
+            // 전체 범위
             fromTextBox.Text = DateTime.MinValue.ToString(Formats.TIME);
             toTextBox.Text = DateTime.MaxValue.ToString(Formats.TIME);
-            //fromTextBox.Text = "2023-06-17 00:00:00";
-            //toTextBox.Text = "2023-06-09 04:16:00";
 
-            //toTextBox.Text = "2023-02-09 05:00:00"; // 차트선생 매매
+            // 최근만 포함
+            fromTextBox.Text = "2024-02-01 00:00:00";
+            toTextBox.Text = DateTime.MaxValue.ToString(Formats.TIME);
 
             form.KeyDown += Form_KeyDown;
         }
@@ -2541,7 +2545,7 @@ namespace BackTestingFinal
             if (chartValues == default)
                 chartValues = mainChart.Tag as ChartValues;
             showingItemData = itemData;
-            form.Text = itemData.Code;
+            form.Text = Enum.GetName(typeof(Markets), Settings.values[Settings.ProgramName].market[Settings.MarketsName]) + "     " + itemData.Code;
             var v = itemData.listDic[chartValues];
             cursor.time = cursor.time.AddSeconds(-(int)cursor.time.TimeOfDay.TotalSeconds % chartValues.seconds);
 
@@ -2551,6 +2555,13 @@ namespace BackTestingFinal
                 LoadAndCheckSticks(itemData, true, true, chartViewSticksSize * 2,
                     chartValues != ChartTimeSet.OneMonth ? cursor.time.AddSeconds(more * chartValues.seconds) : cursor.time.AddMonths(more),
                     chartValues);
+
+                var start = GetFirstOrLastTime(true, itemData, chartValues).time;
+                if (v.list[0].Time < start)
+                {
+                    var startIndex = GetStartIndex(v.list, start);
+                    v.list.RemoveRange(0, startIndex);
+                }
             }
             else
             {
@@ -3587,13 +3598,12 @@ namespace BackTestingFinal
             var conn = FuturesUSD.DBDic[chartValues];
 
             var to = GetFirstOrLastTime(false, itemData, chartValues).time;
-            var start = GetFirstOrLastTime(true, itemData, chartValues).time;
             if (toPast)
             {
                 var from2 = chartValues != ChartTimeSet.OneMonth ? from.AddSeconds(-chartValues.seconds * size) : from.AddMonths(-size);
                 if (from != default && from < to)
                     to = from;
-                from = from2 < start ? start : from2;
+                from = from2;
             }
             else
             {
@@ -3817,9 +3827,61 @@ namespace BackTestingFinal
                 return;
             }
 
-            form.Text = showingItemData.Code + "     H:" + list[i].Price[0] + "  L:" + list[i].Price[1] + "  O:" + list[i].Price[2] + "  C:" + list[i].Price[3] + "  Ms:" + list[i].Ms + "  Md:" + list[i].Md +
+            form.Text = Enum.GetName(typeof(Markets), Settings.values[Settings.ProgramName].market[Settings.MarketsName]) + "     " + showingItemData.Code + "     H:" + list[i].Price[0] + "  L:" + list[i].Price[1] + "  O:" + list[i].Price[2] + "  C:" + list[i].Price[3] + "  Ms:" + list[i].Ms + "  Md:" + list[i].Md +
                 " S5:" + Math.Round(mainChart.Series[5].Points[i].YValues[0], 2) + " S6:" + Math.Round(mainChart.Series[6].Points[i].YValues[0], 2) +
                 " Amp:" + Math.Round((list[i].Price[0] / list[i].Price[1] - 1) * 100, 2);
+
+            return;
+
+            var indName = ChartNames.AXIS_Y_RVR2;
+
+            (List<double> x, List<double> y) polList = (new List<double>(), new List<double>());
+            var size = 20;
+            var full2 = true;
+            for (int j = 0; j < size; j++)
+            {
+                var index = i - j;
+                if (index < 0)
+                {
+                    full2 = false;
+                    break;
+                }
+
+                var p = mainChart.Series[ChartAxisYSeries[indName].Keys[0]].Points[index].YValues[0];
+                polList.y.Add(p);
+                polList.x.Add(j);
+            }
+
+            if (!full2)
+                return;
+
+            var arrayY = polList.y.ToArray();
+
+            var func = Fit.PolynomialFunc(polList.x.ToArray(), arrayY, 2);
+            var result = new List<double>();
+
+            for (int j = 0; j < mainChart.Series[0].Points.Count; j++)
+            {
+                mainChart.Series[ChartAxisYSeries[indName].Keys[2]].Points[j].IsEmpty = true;
+            }
+
+            for (int j = 0; j < size; j++)
+            {
+                var index = i - j;
+
+                var val = func(j);
+                result.Add(val);
+
+                mainChart.Series[ChartAxisYSeries[indName].Keys[2]].Points[index].IsEmpty = false;
+                mainChart.Series[ChartAxisYSeries[indName].Keys[2]].Points[index].YValues[0] = val;
+            }
+
+            var good = GoodnessOfFit.RSquared(result.ToArray(), arrayY);
+
+            form.Text += "\t\t good : " + good;
+
+            strategy.Enter_8_41m(list, i - 1, list[i]);
+            strategy.Eixt_8_41m(Position.Long, list, i - 1, list[i]);
 
             return;
 
