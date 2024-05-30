@@ -166,16 +166,20 @@ namespace BackTestingFinal
 
             SetAdditionalMainView();
 
-            // 큰 상승 부터 큰 하락까지 포함한 범위
-            fromTextBox.Text = "2020-07-01 00:00:00";
-            toTextBox.Text = "2022-12-01 00:00:00";
+            //// 큰 상승 부터 큰 하락까지 포함한 범위
+            //fromTextBox.Text = "2020-07-01 00:00:00";
+            //toTextBox.Text = "2022-12-01 00:00:00";
 
-            // 전체 범위
-            fromTextBox.Text = DateTime.MinValue.ToString(Formats.TIME);
-            toTextBox.Text = DateTime.MaxValue.ToString(Formats.TIME);
+            //// 전체 범위
+            //fromTextBox.Text = DateTime.MinValue.ToString(Formats.TIME);
+            //toTextBox.Text = DateTime.MaxValue.ToString(Formats.TIME);
 
-            // 최근만 포함
-            fromTextBox.Text = "2024-02-01 00:00:00";
+            //// 최근만 포함
+            //fromTextBox.Text = "2024-02-01 00:00:00";
+            //toTextBox.Text = DateTime.MaxValue.ToString(Formats.TIME);
+
+            // 정상적인 데이터부터 최신까지
+            fromTextBox.Text = "2019-10-01 00:00:00";
             toTextBox.Text = DateTime.MaxValue.ToString(Formats.TIME);
 
             form.KeyDown += Form_KeyDown;
@@ -1172,7 +1176,7 @@ namespace BackTestingFinal
 
             if (lastCR != CRType || start < startDone || end > endDone)
             {
-                Log.LoadingSettingFirst(form, loadingListBox);
+                loadingListBox = Log.LoadingSettingFirst(form, loadingListBox);
                 sw.Reset();
                 sw.Start();
 
@@ -2383,7 +2387,7 @@ namespace BackTestingFinal
         {
             Task.Run(new Action(() =>
             {
-                Log.LoadingSettingFirst(form, loadingListBox);
+                loadingListBox = Log.LoadingSettingFirst(form, loadingListBox);
                 sw.Reset();
                 sw.Start();
 
@@ -3200,7 +3204,10 @@ namespace BackTestingFinal
                             Error.Show();
                     }
 
-                    if (!Strategy.calLater && (j == ChartTimeSet.OneMinute.index || !Strategy.calOnlyFullStick))
+                    if (!Strategy.calLater
+                        && (j == ChartTimeSet.OneMinute.index
+                            || !Strategy.calOnlyFullStick
+                            || from2.AddMinutes(1).Subtract(v.CLD.lastStick.Time).TotalSeconds == v.CV.seconds))
                         Strategy.SetRSIAandDiff(v.CLD.list, v.CLD.lastStick, v.CLD.currentIndex - 1);
 
                     if (from2 >= tst && j >= Strategy.minCV.index && j <= Strategy.maxCV.index)
@@ -3226,7 +3233,7 @@ namespace BackTestingFinal
             var from = tst.Date;
             var size = (int)end.Date.AddDays(1).Subtract(from).TotalSeconds / ChartTimeSet.OneMinute.seconds;
 
-            Log.Add(form, loadingListBox, "Simulating ST" + Strategy.ST + " ...(" + from.ToString(Formats.DATE_TIME) + ")");
+            Log.Replace(form, loadingListBox, "Simulating ST" + Strategy.ST + " ...(" + from.ToString(Formats.DATE_TIME) + ")");
 
             foreach (BackItemData itemData in itemDataDic.Values)
                 ResetBeforeRun(itemData, from);
@@ -3240,15 +3247,26 @@ namespace BackTestingFinal
                 for (int j = (int)Position.Long; j <= (int)Position.Short; j++)
                 {
                     var positionData = itemData.positionData[j];
-                    if ((Strategy.canLStogether ? !positionData.Enter : (!itemData.positionData[(int)Position.Long].Enter && !itemData.positionData[(int)Position.Short].Enter)) &&
-                        positionData.found)
+                    
+                    if
+                    (
+                        (
+                            Strategy.canLStogether
+                            ? !positionData.Enter
+                            :
+                            (
+                                !itemData.positionData[(int)Position.Long].Enter
+                                && !itemData.positionData[(int)Position.Short].Enter
+                            )
+                        )
+                        && positionData.found
+                    )
                         lock (foundLocker)
                             Strategy.foundItemList[j].Add(itemData.number, (itemData, positionData.foundList));
                     else if (positionData.Enter)
                     {
                         var v = GetChartListDataAndChartValues(itemData, positionData.EnterFoundForExit.chartValues);
-                        if (Strategy.ExitConditionFinal(itemData, (Position)j, m.CLD.lastStick, v.CLD.lastStick, v.CLD.currentIndex - 1) || 
-                            itemData.firstLastMin.lastMin == from2)
+                        if (Strategy.ExitConditionFinal(itemData, (Position)j, m.CLD.lastStick, v.CLD.lastStick, v.CLD.currentIndex - 1))
                         {
                             positionData.Enter = false;
 
@@ -3439,7 +3457,7 @@ namespace BackTestingFinal
                         openDaysPerYear.Add(year, 0);
                     openDaysPerYear[year]++;
 
-                    Log.Add(form, loadingListBox, "Simulating ST" + Strategy.ST + " ...(" + from2.ToString(Formats.DATE_TIME) + ")   " + sw.Elapsed.ToString(Formats.TIME_SPAN));
+                    Log.Replace(form, loadingListBox, "Simulating ST" + Strategy.ST + " ...(" + from2.ToString(Formats.DATE_TIME) + ")   " + sw.Elapsed.ToString(Formats.TIME_SPAN));
                 }
 
                 var detailStartTime = GetDetailStartTime(from2);
@@ -3600,7 +3618,7 @@ namespace BackTestingFinal
             var to = GetFirstOrLastTime(false, itemData, chartValues).time;
             if (toPast)
             {
-                var from2 = chartValues != ChartTimeSet.OneMonth ? from.AddSeconds(-chartValues.seconds * size) : from.AddMonths(-size);
+                var from2 = chartValues != ChartTimeSet.OneMonth ? from.AddSeconds(-chartValues.seconds * (size - 1)) : from.AddMonths(-(size - 1));
                 if (from != default && from < to)
                     to = from;
                 from = from2;
@@ -3609,12 +3627,12 @@ namespace BackTestingFinal
             {
                 if (from == default)
                     from = GetFirstOrLastTime(true, itemData, chartValues).time;
-                var to2 = chartValues != ChartTimeSet.OneMonth ? from.AddSeconds(chartValues.seconds * size) : from.AddMonths(size);
+                var to2 = chartValues != ChartTimeSet.OneMonth ? from.AddSeconds(chartValues.seconds * (size - 1)) : from.AddMonths(size - 1);
                 if (to2 < to)
                     to = to2;
             }
 
-            size = (int)(to.Subtract(from).TotalSeconds / chartValues.seconds);
+            size = (int)(to.Subtract(from).TotalSeconds / chartValues.seconds) + 1;
 
             var list = new List<TradeStick>();
             //  order by 순서부터 where 조건을 이용해서 limit만큼 찾을때까지 검색하는 모양임. limiit를 못채워서 끝까지 찾는경우를 조심. *and도 속도에 영향을 주는듯
@@ -3747,6 +3765,10 @@ namespace BackTestingFinal
                         " order by rowid " + (first ? "" : "desc") + " limit 1", conn).ExecuteReader();
                     if (!reader.Read())
                     {
+                        if (first ? !start.ToString(Formats.DB_TIME).Equals(DateTime.MinValue.ToString(Formats.DB_TIME))
+                            : !end.ToString(Formats.DB_TIME).Equals(DateTime.MaxValue.ToString(Formats.DB_TIME)))
+                            continue;
+
                         reader = new SQLiteCommand("Select *, rowid From '" + itemData2.Code + "'" +
                         " order by rowid " + (first ? "" : "desc") + " limit 1", conn).ExecuteReader();
 
@@ -3778,6 +3800,9 @@ namespace BackTestingFinal
                 if (first ? stick.Time < time : stick.Time > time)
                     time = stick.Time;
             }
+
+            if (time == DateTime.MinValue || time == DateTime.MaxValue)
+                Error.Show();
 
             return (time, itemData);
         }
