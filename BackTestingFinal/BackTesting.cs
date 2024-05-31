@@ -3284,6 +3284,11 @@ namespace BackTestingFinal
                                 EnterMarketLastMins = positionData.EnterMarketLastMins
                             };
 
+                            // 수익말고 다른지표 확률 계산하고 싶을때
+                            resultData.ProfitRate = ((Position)j == Position.Long
+                                ? positionData.EnterValue < positionData.ExitValue : positionData.EnterValue > positionData.ExitValue)
+                                ? 1 : -1;
+
                             if (itemData.firstLastMin.lastMin != from2)
                             {
                                 if (!Strategy.inside)
