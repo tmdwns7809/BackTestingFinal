@@ -166,23 +166,38 @@ namespace BackTestingFinal
 
             SetAdditionalMainView();
 
+            form.KeyDown += Form_KeyDown;
+
             //// 큰 상승 부터 큰 하락까지 포함한 범위
             //fromTextBox.Text = "2020-07-01 00:00:00";
             //toTextBox.Text = "2022-12-01 00:00:00";
 
-            //// 전체 범위
-            //fromTextBox.Text = DateTime.MinValue.ToString(Formats.TIME);
-            //toTextBox.Text = DateTime.MaxValue.ToString(Formats.TIME);
+            // 전체 범위
+            fromTextBox.Text = DateTime.MinValue.ToString(Formats.TIME);
+            toTextBox.Text = DateTime.MaxValue.ToString(Formats.TIME);
 
             //// 최근만 포함
             //fromTextBox.Text = "2024-02-01 00:00:00";
             //toTextBox.Text = DateTime.MaxValue.ToString(Formats.TIME);
 
-            // 정상적인 데이터부터 최신까지
-            fromTextBox.Text = "2019-10-01 00:00:00";
-            toTextBox.Text = DateTime.MaxValue.ToString(Formats.TIME);
+            //// 정상적인 데이터부터 최신까지
+            //fromTextBox.Text = "2019-10-01 00:00:00";
+            //toTextBox.Text = DateTime.MaxValue.ToString(Formats.TIME);
 
-            form.KeyDown += Form_KeyDown;
+            //// 하락장 전체
+            //fromTextBox.Text = "2021-11-01 00:00:00";
+            //toTextBox.Text = "2023-01-01 00:00:00";
+
+            //// 하락장 후반
+            //fromTextBox.Text = "2022-04-01 00:00:00";
+            //toTextBox.Text = "2022-07-01 00:00:00";
+
+            //// 이상적인 하락과 상승
+            //fromTextBox.Text = "2024-04-22 00:00:00";
+            //toTextBox.Text = "2024-05-07 00:00:00";
+            //// 하락장의 하락과 상승
+            //fromTextBox.Text = "2021-11-09 00:00:00";
+            //toTextBox.Text = "2021-11-25 00:00:00";
         }
         void SetAdditionalMainView()
         {
@@ -2603,6 +2618,13 @@ namespace BackTestingFinal
                     if (foundIndex > chartViewSticksSize)
                         v.list.RemoveRange(0, foundIndex - chartViewSticksSize);
                 }
+
+                var start = GetFirstOrLastTime(true, itemData, chartValues).time;
+                if (v.list[0].Time < start)
+                {
+                    var startIndex = GetStartIndex(v.list, start);
+                    v.list.RemoveRange(0, startIndex);
+                }
             }
 
             //if (mainChart.Series[0].Points.Count != 0)
@@ -2720,6 +2742,13 @@ namespace BackTestingFinal
             //var addedCount = v.list.Count - countLast;
 
             ClearChart(chart);
+
+            var start = GetFirstOrLastTime(true, showingItemData as BackItemData, chartValue).time;
+            if (v.list[0].Time < start)
+            {
+                var startIndex = GetStartIndex(v.list, start);
+                v.list.RemoveRange(0, startIndex);
+            }
 
             for (int i = 0; i < v.list.Count; i++)
                 AddFullChartPoint(chart, v.list[i]);
@@ -3284,10 +3313,10 @@ namespace BackTestingFinal
                                 EnterMarketLastMins = positionData.EnterMarketLastMins
                             };
 
-                            // 수익말고 다른지표 확률 계산하고 싶을때
-                            resultData.ProfitRate = ((Position)j == Position.Long
-                                ? positionData.EnterValue < positionData.ExitValue : positionData.EnterValue > positionData.ExitValue)
-                                ? 1 : -1;
+                            //// 수익말고 다른지표 확률 계산하고 싶을때
+                            //resultData.ProfitRate = ((Position)j == Position.Long
+                            //    ? positionData.EnterValue < positionData.ExitValue : positionData.EnterValue > positionData.ExitValue)
+                            //    ? 1 : -1;
 
                             if (itemData.firstLastMin.lastMin != from2)
                             {
