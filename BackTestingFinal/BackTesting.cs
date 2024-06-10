@@ -195,9 +195,13 @@ namespace BackTestingFinal
             //// 이상적인 하락과 상승
             //fromTextBox.Text = "2024-04-22 00:00:00";
             //toTextBox.Text = "2024-05-07 00:00:00";
-            //// 하락장의 하락과 상승
-            //fromTextBox.Text = "2021-11-09 00:00:00";
-            //toTextBox.Text = "2021-11-25 00:00:00";
+
+            // 생각용
+            toTextBox.Text = "2024-05-11 00:00:00";
+            // 하락장의 하락과 상승
+            toTextBox.Text = "2021-11-25 00:00:00";
+            //// 하락장 전체
+            //toTextBox.Text = "2023-01-01 00:00:00";
         }
         void SetAdditionalMainView()
         {
