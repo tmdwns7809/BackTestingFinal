@@ -196,10 +196,10 @@ namespace BackTestingFinal
             //fromTextBox.Text = "2024-04-22 00:00:00";
             //toTextBox.Text = "2024-05-07 00:00:00";
 
-            // 생각용
-            toTextBox.Text = "2024-05-11 00:00:00";
-            // 하락장의 하락과 상승
-            toTextBox.Text = "2021-11-25 00:00:00";
+            //// 생각용
+            //toTextBox.Text = "2024-05-11 00:00:00";
+            //// 하락장의 하락과 상승
+            //toTextBox.Text = "2021-11-25 00:00:00";
             //// 하락장 전체
             //toTextBox.Text = "2023-01-01 00:00:00";
         }
@@ -2524,7 +2524,8 @@ namespace BackTestingFinal
             }));
         }
 
-        public override void SetChartNowOrLoad(ChartValues chartValues, int position = int.MinValue, bool loadNew = false)
+        public override void SetChartNowOrLoad(ChartValues chartValues, int position = int.MinValue, bool loadNew = false
+            , bool updateZoom = true)
         {
             if (showingItemData != default && !FuturesUSD.DBDic.ContainsKey(chartValues))
                 return;
@@ -2557,13 +2558,13 @@ namespace BackTestingFinal
                 Error.Show();
 
             var list = showingItemData.listDic[mainChart.Tag as ChartValues].list;
-            ShowChart(showingItemData as BackItemData, (from, position, cursorOn), !loadNew && list.Count != 0 && from >= list[0].Time && from <= list[list.Count - 1].Time);
+            ShowChart(showingItemData as BackItemData, (from, position, cursorOn), !loadNew && list.Count != 0 && from >= list[0].Time && from <= list[list.Count - 1].Time, updateZoom: updateZoom);
 
-            base.SetChartNowOrLoad(chartValues);
+            base.SetChartNowOrLoad(chartValues, updateZoom: updateZoom);
         }
         void ShowChart(
             BackItemData itemData, (DateTime time, int position, bool on) cursor
-            , bool loaded = false, ChartValues chartValues = default)
+            , bool loaded = false, ChartValues chartValues = default, bool updateZoom = true)
         {
             if (chartValues == default)
                 chartValues = mainChart.Tag as ChartValues;
@@ -2646,7 +2647,7 @@ namespace BackTestingFinal
             }
 
             var zoomStart = cursorIndex - cursor.position + 1;
-            ZoomX(mainChart, zoomStart, zoomStart + chartViewSticksSize);
+            ZoomX(mainChart, zoomStart, zoomStart + chartViewSticksSize, updateZoom);
 
             if (cursor.on)
             {
@@ -2660,7 +2661,7 @@ namespace BackTestingFinal
             //RecalOBVandSignandUpdateChart();
             //RecalROBVandSignandUpdateChart();
 
-            RecalculateChart(mainChart);
+            RecalculateChart(mainChart, updateZoom);
 
             SetFrontZoomRatio();
         }
