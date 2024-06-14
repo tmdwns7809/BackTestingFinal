@@ -198,8 +198,8 @@ namespace BackTestingFinal
 
             //// 생각용
             //toTextBox.Text = "2024-05-11 00:00:00";
-            //// 하락장의 하락과 상승
-            //toTextBox.Text = "2021-11-25 00:00:00";
+            // 하락장의 하락과 상승
+            toTextBox.Text = "2021-11-25 00:00:00";
             //// 하락장 전체
             //toTextBox.Text = "2023-01-01 00:00:00";
         }
@@ -2733,8 +2733,8 @@ namespace BackTestingFinal
                     });
             }
         }
-         
-        public override void LoadMore(Chart chart, ScrollType scrollType, bool loadNew, int beforeCount)
+
+        public override void LoadMore(Chart chart, ScrollType scrollType, bool loadNew, int beforeCount, bool updateZoom = true)
         {
             if (showingItemData == default)
                 return;
