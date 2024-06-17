@@ -3058,7 +3058,7 @@ namespace BackTestingFinal
             if (lastTime != list[0].Time)
                 list.InsertRange(0, LoadSticks(itemData, ChartTimeSet.OneMinute, lastTime, (int)(list[0].Time.Subtract(lastTime).TotalSeconds / ChartTimeSet.OneMinute.seconds), false));
 
-            var lastStick = new BackTradeStick()
+            var lastStick = new BackTradeStick(chartValues)
             {
                 Time = lastTime,
                 Price = new decimal[]
@@ -3140,7 +3140,7 @@ namespace BackTestingFinal
                                     minituesInADay * ChartTimeSet.OneMinute.seconds / v.CV.seconds * (j - ChartTimeSet.OneMinute.index + 1) + (Strategy.IndNeedDays + Strategy.CompareNeedDays - 1), false);
                                 v.CLD.currentIndex = GetStartIndex(v.CLD.list, from2);
                                 v.CLD.startIndex = v.CLD.currentIndex;
-                                v.CLD.lastStick = new BackTradeStick() { Time = v.CLD.list[v.CLD.currentIndex].Time };
+                                v.CLD.lastStick = new BackTradeStick(v.CV) { Time = v.CLD.list[v.CLD.currentIndex].Time };
 
                                 for (int k = 0; k < v.CLD.list.Count; k++)
                                     Strategy.SetRSIAandDiff(v.CLD.list, v.CLD.list[k], k - 1);
@@ -3200,7 +3200,7 @@ namespace BackTestingFinal
                             if (v.CLD.currentIndex == v.CLD.list.Count)
                                 continue;
 
-                            v.CLD.lastStick = new BackTradeStick() { Time = v.CLD.list[v.CLD.currentIndex].Time };
+                            v.CLD.lastStick = new BackTradeStick(v.CV) { Time = v.CLD.list[v.CLD.currentIndex].Time };
 
                             if (from2 < v.CLD.lastStick.Time || from2 >= v.CLD.lastStick.Time.AddSeconds(v.CV.seconds))
                                 Error.Show();
@@ -3719,7 +3719,7 @@ namespace BackTestingFinal
                 var smallestDiff = decimal.MaxValue;
                 while (reader.Read())
                 {
-                    var stick = GetStickFromSQL(reader);
+                    var stick = GetStickFromSQL(reader, chartValues);
 
                     if (stick.Price[0] - stick.Price[2] != 0 && stick.Price[0] - stick.Price[2] < smallestDiff)
                         smallestDiff = stick.Price[0] - stick.Price[2];
@@ -3746,9 +3746,9 @@ namespace BackTestingFinal
 
             return list;
         }
-        BackTradeStick GetStickFromSQL(SQLiteDataReader reader)
+        BackTradeStick GetStickFromSQL(SQLiteDataReader reader, ChartValues cv)
         {
-            return new BackTradeStick()
+            return new BackTradeStick(cv)
             {
                 //Time = DateTime.ParseExact(reader["date"].ToString() + reader["time"].ToString(), Formats.DB_TIME, null),
                 Time = DateTime.ParseExact(reader["time"].ToString(), Formats.DB_TIME, null),
@@ -3814,7 +3814,7 @@ namespace BackTestingFinal
                         if (!reader.Read())
                             Error.Show();
                     }
-                    var stick = GetStickFromSQL(reader);
+                    var stick = GetStickFromSQL(reader, chartValues);
                     if (first ? stick.Time < time : stick.Time >= time)
                     {
                         time = stick.Time;
@@ -3835,7 +3835,7 @@ namespace BackTestingFinal
                     if (!reader.Read())
                         Error.Show();
                 }
-                var stick = GetStickFromSQL(reader);
+                var stick = GetStickFromSQL(reader, chartValues);
                 if (first ? stick.Time < time : stick.Time > time)
                     time = stick.Time;
             }

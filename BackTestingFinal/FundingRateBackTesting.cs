@@ -213,7 +213,7 @@ namespace BackTestingFinal
 
         BackTradeStick GetStickFromSQL(SQLiteDataReader reader)
         {
-            return new BackTradeStick()
+            return new BackTradeStick(null)
             {
                 Time = DateTime.ParseExact(reader["time"].ToString(), Formats.DB_TIME, null),
                 Price = new decimal[] { decimal.Parse(reader["fundingRate"].ToString()) }

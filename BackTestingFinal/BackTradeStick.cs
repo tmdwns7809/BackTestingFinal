@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using TradingLibrary.Trading;
 using TradingLibrary;
 using TradingLibrary.Base;
+using TradingLibrary.Base.Values.Chart;
 
 namespace BackTestingFinal
 {
@@ -14,6 +15,10 @@ namespace BackTestingFinal
         public bool suddenBurst = false;
         public BackResultData resultData = default;
         public BackResultData resultData2 = default;
+
+        public BackTradeStick(ChartValues cv, decimal firstPrice = 0, DateTime time = default) : base(cv, firstPrice, time)
+        {
+        }
 
         public static bool isEqual(BackTradeStick stick0, BackTradeStick stick1)
         {
