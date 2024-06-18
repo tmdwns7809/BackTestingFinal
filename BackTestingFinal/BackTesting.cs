@@ -168,21 +168,20 @@ namespace BackTestingFinal
 
             form.KeyDown += Form_KeyDown;
 
-            //// 큰 상승 부터 큰 하락까지 포함한 범위
-            //fromTextBox.Text = "2020-07-01 00:00:00";
-            //toTextBox.Text = "2022-12-01 00:00:00";
 
             // 전체 범위
             fromTextBox.Text = DateTime.MinValue.ToString(Formats.TIME);
             toTextBox.Text = DateTime.MaxValue.ToString(Formats.TIME);
 
-            //// 최근만 포함
-            //fromTextBox.Text = "2024-02-01 00:00:00";
-            //toTextBox.Text = DateTime.MaxValue.ToString(Formats.TIME);
+            // 정상적인 데이터 시작
+            fromTextBox.Text = "2019-10-01 00:00:00";
 
-            //// 정상적인 데이터부터 최신까지
-            //fromTextBox.Text = "2019-10-01 00:00:00";
-            //toTextBox.Text = DateTime.MaxValue.ToString(Formats.TIME);
+            // 최근 6시간 일치하는 부분
+            //fromTextBox.Text = "2024-02-01 00:00:00";
+
+            //// 큰 상승 부터 큰 하락까지 포함한 범위
+            //fromTextBox.Text = "2020-07-01 00:00:00";
+            //toTextBox.Text = "2022-12-01 00:00:00";
 
             //// 하락장 전체
             //fromTextBox.Text = "2021-11-01 00:00:00";
@@ -198,10 +197,12 @@ namespace BackTestingFinal
 
             //// 생각용
             //toTextBox.Text = "2024-05-11 00:00:00";
-            // 하락장의 하락과 상승
-            toTextBox.Text = "2021-11-25 00:00:00";
-            //// 하락장 전체
-            //toTextBox.Text = "2023-01-01 00:00:00";
+
+            //// 하락장의 하락과 상승
+            //toTextBox.Text = "2021-11-25 00:00:00";
+
+            // 8.12 전략 확인용
+            toTextBox.Text = "2024-05-31 00:00:00";
         }
         void SetAdditionalMainView()
         {
@@ -1985,7 +1986,7 @@ namespace BackTestingFinal
 
                             columnDic[isJooName] = "'" + isJoo.ToString() + "'";
                             columnDic[isFuturesName] = "'" + isFutures.ToString() + "'";
-                            columnDic[strategyName] = "'" + Strategy.ST.ToString() + "'";
+                            columnDic[strategyName] = "'" + Strategy.ST.ToString() + ".'";
                             columnDic[CRName] = "'" + CRType.ToString() + "'";
                             columnDic[isLongName] = "'" + Enum.GetName(typeof(Position), i2).ToString() + "'";
                             columnDic[start_dayName] = "'" + start.ToString(Formats.DATE_TIME) + "'";
@@ -2063,25 +2064,26 @@ namespace BackTestingFinal
                             }
 
                             var reader = new SQLiteCommand(statement, STResultDB).ExecuteReader();
-                            if (reader.Read())
-                            {
-                                count = 0;
-                                foreach (var column in columnDic)
-                                {
-                                    if (count == 0)
-                                        statement = "update 'result' set ";
-                                    else
-                                        statement += ", ";
+                            // 중복되는 결과를 업데이트하고 싶을때, 그냥 무조건 삽입하려면 주석처리해놓고 사용
+                            //if (reader.Read())
+                            //{
+                            //    count = 0;
+                            //    foreach (var column in columnDic)
+                            //    {
+                            //        if (count == 0)
+                            //            statement = "update 'result' set ";
+                            //        else
+                            //            statement += ", ";
 
-                                    statement += "'" + column.Key + "'=" + column.Value;
+                            //        statement += "'" + column.Key + "'=" + column.Value;
 
-                                    if (count == columnDic.Count - 1)
-                                        statement += " where rowid='" + reader["rowid"] + "'";
+                            //        if (count == columnDic.Count - 1)
+                            //            statement += " where rowid='" + reader["rowid"] + "'";
 
-                                    count++;
-                                }
-                            }
-                            else
+                            //        count++;
+                            //    }
+                            //}
+                            //else
                             {
                                 count = 0;
                                 foreach (var column in columnDic)
@@ -3318,10 +3320,10 @@ namespace BackTestingFinal
                                 EnterMarketLastMins = positionData.EnterMarketLastMins
                             };
 
-                            //// 수익말고 다른지표 확률 계산하고 싶을때
-                            //resultData.ProfitRate = ((Position)j == Position.Long
-                            //    ? positionData.EnterValue < positionData.ExitValue : positionData.EnterValue > positionData.ExitValue)
-                            //    ? 1 : -1;
+                            // 수익말고 다른지표 확률 계산하고 싶을때
+                            resultData.ProfitRate = ((Position)j == Position.Long
+                                ? positionData.EnterValue < positionData.ExitValue : positionData.EnterValue > positionData.ExitValue)
+                                ? 1 : -1;
 
                             if (itemData.firstLastMin.lastMin != from2)
                             {
