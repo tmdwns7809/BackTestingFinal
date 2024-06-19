@@ -175,6 +175,8 @@ namespace BackTestingFinal
 
             // 정상적인 데이터 시작
             fromTextBox.Text = "2019-10-01 00:00:00";
+            
+            //fromTextBox.Text = "2019-11-01 00:00:00";
 
             // 최근 6시간 일치하는 부분
             //fromTextBox.Text = "2024-02-01 00:00:00";
@@ -2801,13 +2803,16 @@ namespace BackTestingFinal
                     var lastTime = toPast ? v.list[0].Time : v.list[v.list.Count - 1].Time;
                     from = chartValues != ChartTimeSet.OneMonth ? lastTime.AddSeconds(multiplier * chartValues.seconds) : lastTime.AddMonths(multiplier);
                 }
+                else if (!toPast)
+                    Error.Show(message: "처리 필요");
 
                 var list = LoadSticks(itemData, chartValues,
-                    toPast ? from :
+                    (toPast || !newLoad) ? from :
                         (chartValues != ChartTimeSet.OneMonth ?
-                            from.AddSeconds(-chartValues.seconds * (minSize + Strategy.IndNeedDays + Strategy.CompareNeedDays - 1)) :
-                            from.AddMonths(-(minSize + Strategy.IndNeedDays + Strategy.CompareNeedDays - 1))),
-                    minSize + Strategy.IndNeedDays + Strategy.CompareNeedDays - 1, toPast);
+                            from.AddSeconds(-chartValues.seconds * (Strategy.IndNeedDays + Strategy.CompareNeedDays - 1)) :
+                            from.AddMonths(-(Strategy.IndNeedDays + Strategy.CompareNeedDays - 1))),
+                    minSize
+                        + ((!newLoad && !toPast) ? 0 : (Strategy.IndNeedDays + Strategy.CompareNeedDays - 1)), toPast);
 
                 var startIndex = GetStartIndex(list, toPast ? 
                     (chartValues != ChartTimeSet.OneMonth ? from.AddSeconds(-chartValues.seconds * (minSize - 1)) : from.AddMonths(-(minSize - 1))) : 
@@ -2836,9 +2841,11 @@ namespace BackTestingFinal
                     }
                 }
 
+                var indStartIndex = 0;
                 if (!newLoad && !toPast)
                 {
                     list.RemoveRange(0, startIndex);
+                    indStartIndex = v.list.Count;
                     v.list.AddRange(list);
                     startIndex = 0;
                 }
@@ -2850,7 +2857,7 @@ namespace BackTestingFinal
                     v.list = list;
                 }
 
-                for (int i = 0; i < v.list.Count; i++)
+                for (int i = indStartIndex; i < v.list.Count; i++)
                 {
                     Strategy.SetRSIAandDiff(v.list, v.list[i], i - 1);
                     if (strategy.SuddenBurst(v.list[i]).found)
@@ -3321,9 +3328,12 @@ namespace BackTestingFinal
                             };
 
                             // 수익말고 다른지표 확률 계산하고 싶을때
-                            resultData.ProfitRate = ((Position)j == Position.Long
-                                ? positionData.EnterValue < positionData.ExitValue : positionData.EnterValue > positionData.ExitValue)
-                                ? 1 : -1;
+                            if (!Strategy.isPrice)
+                            {
+                                resultData.ProfitRate = ((Position)j == Position.Long
+                                    ? positionData.EnterValue < positionData.ExitValue : positionData.EnterValue > positionData.ExitValue)
+                                    ? 1 : -1;
+                            }
 
                             if (itemData.firstLastMin.lastMin != from2)
                             {
