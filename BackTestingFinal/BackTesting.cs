@@ -175,36 +175,34 @@ namespace BackTestingFinal
 
             // 정상적인 데이터 시작
             fromTextBox.Text = "2019-10-01 00:00:00";
-            
-            //fromTextBox.Text = "2019-11-01 00:00:00";
 
             // 최근 6시간 일치하는 부분
             //fromTextBox.Text = "2024-02-01 00:00:00";
 
-            //// 큰 상승 부터 큰 하락까지 포함한 범위
+            // 큰 상승 부터 큰 하락까지 포함한 범위
             //fromTextBox.Text = "2020-07-01 00:00:00";
             //toTextBox.Text = "2022-12-01 00:00:00";
 
-            //// 하락장 전체
+            // 하락장 전체
             //fromTextBox.Text = "2021-11-01 00:00:00";
             //toTextBox.Text = "2023-01-01 00:00:00";
 
-            //// 하락장 후반
+            // 하락장 후반
             //fromTextBox.Text = "2022-04-01 00:00:00";
             //toTextBox.Text = "2022-07-01 00:00:00";
 
-            //// 이상적인 하락과 상승
+            // 이상적인 하락과 상승
             //fromTextBox.Text = "2024-04-22 00:00:00";
             //toTextBox.Text = "2024-05-07 00:00:00";
 
-            //// 생각용
+            // 생각용
             //toTextBox.Text = "2024-05-11 00:00:00";
 
-            //// 하락장의 하락과 상승
+            // 하락장의 하락과 상승
             //toTextBox.Text = "2021-11-25 00:00:00";
 
             // 8.12 전략 확인용
-            toTextBox.Text = "2024-05-31 00:00:00";
+            //toTextBox.Text = "2024-05-31 00:00:00";
         }
         void SetAdditionalMainView()
         {
@@ -2646,7 +2644,7 @@ namespace BackTestingFinal
             for (int i = 0; i < v.list.Count; i++)
             {
                 AddNewChartPoint(mainChart, showingItemData as BackItemData, i, false);
-                if (v.list[i].Time == cursor.time || (i + 1 < v.list.Count && v.list[i].Time < cursor.time && cursor.time < v.list[i + 1].Time))
+                if (v.list[i].Time == cursor.time || (i + 1 < v.list.Count && v.list[i].Time <= cursor.time && cursor.time <= v.list[i + 1].Time))
                     cursorIndex = i;
             }
 
