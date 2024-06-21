@@ -174,7 +174,11 @@ namespace BackTestingFinal
             toTextBox.Text = DateTime.MaxValue.ToString(Formats.TIME);
 
             // 정상적인 데이터 시작
-            fromTextBox.Text = "2019-10-01 00:00:00";
+            //fromTextBox.Text = "2019-10-01 00:00:00";
+
+            // 최신 데이터 시작
+            fromTextBox.Text = "2020-11-01 00:00:00";
+            //fromTextBox.Text = "2021-11-01 00:00:00";
 
             // 최근 6시간 일치하는 부분
             //fromTextBox.Text = "2024-02-01 00:00:00";
