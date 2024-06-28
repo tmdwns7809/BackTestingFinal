@@ -207,6 +207,15 @@ namespace BackTestingFinal
 
             // 8.12 전략 확인용
             //toTextBox.Text = "2024-05-31 00:00:00";
+
+            // 상승 진입
+            toTextBox.Text = "2024-05-02 00:00:00";
+            // 상승 청산
+            //toTextBox.Text = "2024-05-07 00:00:00";
+
+            // 하락 초입
+            //toTextBox.Text = "2021-11-17 00:00:00";
+
         }
         void SetAdditionalMainView()
         {
