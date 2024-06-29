@@ -12,7 +12,7 @@ namespace BackTestingFinal
         {
             InitializeComponent();
 
-            BackTesting.instance = new BackTesting(this, Settings.ProgramBackTesting, 8.4103m);
+            BackTesting.instance = new BackTesting(this, Settings.ProgramBackTesting, 8.4104m);
             //BackTesting.instance = new BackTesting(this, Settings.ProgramBackTesting, 8.412m);
         }
     }

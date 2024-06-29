@@ -2870,7 +2870,7 @@ namespace BackTestingFinal
 
                 for (int i = indStartIndex; i < v.list.Count; i++)
                 {
-                    Strategy.SetRSIAandDiff(v.list, v.list[i], i - 1);
+                    Strategy.SetRSIAandDiff(itemData, v.list, v.list[i], i - 1);
                     if (strategy.SuddenBurst(v.list[i]).found)
                     {
                         (v.list[i] as BackTradeStick).suddenBurst = true;
@@ -3163,7 +3163,7 @@ namespace BackTestingFinal
                                 v.CLD.lastStick = new BackTradeStick(v.CV) { Time = v.CLD.list[v.CLD.currentIndex].Time };
 
                                 for (int k = 0; k < v.CLD.list.Count; k++)
-                                    Strategy.SetRSIAandDiff(v.CLD.list, v.CLD.list[k], k - 1);
+                                    Strategy.SetRSIAandDiff(itemData, v.CLD.list, v.CLD.list[k], k - 1);
                             }
                         }
                         else if (v.CLD.list[v.CLD.list.Count - 1].Time <= from2.AddDays(1))
@@ -3183,7 +3183,7 @@ namespace BackTestingFinal
                                 v.CLD.currentIndex = GetStartIndex(v.CLD.list, from2) - 1;
 
                                 for (int k = v.CLD.currentIndex; k < v.CLD.list.Count; k++)
-                                    Strategy.SetRSIAandDiff(v.CLD.list, v.CLD.list[k], k - 1);
+                                    Strategy.SetRSIAandDiff(itemData, v.CLD.list, v.CLD.list[k], k - 1);
                             }
                         }
                     }
@@ -3213,7 +3213,7 @@ namespace BackTestingFinal
                                 BackTradeStick.isEqual(v.CLD.lastStick as BackTradeStick, v.CLD.list[v.CLD.currentIndex] as BackTradeStick);
                             }
 
-                            Strategy.SetRSIAandDiff(v.CLD.list, v.CLD.list[v.CLD.currentIndex], v.CLD.currentIndex - 1);
+                            Strategy.SetRSIAandDiff(itemData, v.CLD.list, v.CLD.list[v.CLD.currentIndex], v.CLD.currentIndex - 1);
 
                             v.CLD.currentIndex++;
 
@@ -3262,7 +3262,7 @@ namespace BackTestingFinal
                         && (j == ChartTimeSet.OneMinute.index
                             || !Strategy.calOnlyFullStick
                             || from2.AddMinutes(1).Subtract(v.CLD.lastStick.Time).TotalSeconds == v.CV.seconds))
-                        Strategy.SetRSIAandDiff(v.CLD.list, v.CLD.lastStick, v.CLD.currentIndex - 1);
+                        Strategy.SetRSIAandDiff(itemData, v.CLD.list, v.CLD.lastStick, v.CLD.currentIndex - 1);
 
                     if (from2 >= tst && j >= Strategy.minCV.index && j <= Strategy.maxCV.index)
                         Strategy.ChartFindConditionAndAdd(itemData, v.CV, m.CLD.lastStick, v.CLD.lastStick, m.CLD.currentIndex - 1, v.CLD.currentIndex - 1);
