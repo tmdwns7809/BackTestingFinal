@@ -209,16 +209,25 @@ namespace BackTestingFinal
             //toTextBox.Text = "2024-05-31 00:00:00";
 
             // 상승 진입
-            toTextBox.Text = "2024-05-02 00:00:00";
+            //toTextBox.Text = "2024-05-02 00:00:00";
             // 상승 청산
             //toTextBox.Text = "2024-05-07 00:00:00";
 
             // 하락 초입
             //toTextBox.Text = "2021-11-17 00:00:00";
 
+            // 8.4103. 전략 확인용
+            //fromTextBox.Text = "2019-10-01 00:00:00";
+            //toTextBox.Text = "2024-05-31 00:00:00";
+
+            // 8.4104. 전략 확인용
+            //fromTextBox.Text = "2024-03-01 00:00:00";
+
         }
         void SetAdditionalMainView()
         {
+            mainChart.Paint += Form_Paint;
+
             LeftClickAction += leftClick;
 
             /* test?
@@ -1001,9 +1010,10 @@ namespace BackTestingFinal
 
                 var data = sender.SelectedObject as BackResultData;
                 var itemData = itemDataDic[data.Code] as BackItemData;
-                var result = LoadAndCheckSticks(itemData:itemData, newLoad:true, toPast:false, minSize:default, from:data.OutEnterTime == default ? data.EnterTime : data.OutEnterTime, chartValues:default, oneChart:false);
+                //var result = LoadAndCheckSticks(itemData:itemData, newLoad:true, toPast:false, minSize:default, from:data.OutEnterTime == default ? data.EnterTime : data.OutEnterTime, chartValues:default, oneChart:false);
                 //SetChartNowOrLoad(result.chartValues);
-                ShowChart(itemData, (result.foundTime, chartViewSticksSize / 2, true), true, result.chartValues);
+                //ShowChart(itemData, (result.foundTime, chartViewSticksSize / 2, true), true, result.chartValues);
+                ShowChart(itemData, (data.EnterTime, chartViewSticksSize / 2, true), false, data.cv);
             });
 
             var tab_page_list = new List<TabPage>() { new TabPage("Metric Result"), new TabPage("Day Result") };
@@ -3081,33 +3091,9 @@ namespace BackTestingFinal
             var lastStick = new BackTradeStick(chartValues)
             {
                 Time = lastTime,
-                Price = new decimal[]
-                        {
-                                list[0].Price[2],
-                                list[0].Price[2],
-                                list[0].Price[2],
-                                list[0].Price[2]
-                        }
             };
-            var nextTime = lastStick.Time.AddSeconds(chartValues.seconds);
-            for (int i = 0; i < list.Count; i++)
-            {
-                if (list[i].Time >= nextTime)
-                {
-                    Error.Show();
-                    return null;
-                }
 
-                lastStick.Price[3] = list[i].Price[3];
-
-                if (list[i].Price[0] > lastStick.Price[0])
-                    lastStick.Price[0] = list[i].Price[0];
-                if (list[i].Price[1] < lastStick.Price[1])
-                    lastStick.Price[1] = list[i].Price[1];
-
-                lastStick.Ms += list[i].Ms;
-                lastStick.Md += list[i].Md;
-            }
+            MakeStick(lastStick, list, 0, list.Count - 1, lastStick.Time.AddSeconds(chartValues.seconds));
 
             return lastStick;
         }
@@ -3134,6 +3120,7 @@ namespace BackTestingFinal
         {
             return Strategy.calSimul ? start.Subtract(Strategy.ReadyTimeToCheckBeforeStart) : start;
         }
+        // 메인 로직
         bool CheckAndCompliteFromTheMinuite(BackItemData itemData, DateTime from2, DateTime tst)
         {
             if (from2 > itemData.firstLastMin.lastMin)
@@ -3162,8 +3149,8 @@ namespace BackTestingFinal
                                 v.CLD.startIndex = v.CLD.currentIndex;
                                 v.CLD.lastStick = new BackTradeStick(v.CV) { Time = v.CLD.list[v.CLD.currentIndex].Time };
 
-                                for (int k = 0; k < v.CLD.list.Count; k++)
-                                    Strategy.SetRSIAandDiff(itemData, v.CLD.list, v.CLD.list[k], k - 1);
+                                //for (int k = 0; k < v.CLD.list.Count; k++)
+                                //    Strategy.SetRSIAandDiff(itemData, v.CLD.list, v.CLD.list[k], k - 1);
                             }
                         }
                         else if (v.CLD.list[v.CLD.list.Count - 1].Time <= from2.AddDays(1))
@@ -3178,12 +3165,17 @@ namespace BackTestingFinal
                                 if (v.CLD.currentIndex - (Strategy.IndNeedDays + Strategy.CompareNeedDays - 1) > 0
                                     && !itemData.positionData[(int)Position.Long].Enter
                                     && !itemData.positionData[(int)Position.Short].Enter)
-                                    v.CLD.list.RemoveRange(0, v.CLD.currentIndex - (Strategy.IndNeedDays + Strategy.CompareNeedDays - 1));
+                                {
+                                    var removeCount = v.CLD.currentIndex - (Strategy.IndNeedDays + Strategy.CompareNeedDays - 1);
+
+                                    if (v.CLD.crossTimes.Count == 0 || v.CLD.list[removeCount - 1].Time < v.CLD.crossTimes[0])
+                                        v.CLD.list.RemoveRange(0, removeCount);
+                                }
 
                                 v.CLD.currentIndex = GetStartIndex(v.CLD.list, from2) - 1;
 
-                                for (int k = v.CLD.currentIndex; k < v.CLD.list.Count; k++)
-                                    Strategy.SetRSIAandDiff(itemData, v.CLD.list, v.CLD.list[k], k - 1);
+                                //for (int k = v.CLD.currentIndex; k < v.CLD.list.Count; k++)
+                                //    Strategy.SetRSIAandDiff(itemData, v.CLD.list, v.CLD.list[k], k - 1);
                             }
                         }
                     }
@@ -3261,7 +3253,9 @@ namespace BackTestingFinal
                     if (!Strategy.calLater
                         && (j == ChartTimeSet.OneMinute.index
                             || !Strategy.calOnlyFullStick
-                            || from2.AddMinutes(1).Subtract(v.CLD.lastStick.Time).TotalSeconds == v.CV.seconds))
+                            || from2.AddMinutes(1).Subtract(v.CLD.lastStick.Time).TotalSeconds == v.CV.seconds
+                            )
+                        )
                         Strategy.SetRSIAandDiff(itemData, v.CLD.list, v.CLD.lastStick, v.CLD.currentIndex - 1);
 
                     if (from2 >= tst && j >= Strategy.minCV.index && j <= Strategy.maxCV.index)
@@ -3276,6 +3270,7 @@ namespace BackTestingFinal
 
             return true;
         }
+        // 메인 로직
         void Run(DateTime start, DateTime end, CR CRType)
         {
             if (TestAll)
@@ -3335,7 +3330,8 @@ namespace BackTestingFinal
                                 BeforeGap = positionData.EnterTime.Subtract(itemData.BeforeExitTime).ToString(Formats.TIME_SPAN),
                                 LorS = (Position)j,
                                 EnterMarketLastMin = positionData.EnterMarketLastMin,
-                                EnterMarketLastMins = positionData.EnterMarketLastMins
+                                EnterMarketLastMins = positionData.EnterMarketLastMins,
+                                cv = positionData.EnterFoundForExit.chartValues,
                             };
 
                             // 수익말고 다른지표 확률 계산하고 싶을때
@@ -3903,7 +3899,24 @@ namespace BackTestingFinal
             e.Handled = true;
         }
 
-        void leftClick(int i)
+        private void Form_Paint(object sender, PaintEventArgs e)
+        {
+            if (shouldDrawLine && beforeClickIndex2 != int.MinValue)
+            {
+                if (double.IsNaN(mainChart.ChartAreas[0].AxisX.Minimum))
+                    return;
+
+                Graphics g = e.Graphics;
+
+                using (Pen pen = new Pen(Color.Orange, 1))
+                {
+                    var pixelX = (int)mainChart.ChartAreas[0].AxisX.ValueToPixelPosition(beforeClickIndex2);
+
+                    g.DrawLine(pen, pixelX, 0, pixelX, form.Height);
+                }
+            }
+        }
+        void leftClick(int i, MouseEventArgs e)
         {
             var chartValues = mainChart.Tag as ChartValues;
             var list = showingItemData.listDic[chartValues].list;
@@ -3914,9 +3927,60 @@ namespace BackTestingFinal
                 return;
             }
 
-            form.Text = Enum.GetName(typeof(Markets), Settings.values[Settings.ProgramName].market[Settings.MarketsName]) + "     " + showingItemData.Code + "     H:" + list[i].Price[0] + "  L:" + list[i].Price[1] + "  O:" + list[i].Price[2] + "  C:" + list[i].Price[3] + "  Ms:" + list[i].Ms + "  Md:" + list[i].Md +
-                " S5:" + Math.Round(mainChart.Series[5].Points[i].YValues[0], 2) + " S6:" + Math.Round(mainChart.Series[6].Points[i].YValues[0], 2) +
-                " Amp:" + Math.Round((list[i].Price[0] / list[i].Price[1] - 1) * 100, 2);
+            shouldDrawLine = true;
+            mainChart.Invalidate();
+            var texts = new List<string>
+                {
+                    mainChart.Series[0].Points[i].AxisLabel,
+                    "\r\n",
+                    "고 : " + list[i].Price[0],
+                    "저 : " + list[i].Price[1],
+                    "시 : " + list[i].Price[2],
+                    "종 : " + list[i].Price[3],
+                    "\r\n",
+                    "매수 : " + list[i].Ms,
+                    "매도 : " + list[i].Md,
+                    
+                };
+            if (beforeClickIndex != int.MinValue)
+            {
+                texts.Add("\r\n");
+                texts.Add("Δx : " + (i - beforeClickIndex)); // 이전 클릭으로 부터의 x축 거리
+                texts.Add("Δy : " + (beforeClickIndex < list.Count
+                        ? (Math.Round((list[i].Price[3] / list[beforeClickIndex].Price[2] - 1) * 100, 2) + "%") : ""));
+            }
+            ShowClickTextBox(e, texts);
+            beforeClickIndex2 = beforeClickIndex;
+            beforeClickIndex = i;
+
+            var crossTimes = new List<DateTime>();
+            var dist = new List<int>();
+            var ratios = new List<double>();
+            var lastCross = i;
+            for (int j = i; j >= 1; j--)
+            {
+
+                var RVR2PDiffNow = list[j].indicator.IndNew[ChartNames.AXIS_Y_RVR2P][0]
+                - list[j].indicator.IndNew[ChartNames.AXIS_Y_RVR2P][1];
+                var RVR2PDiffLast = list[j - 1].indicator.IndNew[ChartNames.AXIS_Y_RVR2P][0]
+                - list[j - 1].indicator.IndNew[ChartNames.AXIS_Y_RVR2P][1];
+
+                if (RVR2PDiffNow * RVR2PDiffLast < 0)
+                {
+                    crossTimes.Add(list[j].Time);
+                    dist.Add(lastCross - j);
+                    lastCross = j;
+
+                    if (dist.Count == 3)
+                    {
+                        ratios.Add((double)dist[2] / dist[1]);
+                        ratios.Add(1);
+                        ratios.Add((double)dist[0] / dist[1]);
+
+                        break;
+                    }
+                }
+            }
 
             return;
 
