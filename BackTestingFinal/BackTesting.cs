@@ -177,7 +177,7 @@ namespace BackTestingFinal
             //fromTextBox.Text = "2019-10-01 00:00:00";
 
             // 최신 데이터 시작
-            fromTextBox.Text = "2020-11-01 00:00:00";
+            //fromTextBox.Text = "2020-11-01 00:00:00";
             //fromTextBox.Text = "2021-11-01 00:00:00";
 
             // 최근 6시간 일치하는 부분
@@ -3977,20 +3977,21 @@ namespace BackTestingFinal
             var texts = new List<string>
                 {
                     mainChart.Series[0].Points[i].AxisLabel,
-                    "\r\n",
+                    //"\r\n",
                     "고 : " + list[i].Price[0],
                     "저 : " + list[i].Price[1],
                     "시 : " + list[i].Price[2],
                     "종 : " + list[i].Price[3],
-                    "\r\n",
+                    //"\r\n",
                     "매수 : " + list[i].Ms,
                     "매도 : " + list[i].Md,
                     
                 };
             if (beforeClickIndex != int.MinValue)
             {
-                texts.Add("\r\n");
-                texts.Add("Δx : " + (i - beforeClickIndex)); // 이전 클릭으로 부터의 x축 거리
+                //texts.Add("\r\n");
+                texts.Add("Δx : " + (i - beforeClickIndex)
+                    + " (" + (list[i].Time.Subtract(list[beforeClickIndex].Time).ToString(Formats.TIME_SPAN)) + ")"); // 이전 클릭으로 부터의 x축 거리
                 texts.Add("Δy : " + (beforeClickIndex < list.Count
                         ? (Math.Round((list[i].Price[3] / list[beforeClickIndex].Price[2] - 1) * 100, 2) + "%") : ""));
             }
