@@ -3972,33 +3972,6 @@ namespace BackTestingFinal
                 return;
             }
 
-            shouldDrawLine = true;
-            mainChart.Invalidate();
-            var texts = new List<string>
-                {
-                    mainChart.Series[0].Points[i].AxisLabel,
-                    //"\r\n",
-                    "고 : " + list[i].Price[0],
-                    "저 : " + list[i].Price[1],
-                    "시 : " + list[i].Price[2],
-                    "종 : " + list[i].Price[3],
-                    //"\r\n",
-                    "매수 : " + list[i].Ms,
-                    "매도 : " + list[i].Md,
-                    
-                };
-            if (beforeClickIndex != int.MinValue)
-            {
-                //texts.Add("\r\n");
-                texts.Add("Δx : " + (i - beforeClickIndex)
-                    + " (" + (list[i].Time.Subtract(list[beforeClickIndex].Time).ToString(Formats.TIME_SPAN)) + ")"); // 이전 클릭으로 부터의 x축 거리
-                texts.Add("Δy : " + (beforeClickIndex < list.Count
-                        ? (Math.Round((list[i].Price[3] / list[beforeClickIndex].Price[2] - 1) * 100, 2) + "%") : ""));
-            }
-            ShowClickTextBox(e, texts);
-            beforeClickIndex2 = beforeClickIndex;
-            beforeClickIndex = i;
-
             var crossTimes = new List<DateTime>();
             var dist = new List<int>();
             var ratios = new List<double>();
