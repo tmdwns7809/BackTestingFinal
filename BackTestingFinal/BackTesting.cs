@@ -151,8 +151,8 @@ namespace BackTestingFinal
             TestAll = Settings.values[Settings.ProgramName].others[Settings.TestAll];
             TestAll = Settings.values[Settings.ProgramName].others[Settings.AlertOn];
 
-            sticksDBpath = DBManager.path;
-            sticksDBbaseName = DBManager.BaseName;
+            sticksDBpath = SticksDBManager.path;
+            sticksDBbaseName = SticksDBManager.BaseName;
             FuturesUSD.SetDB();
 
             var start = sticksDBpath.LastIndexOf('\\'); 
@@ -3972,6 +3972,8 @@ namespace BackTestingFinal
                 return;
             }
 
+            return;
+
             var crossTimes = new List<DateTime>();
             var dist = new List<int>();
             var ratios = new List<double>();
@@ -4000,8 +4002,6 @@ namespace BackTestingFinal
                     }
                 }
             }
-
-            return;
 
             var indName = ChartNames.AXIS_Y_RVR2;
 
