@@ -1113,6 +1113,8 @@ namespace BackTestingFinal
         {
             var conn = FuturesUSD.DBDic[ChartTimeSet.Minute1];
 
+            SticksDBManager.OpenConnection(conn);
+
             var reader = new SQLiteCommand("Select name From sqlite_master where type='table'", conn).ExecuteReader();
 
             var number = 1;
@@ -1125,6 +1127,7 @@ namespace BackTestingFinal
                 itemDataDic.Add(itemData.Code, itemData);
             }
 
+            SticksDBManager.CloseConnection(conn);
 
             metricDic.Add(MetricCR, new MetricData() { MetricName = MetricCR });
             metricListView.AddObject(metricDic[MetricCR]);
@@ -3712,8 +3715,6 @@ namespace BackTestingFinal
             if (size == default)
                 size = ChartCounts.DEFAULT_LOAD;
 
-            var conn = FuturesUSD.DBDic[chartValues];
-
             var to = GetFirstOrLastTime(false, itemData, chartValues).time;
             if (toPast)
             {
@@ -3730,6 +3731,10 @@ namespace BackTestingFinal
                 if (to2 < to)
                     to = to2;
             }
+
+            var conn = FuturesUSD.DBDic[chartValues];
+
+            SticksDBManager.OpenConnection(conn);
 
             size = (int)(to.Subtract(from).TotalSeconds / chartValues.seconds) + 1;
 
@@ -3804,6 +3809,8 @@ namespace BackTestingFinal
                 throw;
             }
 
+            SticksDBManager.CloseConnection(conn);
+
             return list;
         }
         BackTradeStick GetStickFromSQL(SQLiteDataReader reader, ChartValues cv)
@@ -3848,6 +3855,7 @@ namespace BackTestingFinal
                 chartValues = mainChart.Tag as ChartValues;
 
             var conn = FuturesUSD.DBDic[chartValues];
+            SticksDBManager.OpenConnection(conn);
 
             var time = first ? DateTime.MaxValue : DateTime.MinValue;
             if (!DateTime.TryParse(toTextBox.Text, out var end) || !DateTime.TryParse(fromTextBox.Text, out var start))
@@ -3906,6 +3914,8 @@ namespace BackTestingFinal
 
             if (time == DateTime.MinValue || time == DateTime.MaxValue)
                 Error.Show();
+
+            SticksDBManager.CloseConnection(conn);
 
             return (time, itemData);
         }
