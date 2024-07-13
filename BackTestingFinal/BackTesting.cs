@@ -226,8 +226,6 @@ namespace BackTestingFinal
         }
         void SetAdditionalMainView()
         {
-            mainChart.Paint += Chart_Paint;
-
             LeftClickAction += leftClick;
 
             /* test?
@@ -3955,23 +3953,6 @@ namespace BackTestingFinal
             e.Handled = true;
         }
 
-        private void Chart_Paint(object sender, PaintEventArgs e)
-        {
-            if (shouldDrawLine && beforeClickIndex2 != int.MinValue)
-            {
-                if (double.IsNaN(mainChart.ChartAreas[0].AxisX.Minimum))
-                    return;
-
-                Graphics g = e.Graphics;
-
-                using (Pen pen = new Pen(Color.Orange, 1))
-                {
-                    var pixelX = (int)mainChart.ChartAreas[0].AxisX.ValueToPixelPosition(beforeClickIndex2);
-
-                    g.DrawLine(pen, pixelX, 0, pixelX, form.Height);
-                }
-            }
-        }
         void leftClick(int i, MouseEventArgs e)
         {
             var chartValues = mainChart.Tag as ChartValues;
