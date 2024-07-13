@@ -2944,7 +2944,8 @@ namespace BackTestingFinal
                         if ((Strategy.canLStogether ? !positionData.Enter : (!itemData.positionData[(int)Position.Long].Enter && !itemData.positionData[(int)Position.Short].Enter)) &&
                             positionData.found && result.foundTime == DateTime.MinValue)
                         {
-                            Strategy.EnterSetting(positionData, m.CLD.lastStick);
+                            
+                            CandleEnterSetting(positionData, m.CLD.lastStick);
 
                             if (Strategy.inside)
                                 Strategy.InsideFirstSetting(itemData, (Position)j);
@@ -2994,7 +2995,7 @@ namespace BackTestingFinal
                             {
                                 if (positionData.Enter && Strategy.InsideEnterCondition(itemData, (Position)j))
                                 {
-                                    Strategy.EnterSetting(positionData2, m.CLD.lastStick);
+                                    CandleEnterSetting(positionData2, m.CLD.lastStick);
                                     positionData2.OutEnterTime = positionData.EnterTime;
                                 }
                             }
@@ -3472,7 +3473,7 @@ namespace BackTestingFinal
                         {
                             if (positionData.Enter && Strategy.InsideEnterCondition(itemData, (Position)j))
                             {
-                                Strategy.EnterSetting(positionData2, m.CLD.lastStick);
+                                CandleEnterSetting(positionData2, m.CLD.lastStick);
                                 positionData2.OutEnterTime = positionData.EnterTime;
                             }
                         }
@@ -3604,7 +3605,7 @@ namespace BackTestingFinal
                                 {
                                     var minV = foundItem.itemData.listDic[ChartTimeSet.Minute1];
                                     var positionData = foundItem.itemData.positionData[j];
-                                    Strategy.EnterSetting(positionData, minV.lastStick);
+                                    CandleEnterSetting(positionData, minV.lastStick);
                                     if (Strategy.calSimul && from2 >= start)
                                         positionData.Real = Strategy.CheckTrend((Position)j, from2,
                                             (market1Day[m1DI].Price[3] > market1Day[m1DI].Price[2] ? 1 : -1) * market1Day[m1DI].Price[0] / market1Day[m1DI].Price[1], enterCount[j].Count);
@@ -3621,7 +3622,7 @@ namespace BackTestingFinal
                                         Strategy.InsideFirstSetting(foundItem.itemData, (Position)j);
                                         if (Strategy.InsideEnterCondition(foundItem.itemData, (Position)j))
                                         {
-                                            Strategy.EnterSetting(foundItem.itemData.positionData2[j], minV.lastStick);
+                                            CandleEnterSetting(foundItem.itemData.positionData2[j], minV.lastStick);
                                             foundItem.itemData.positionData2[j].OutEnterTime = foundItem.itemData.positionData[j].EnterTime;
                                         }
                                     }
