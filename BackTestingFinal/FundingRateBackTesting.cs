@@ -82,6 +82,14 @@ namespace BackTestingFinal
                 chartAreaPrice.AxisX.MinorGrid.LineColor = ColorSet.ChartGridWeak;
             }
 
+            if (majorGrid != 0)
+            {
+                chartAreaPrice.AxisX.MajorGrid.Enabled = true;
+                chartAreaPrice.AxisX.MajorGrid.Interval = majorGrid;
+                chartAreaPrice.AxisX.MajorGrid.LineWidth = 1;
+                chartAreaPrice.AxisX.MajorGrid.LineColor = ColorSet.ChartGrid;
+            }
+
             SetFundingRateSeries(mainChart.Series.Add(ChartNames.SERIES_FUNDING_RATE), chartAreaPrice);
             SetCumulativeReturnSeries(mainChart.Series.Add(ChartNames.SERIES_CUMULATIVE_RETURN), chartAreaPrice);
         }
