@@ -289,7 +289,7 @@ namespace BackTestingFinal
                 var e2 = e as MouseEventArgs;
                 if (e2.Button == MouseButtons.Left)
                 {
-                    var result = GetCursorPositionFromClick(chart, e2);
+                    var result = GetXIndexFromClick(chart, e2);
                     if (!result.isInArea)
                         return;
 
