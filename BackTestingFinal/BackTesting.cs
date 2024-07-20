@@ -217,11 +217,13 @@ namespace BackTestingFinal
             //toTextBox.Text = "2021-11-17 00:00:00";
 
             // 8.4103. 전략 확인용
-            fromTextBox.Text = "2019-10-01 00:00:00";
-            toTextBox.Text = "2024-05-31 00:00:00";
+            fromTextBox.Text = "2024-01-01 00:00:00";
+            //fromTextBox.Text = "2019-10-01 00:00:00";
+            //toTextBox.Text = "2024-05-31 00:00:00";
 
             // 8.4104. 전략 확인용
             //fromTextBox.Text = "2024-03-01 00:00:00";
+            //toTextBox.Text = "2024-06-27 00:00:00";
 
         }
         void SetAdditionalMainView()
@@ -1300,15 +1302,15 @@ namespace BackTestingFinal
             var CRType = (CR)Enum.Parse(typeof(CR), CRComboBox.Text);
 
             var market1Day = LoadSticks(itemDataDic["BTCUSDT"] as BackItemData, ChartTimeSet.Day1, start.Date, (int)end.Date.AddDays(1).Subtract(start.Date).TotalDays, false);
-            var market2Day = LoadSticks(itemDataDic["ETHUSDT"] as BackItemData, ChartTimeSet.Day1, start.Date, (int)end.Date.AddDays(1).Subtract(start.Date).TotalDays, false);
+            //var market2Day = LoadSticks(itemDataDic["ETHUSDT"] as BackItemData, ChartTimeSet.Day1, start.Date, (int)end.Date.AddDays(1).Subtract(start.Date).TotalDays, false);
             var m1DI = 0;
-            var m2DI = 0;
+            //var m2DI = 0;
             var market1DayDetail = LoadSticks(itemDataDic["BTCUSDT"] as BackItemData, Strategy.DetailCV, startStartTime
                 , (int)(ChartTimeSet.AddSeconds(endStartTime, Strategy.DetailCV.seconds).Subtract(startStartTime).TotalSeconds / Strategy.DetailCV.seconds), false);
-            var market2DayDetail = LoadSticks(itemDataDic["ETHUSDT"] as BackItemData, Strategy.DetailCV, startStartTime
-                , (int)(ChartTimeSet.AddSeconds(endStartTime, Strategy.DetailCV.seconds).Subtract(startStartTime).TotalSeconds / Strategy.DetailCV.seconds), false);
+            //var market2DayDetail = LoadSticks(itemDataDic["ETHUSDT"] as BackItemData, Strategy.DetailCV, startStartTime
+            //    , (int)(ChartTimeSet.AddSeconds(endStartTime, Strategy.DetailCV.seconds).Subtract(startStartTime).TotalSeconds / Strategy.DetailCV.seconds), false);
             var m1DDI = 0;
-            var m2DDI = 0;
+            //var m2DDI = 0;
 
             for (int j = (int)Position.Long; j <= (int)Position.Short; j++)
                 if (isAllLongShort == Position.All || isAllLongShort == (Position)j)
@@ -1506,24 +1508,24 @@ namespace BackTestingFinal
                                 Charts[3].Series[2].Points.AddXY(axisLabel, 0);
                                 Charts[3].Series[4].Points.AddXY(axisLabel, 0);
                             }
-                            if (market2DayDetail.Count > 0 && date >= market2DayDetail[0].Time && date <= market2DayDetail[market2DayDetail.Count - 1].Time)
-                            {
-                                Charts[3].Series[3].Points.AddXY(axisLabel, Math.Round((market2DayDetail[m2DDI].Price[3] / market2DayDetail[0].Price[3] - 1) * 100, 0));
-                                Charts[3].Series[5].Points.AddXY(axisLabel, market2DayDetail[m2DDI].Ms + market2DayDetail[m2DDI].Md);
-                                m2DDI++;
-                            }
-                            else
-                            {
-                                Charts[3].Series[3].Points.AddXY(axisLabel, 0);
-                                Charts[3].Series[5].Points.AddXY(axisLabel, 0);
-                            }
+                            //if (market2DayDetail.Count > 0 && date >= market2DayDetail[0].Time && date <= market2DayDetail[market2DayDetail.Count - 1].Time)
+                            //{
+                            //    Charts[3].Series[3].Points.AddXY(axisLabel, Math.Round((market2DayDetail[m2DDI].Price[3] / market2DayDetail[0].Price[3] - 1) * 100, 0));
+                            //    Charts[3].Series[5].Points.AddXY(axisLabel, market2DayDetail[m2DDI].Ms + market2DayDetail[m2DDI].Md);
+                            //    m2DDI++;
+                            //}
+                            //else
+                            //{
+                            //    Charts[3].Series[3].Points.AddXY(axisLabel, 0);
+                            //    Charts[3].Series[5].Points.AddXY(axisLabel, 0);
+                            //}
                         }
 
                         Charts[j].Series[j].Points.AddXY(axisLabel, Charts[3].Series[j].Points.Last().YValues[0]);
                         Charts[j].Series[2].Points.AddXY(axisLabel, Charts[3].Series[2].Points[Charts[3].Series[j].Points.Count - 1].YValues[0]);
-                        Charts[j].Series[3].Points.AddXY(axisLabel, Charts[3].Series[3].Points[Charts[3].Series[j].Points.Count - 1].YValues[0]);
+                        //Charts[j].Series[3].Points.AddXY(axisLabel, Charts[3].Series[3].Points[Charts[3].Series[j].Points.Count - 1].YValues[0]);
                         Charts[j].Series[4].Points.AddXY(axisLabel, Charts[3].Series[4].Points[Charts[3].Series[j].Points.Count - 1].YValues[0]);
-                        Charts[j].Series[5].Points.AddXY(axisLabel, Charts[3].Series[5].Points[Charts[3].Series[j].Points.Count - 1].YValues[0]);
+                        //Charts[j].Series[5].Points.AddXY(axisLabel, Charts[3].Series[5].Points[Charts[3].Series[j].Points.Count - 1].YValues[0]);
                         Charts[j].Series[j + 6].Points.AddXY(axisLabel, Charts[3].Series[j + 6].Points.Last().YValues[0]);
                         Charts[j].Series[j + 8].Points.AddXY(axisLabel, Charts[3].Series[j + 8].Points.Last().YValues[0]);
                         Charts[j].Series[j + 10].Points.AddXY(axisLabel, Charts[3].Series[j + 10].Points.Last().YValues[0]);
@@ -1586,17 +1588,17 @@ namespace BackTestingFinal
                                     Charts[2].Series[2].Points.AddXY(axisLabel, 0);
                                     Charts[2].Series[4].Points.AddXY(axisLabel, 0);
                                 }
-                                if (market2Day.Count > 0 && date >= market2Day[0].Time && date <= market2Day[market2Day.Count - 1].Time)
-                                {
-                                    Charts[2].Series[3].Points.AddXY(axisLabel, Math.Round((market2Day[m2DI].Price[3] / market2Day[0].Price[3] - 1) * 100, 0));
-                                    Charts[2].Series[5].Points.AddXY(axisLabel, market2Day[m2DI].Ms + market2Day[m2DI].Md);
-                                    m2DI++;
-                                }
-                                else
-                                {
-                                    Charts[2].Series[3].Points.AddXY(axisLabel, 0);
-                                    Charts[2].Series[5].Points.AddXY(axisLabel, 0);
-                                }
+                                //if (market2Day.Count > 0 && date >= market2Day[0].Time && date <= market2Day[market2Day.Count - 1].Time)
+                                //{
+                                //    Charts[2].Series[3].Points.AddXY(axisLabel, Math.Round((market2Day[m2DI].Price[3] / market2Day[0].Price[3] - 1) * 100, 0));
+                                //    Charts[2].Series[5].Points.AddXY(axisLabel, market2Day[m2DI].Ms + market2Day[m2DI].Md);
+                                //    m2DI++;
+                                //}
+                                //else
+                                //{
+                                //    Charts[2].Series[3].Points.AddXY(axisLabel, 0);
+                                //    Charts[2].Series[5].Points.AddXY(axisLabel, 0);
+                                //}
                             }
                         }
                     }
