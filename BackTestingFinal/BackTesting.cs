@@ -148,6 +148,8 @@ namespace BackTestingFinal
 
         public BackTesting(Form form, string programName, decimal st) : base(form, programName, st)
         {
+            baseInstance = this;
+
             TestAll = Settings.values[Settings.ProgramName].others[Settings.TestAll];
             TestAll = Settings.values[Settings.ProgramName].others[Settings.AlertOn];
 
@@ -1111,16 +1113,21 @@ namespace BackTestingFinal
 
         void LoadCodeListAndMetric()
         {
-            var conn = FuturesUSD.DBDic[ChartTimeSet.Minute1];
+            var conn = SticksDBManager.DBDic[ChartTimeSet.Minute1];
 
             SticksDBManager.OpenConnection(conn);
 
             var reader = new SQLiteCommand("Select name From sqlite_master where type='table'", conn).ExecuteReader();
 
+            var dropCodeList = new List<string>();
+
             var number = 1;
             while (reader.Read())
             {
                 var code = reader["name"].ToString();
+
+                if (code.Contains("_"))
+                    dropCodeList.Add(code);
 
                 var itemData = new BackItemData(code, number++);
                 codeListView.AddObject(itemData);
@@ -1128,6 +1135,9 @@ namespace BackTestingFinal
             }
 
             SticksDBManager.CloseConnection(conn);
+
+            //foreach (var code in dropCodeList)
+            //    SticksDBManager.DropCode(code);
 
             metricDic.Add(MetricCR, new MetricData() { MetricName = MetricCR });
             metricListView.AddObject(metricDic[MetricCR]);
@@ -2563,7 +2573,7 @@ namespace BackTestingFinal
         public override void SetChartNowOrLoad(ChartValues chartValues, int position = int.MinValue, bool loadNew = false
             , bool updateZoom = true)
         {
-            if (showingItemData != default && !FuturesUSD.DBDic.ContainsKey(chartValues))
+            if (showingItemData != default && !SticksDBManager.DBDic.ContainsKey(chartValues))
                 return;
 
             mainChart.Visible = true;
@@ -3733,7 +3743,7 @@ namespace BackTestingFinal
                     to = to2;
             }
 
-            var conn = FuturesUSD.DBDic[chartValues];
+            var conn = SticksDBManager.DBDic[chartValues];
 
             SticksDBManager.OpenConnection(conn);
 
@@ -3855,7 +3865,7 @@ namespace BackTestingFinal
             if (chartValues == default)
                 chartValues = mainChart.Tag as ChartValues;
 
-            var conn = FuturesUSD.DBDic[chartValues];
+            var conn = SticksDBManager.DBDic[chartValues];
             SticksDBManager.OpenConnection(conn);
 
             var time = first ? DateTime.MaxValue : DateTime.MinValue;
