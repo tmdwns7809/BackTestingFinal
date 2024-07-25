@@ -2850,9 +2850,9 @@ namespace BackTestingFinal
 
                 var list = LoadSticks(itemData, chartValues,
                     (toPast || !newLoad) ? from :
-                        ChartTimeSet.AddSeconds(from, -chartValues.seconds * (Strategy.IndNeedDays + Strategy.CompareNeedDays - 1)),
+                        ChartTimeSet.AddSeconds(from, -chartValues.seconds * (Strategy.FindNeedDays - 1)),
                     minSize
-                        + ((!newLoad && !toPast) ? 0 : (Strategy.IndNeedDays + Strategy.CompareNeedDays - 1)), toPast);
+                        + ((!newLoad && !toPast) ? 0 : (Strategy.FindNeedDays - 1)), toPast);
 
                 var startIndex = GetStartIndex(list, toPast ?
                     ChartTimeSet.AddSeconds(from, -chartValues.seconds * (minSize - 1)) : 
@@ -3196,9 +3196,9 @@ namespace BackTestingFinal
                             if (itemData.firstLastMin.firstMin < from2.AddMinutes(minituesInADay))
                             {
                                 v.CLD.list = LoadSticks(itemData, v.CV
-                                    , ChartTimeSet.AddSeconds(from2, -v.CV.seconds * (Strategy.IndNeedDays + Strategy.CompareNeedDays - 1))
+                                    , ChartTimeSet.AddSeconds(from2, -v.CV.seconds * (Strategy.FindNeedDays - 1))
                                     , (int)(minituesInADay * ChartTimeSet.Minute1.seconds / v.CV.seconds * (j + 1)
-                                        + (Strategy.IndNeedDays + Strategy.CompareNeedDays - 1)), false);
+                                        + (Strategy.FindNeedDays - 1)), false);
                                 v.CLD.currentIndex = GetStartIndex(v.CLD.list, from2);
                                 v.CLD.startIndex = v.CLD.currentIndex;
                                 v.CLD.lastStick = new BackTradeStick(v.CV) { Time = v.CLD.list[v.CLD.currentIndex].Time };
@@ -3216,11 +3216,11 @@ namespace BackTestingFinal
                                     , (int)(minituesInADay * ChartTimeSet.Minute1.seconds / v.CV.seconds * (j + 1)), false));
                                 v.CLD.currentIndex = GetStartIndex(v.CLD.list, from2) - 1;
 
-                                if (v.CLD.currentIndex - (Strategy.IndNeedDays + Strategy.CompareNeedDays - 1) > 0
+                                if (v.CLD.currentIndex - (Strategy.FindNeedDays - 1) > 0
                                     && !itemData.positionData[(int)Position.Long].Enter
                                     && !itemData.positionData[(int)Position.Short].Enter)
                                 {
-                                    var removeCount = v.CLD.currentIndex - (Strategy.IndNeedDays + Strategy.CompareNeedDays - 1);
+                                    var removeCount = v.CLD.currentIndex - (Strategy.FindNeedDays - 1);
 
                                     if (v.CLD.crossTimes.Count == 0 || v.CLD.list[removeCount - 1].Time < v.CLD.crossTimes[0])
                                         v.CLD.list.RemoveRange(0, removeCount);
