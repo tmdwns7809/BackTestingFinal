@@ -13,9 +13,16 @@ namespace BackTestingFinal
         {
             InitializeComponent();
 
-            //BackTesting.instance = new BackTesting(this, Settings.ProgramBackTesting, 8.4103m);     // 속도 버그 있음 개선 필요, 디비쪽 문제일듯?
+            BackTesting.instance = new BackTesting(this, Settings.ProgramBackTesting, 8.4103m);     // 속도 버그 있음 개선 필요, 디비쪽 문제일듯?
             //BackTesting.instance = new BackTesting(this, Settings.ProgramBackTesting, 8.41031m);
-            BackTesting.instance = new BackTesting(this, Settings.ProgramBackTesting, 8.41032m);
+            //BackTesting.instance = new BackTesting(this, Settings.ProgramBackTesting, 100);
+
+            FormClosed += Form1_FormClosed;
+        }
+
+        private void Form1_FormClosed(object sender, FormClosedEventArgs e)
+        {
+            SticksDBManager.CloseAllDB();
         }
 
         protected override void WndProc(ref Message m)

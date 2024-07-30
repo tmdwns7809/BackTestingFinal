@@ -156,6 +156,7 @@ namespace BackTestingFinal
             sticksDBpath = SticksDBManager.path;
             sticksDBbaseName = SticksDBManager.BaseName;
             FuturesUSD.SetDB();
+            SticksDBManager.OpenAllDB();
 
             var start = sticksDBpath.LastIndexOf('\\'); 
             var image_folder = sticksDBpath.Substring(0, start) + "image";
@@ -219,9 +220,9 @@ namespace BackTestingFinal
             //toTextBox.Text = "2021-11-17 00:00:00";
 
             // 8.4103. 전략 확인용
-            fromTextBox.Text = "2024-01-01 00:00:00";
-            //fromTextBox.Text = "2019-10-01 00:00:00";
-            //toTextBox.Text = "2024-05-31 00:00:00";
+            //fromTextBox.Text = "2024-01-01 00:00:00";
+            fromTextBox.Text = "2019-10-01 00:00:00";
+            toTextBox.Text = "2024-05-31 00:00:00";
 
             // 8.4104. 전략 확인용
             //fromTextBox.Text = "2024-03-01 00:00:00";
@@ -896,6 +897,7 @@ namespace BackTestingFinal
                     Task.Run(new Action(() =>
                     {
                         FuturesUSD.SetDB();
+                        SticksDBManager.OpenAllDB();
 
                         foreach (BackItemData itemData in itemDataDic.Values)
                             itemData.firstLastMin =
@@ -1115,7 +1117,7 @@ namespace BackTestingFinal
         {
             var conn = SticksDBManager.DBDic[ChartTimeSet.Minute1];
 
-            SticksDBManager.OpenConnection(conn);
+            //SticksDBManager.OpenConnection(conn);
 
             var reader = new SQLiteCommand("Select name From sqlite_master where type='table'", conn).ExecuteReader();
 
@@ -1134,7 +1136,7 @@ namespace BackTestingFinal
                 itemDataDic.Add(itemData.Code, itemData);
             }
 
-            SticksDBManager.CloseConnection(conn);
+            //SticksDBManager.CloseConnection(conn);
 
             //foreach (var code in dropCodeList)
             //    SticksDBManager.DropCode(code);
@@ -3096,15 +3098,13 @@ namespace BackTestingFinal
             else if (j > 0)
                 list[list.Count - 1] = makeLastStick(itemData, beforeCV, list[list.Count - 1].Time);
 
-            var lastStick = new BackTradeStick(chartValues)
-            {
-                Time = lastTime,
-            };
+            var lastStick = new BackTradeStick(chartValues) { Time = lastTime, };
 
             MakeStick(lastStick, list, 0, list.Count - 1, ChartTimeSet.AddSeconds(lastStick.Time, chartValues.seconds));
 
             return lastStick;
         }
+        // 백테스팅 할때는 이 메서드를 안 부르기 때문에 속도에 영향 없음
         TradeStick makeLastStickOld(BackItemData itemData, ChartValues chartValues, DateTime lastTime)
         {
             if (!DateTime.TryParse(toTextBox.Text, out DateTime endTime))
@@ -3745,7 +3745,7 @@ namespace BackTestingFinal
 
             var conn = SticksDBManager.DBDic[chartValues];
 
-            SticksDBManager.OpenConnection(conn);
+            //SticksDBManager.OpenConnection(conn);
 
             size = (int)(to.Subtract(from).TotalSeconds / chartValues.seconds) + 1;
 
@@ -3820,7 +3820,7 @@ namespace BackTestingFinal
                 throw;
             }
 
-            SticksDBManager.CloseConnection(conn);
+            //SticksDBManager.CloseConnection(conn);
 
             return list;
         }
@@ -3866,7 +3866,7 @@ namespace BackTestingFinal
                 chartValues = mainChart.Tag as ChartValues;
 
             var conn = SticksDBManager.DBDic[chartValues];
-            SticksDBManager.OpenConnection(conn);
+            //SticksDBManager.OpenConnection(conn);
 
             var time = first ? DateTime.MaxValue : DateTime.MinValue;
             if (!DateTime.TryParse(toTextBox.Text, out var end) || !DateTime.TryParse(fromTextBox.Text, out var start))
@@ -3926,7 +3926,7 @@ namespace BackTestingFinal
             if (time == DateTime.MinValue || time == DateTime.MaxValue)
                 Error.Show();
 
-            SticksDBManager.CloseConnection(conn);
+            //SticksDBManager.CloseConnection(conn);
 
             return (time, itemData);
         }
