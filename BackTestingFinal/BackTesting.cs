@@ -221,8 +221,8 @@ namespace BackTestingFinal
 
             // 8.4103. 전략 확인용
             //fromTextBox.Text = "2024-01-01 00:00:00";
-            fromTextBox.Text = "2019-10-01 00:00:00";
-            toTextBox.Text = "2024-05-31 00:00:00";
+            //fromTextBox.Text = "2019-10-01 00:00:00";
+            //toTextBox.Text = "2024-05-31 00:00:00";
 
             // 8.4104. 전략 확인용
             //fromTextBox.Text = "2024-03-01 00:00:00";
