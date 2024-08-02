@@ -228,6 +228,9 @@ namespace BackTestingFinal
             //fromTextBox.Text = "2024-03-01 00:00:00";
             //toTextBox.Text = "2024-06-27 00:00:00";
 
+            // 100 전략 확인용
+            fromTextBox.Text = "2019-10-01 00:00:00";
+
         }
         void SetAdditionalMainView()
         {
@@ -2693,6 +2696,7 @@ namespace BackTestingFinal
                 if (v.list[i].Time == cursor.time || (i + 1 < v.list.Count && v.list[i].Time <= cursor.time && cursor.time <= v.list[i + 1].Time))
                     cursorIndex = i;
             }
+            MakeVolumeProfileChart(v.list);
 
             var zoomStart = cursorIndex - cursor.position + 1;
             ZoomX(mainChart, zoomStart, zoomStart + chartViewSticksSize, updateZoom);
@@ -3203,8 +3207,8 @@ namespace BackTestingFinal
                                 v.CLD.startIndex = v.CLD.currentIndex;
                                 v.CLD.lastStick = new BackTradeStick(v.CV) { Time = v.CLD.list[v.CLD.currentIndex].Time };
 
-                                //for (int k = 0; k < v.CLD.list.Count; k++)
-                                //    Strategy.SetRSIAandDiff(itemData, v.CLD.list, v.CLD.list[k], k - 1);
+                                for (int k = 0; k < v.CLD.startIndex; k++)
+                                    Strategy.SetRSIAandDiff(itemData, v.CLD.list, v.CLD.list[k], k - 1);
                             }
                         }
                         else if (v.CLD.list[v.CLD.list.Count - 1].Time <= from2.AddDays(1))
