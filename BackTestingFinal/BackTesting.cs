@@ -301,14 +301,14 @@ namespace BackTestingFinal
                     if (!result.isInArea)
                         return;
 
-                    var text = chart.Series[0].Points[result.Xindex].AxisLabel;
+                    var text = chart.Series[ChartNames.SERIES_PRICE].Points[result.Xindex].AxisLabel;
                     foreach (var s in chart.Series)
                         if (s.Points.Count != 0)
                             text += "    " + s.Points[result.Xindex].YValues[0];
 
                     form.Text = text;
 
-                    clickResultAction(strategy.simulDays[0][DateTime.Parse(chart.Series[0].Points[result.Xindex].AxisLabel).Date]);
+                    clickResultAction(strategy.simulDays[0][DateTime.Parse(chart.Series[ChartNames.SERIES_PRICE].Points[result.Xindex].AxisLabel).Date]);
                 }
                 else
                 {
@@ -331,7 +331,7 @@ namespace BackTestingFinal
                 Charts[i].Hide();
                 Charts[i].Click += resultChartClick;
 
-                var mainChartArea = mainChart.ChartAreas[0];
+                var mainChartArea = mainChart.ChartAreas[ChartNames.AREA_PRICE];
                 var areaHeight = 100 - mainChartArea.Position.Y;
                 var chartAreaCR = Charts[i].ChartAreas.Add("ChartAreaCumulativeReturn");
                 SetChartAreaFirst(chartAreaCR);
@@ -551,7 +551,7 @@ namespace BackTestingFinal
                 Charts2[i].Hide();
                 Charts2[i].Click += resultChartClick;
 
-                var mainChartArea = mainChart.ChartAreas[0];
+                var mainChartArea = mainChart.ChartAreas[ChartNames.AREA_PRICE];
                 var areaHeight = 100 - mainChartArea.Position.Y;
                 var chartAreaCR = Charts2[i].ChartAreas.Add("ChartAreaCumulativeReturn");
                 SetChartAreaFirst(chartAreaCR);
@@ -669,7 +669,7 @@ namespace BackTestingFinal
             SetChart(TimeCountChart, mainChart.Size, mainChart.Location, form);
             TimeCountChart.Hide();
 
-            var mainChartArea2 = mainChart.ChartAreas[0];
+            var mainChartArea2 = mainChart.ChartAreas[ChartNames.AREA_PRICE];
             var chartAreaTC = TimeCountChart.ChartAreas.Add("ChartAreaTimeCount");
             SetChartAreaLast(chartAreaTC);
             chartAreaTC.Position = new ElementPosition(mainChartArea2.Position.X, mainChartArea2.Position.Y, mainChartArea2.Position.Width, 100);
@@ -820,7 +820,6 @@ namespace BackTestingFinal
             #endregion
 
             #region Controller
-            var ca = mainChart.ChartAreas[1];
             SetButton(beforeButton, "<", (sender, e) => { FindSimulAndShow(true); });
             beforeButton.Size = Buttons[0].Size;
             beforeButton.Location = new Point(TimeCountChartButton.Location.X, TimeCountChartButton.Location.Y + TimeCountChartButton.Height + 5);
@@ -2566,7 +2565,7 @@ namespace BackTestingFinal
                 {
                     MessageBox.Show("none", "Alert", MessageBoxButtons.OK);
                     if (showingItemData != default)
-                        LoadAndCheckSticks(showingItemData as BackItemData, true, true, mainChart.Series[0].Points.Count, DateTime.Parse(mainChart.Series[0].Points.Last().AxisLabel));
+                        LoadAndCheckSticks(showingItemData as BackItemData, true, true, mainChart.Series[ChartNames.SERIES_PRICE].Points.Count, DateTime.Parse(mainChart.Series[ChartNames.SERIES_PRICE].Points.Last().AxisLabel));
                 }
 
                 sw.Stop();
@@ -2591,9 +2590,9 @@ namespace BackTestingFinal
             TimeCountChartButton.BackColor = ColorSet.Button;
 
             var from = mainChart.Tag != null ? GetStandardDate(chartValues: chartValues) : default;
-            var cursorOn = !double.IsNaN(mainChart.ChartAreas[0].CursorX.Position);
+            var cursorOn = !double.IsNaN(mainChart.ChartAreas[ChartNames.AREA_PRICE].CursorX.Position);
             if (position == int.MinValue)
-                position = cursorOn ? (int)(mainChart.ChartAreas[0].CursorX.Position - mainChart.ChartAreas[0].AxisX.ScaleView.ViewMinimum - 1)
+                position = cursorOn ? (int)(mainChart.ChartAreas[ChartNames.AREA_PRICE].CursorX.Position - mainChart.ChartAreas[ChartNames.AREA_PRICE].AxisX.ScaleView.ViewMinimum - 1)
                 : chartViewSticksSize;
 
             ClearMainChartAndSet(chartValues, showingItemData);
@@ -2703,7 +2702,7 @@ namespace BackTestingFinal
 
             if (cursor.on)
             {
-                mainChart.ChartAreas[0].CursorX.Position = cursorIndex + 1;
+                mainChart.ChartAreas[ChartNames.AREA_PRICE].CursorX.Position = cursorIndex + 1;
                 SetCursorText(cursorIndex);
             }
             else
@@ -2809,6 +2808,7 @@ namespace BackTestingFinal
 
             for (int i = 0; i < v.list.Count; i++)
                 AddFullChartPoint(chart, v.list[i]);
+            MakeVolumeProfileChart(v.list);
 
             //if (toPast)
             //{
@@ -3851,12 +3851,12 @@ namespace BackTestingFinal
             if (from == default)
             {
                 var standardIndex = first
-                    ? (int)mainChart.ChartAreas[0].AxisX.ScaleView.ViewMinimum
-                    : (int)mainChart.ChartAreas[0].AxisX.ScaleView.ViewMaximum - 2;
-                from = (standardIndex < mainChart.Series[0].Points.Count - 1 && standardIndex > 0)
-                        ? DateTime.Parse(mainChart.Series[0].Points[standardIndex].AxisLabel)
+                    ? (int)mainChart.ChartAreas[ChartNames.AREA_PRICE].AxisX.ScaleView.ViewMinimum
+                    : (int)mainChart.ChartAreas[ChartNames.AREA_PRICE].AxisX.ScaleView.ViewMaximum - 2;
+                from = (standardIndex < mainChart.Series[ChartNames.SERIES_PRICE].Points.Count - 1 && standardIndex > 0)
+                        ? DateTime.Parse(mainChart.Series[ChartNames.SERIES_PRICE].Points[standardIndex].AxisLabel)
                         : GetFirstOrLastTime(first
-                            , mainChart.Series[0].Points.Count == 0 ? default : showingItemData as BackItemData
+                            , mainChart.Series[ChartNames.SERIES_PRICE].Points.Count == 0 ? default : showingItemData as BackItemData
                             , oneChart ? chartValues : ChartTimeSet.Minute1).time;
             }
             if (!oneChart && !first)
@@ -4038,7 +4038,7 @@ namespace BackTestingFinal
             var func = Fit.PolynomialFunc(polList.x.ToArray(), arrayY, 2);
             var result = new List<double>();
 
-            for (int j = 0; j < mainChart.Series[0].Points.Count; j++)
+            for (int j = 0; j < mainChart.Series[ChartNames.SERIES_PRICE].Points.Count; j++)
             {
                 mainChart.Series[ChartAxisYSeries[indName].Keys[2]].Points[j].IsEmpty = true;
             }
@@ -4212,7 +4212,7 @@ namespace BackTestingFinal
             shortFunc2.plus = Fit.PolynomialFunc(shortList2.plus.x.ToArray(), shortList2.plus.y.ToArray(), shortD2);
 
 
-            for (int j = 0; j < mainChart.Series[0].Points.Count; j++)
+            for (int j = 0; j < mainChart.Series[ChartNames.SERIES_PRICE].Points.Count; j++)
             {
                 mainChart.Series[ChartAxisYSeries[ChartNames.AXIS_Y_RVMAP].Keys[1]].Points[j].IsEmpty = true;
                 mainChart.Series[ChartAxisYSeries[ChartNames.AXIS_Y_RVMAM].Keys[1]].Points[j].IsEmpty = true;
@@ -4266,7 +4266,7 @@ namespace BackTestingFinal
                 return;
 
             list = showingItemData.listDic[mainChart.Tag as ChartValues].list;
-            cursorIndex = double.IsNaN(mainChart.ChartAreas[0].CursorX.Position) ? list.Count - 1 : GetCursorIndexFromPosition(mainChart);
+            cursorIndex = double.IsNaN(mainChart.ChartAreas[ChartNames.AREA_PRICE].CursorX.Position) ? list.Count - 1 : GetCursorIndexFromPosition(mainChart);
 
             base.OneChartFindAndShow(itemData, cursorIndex, list);
         }
