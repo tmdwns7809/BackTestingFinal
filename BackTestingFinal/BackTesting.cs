@@ -3098,7 +3098,7 @@ namespace BackTestingFinal
             var list = LoadSticks(itemData, beforeCV, lastTime, n, false);
 
             if (list.Count == 0)
-                Error.Show();
+                return null;
             else if (j > 0)
                 list[list.Count - 1] = makeLastStick(itemData, beforeCV, list[list.Count - 1].Time);
 
