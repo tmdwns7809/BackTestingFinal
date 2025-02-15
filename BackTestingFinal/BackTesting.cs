@@ -134,7 +134,7 @@ namespace BackTestingFinal
         bool AlertOn;
         int threadN;
 
-        static string STResultDBPath = TradingLibrary.Base.Values.Path.DB_BASE + @"BackTestingFinal\전략결과\";
+        static string STResultDBPath = TradingLibrary.Base.Values.Path.PROJECTS_PATH + @"BackTestingFinal\전략결과\";
         SQLiteConnection STResultDB = new SQLiteConnection(@"Data Source=" + STResultDBPath + "strategy_result.db");
 
         DateTime startDone = DateTime.MaxValue;
