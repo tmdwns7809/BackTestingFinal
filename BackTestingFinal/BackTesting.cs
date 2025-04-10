@@ -25,6 +25,7 @@ using MathNet.Numerics;
 using TradingLibrary.Base.Values;
 using TradingLibrary.Base.Values.Chart;
 using TradingLibrary.Trading;
+using MathNet.Numerics.Interpolation;
 
 namespace BackTestingFinal
 {
@@ -229,7 +230,11 @@ namespace BackTestingFinal
             //toTextBox.Text = "2024-06-27 00:00:00";
 
             // 100 전략 확인용
+            //fromTextBox.Text = "2019-10-01 00:00:00";
+
+            // 8.412
             fromTextBox.Text = "2019-10-01 00:00:00";
+            toTextBox.Text = "2024-05-31 00:00:00";
 
         }
         void SetAdditionalMainView()
@@ -3980,41 +3985,43 @@ namespace BackTestingFinal
                 return;
             }
 
+            //return;
+
+            //var crossTimes = new List<DateTime>();
+            //var dist = new List<int>();
+            //var ratios = new List<double>();
+            //var lastCross = i;
+            //for (int j = i; j >= 1; j--)
+            //{
+
+            //    var RVR2PDiffNow = list[j].indicator.IndNew[ChartNames.AXIS_Y_RVR2P][0]
+            //    - list[j].indicator.IndNew[ChartNames.AXIS_Y_RVR2P][1];
+            //    var RVR2PDiffLast = list[j - 1].indicator.IndNew[ChartNames.AXIS_Y_RVR2P][0]
+            //    - list[j - 1].indicator.IndNew[ChartNames.AXIS_Y_RVR2P][1];
+
+            //    if (RVR2PDiffNow * RVR2PDiffLast < 0)
+            //    {
+            //        crossTimes.Add(list[j].Time);
+            //        dist.Add(lastCross - j);
+            //        lastCross = j;
+
+            //        if (dist.Count == 3)
+            //        {
+            //            ratios.Add((double)dist[2] / dist[1]);
+            //            ratios.Add(1);
+            //            ratios.Add((double)dist[0] / dist[1]);
+
+            //            break;
+            //        }
+            //    }
+            //}
+
             return;
-
-            var crossTimes = new List<DateTime>();
-            var dist = new List<int>();
-            var ratios = new List<double>();
-            var lastCross = i;
-            for (int j = i; j >= 1; j--)
-            {
-
-                var RVR2PDiffNow = list[j].indicator.IndNew[ChartNames.AXIS_Y_RVR2P][0]
-                - list[j].indicator.IndNew[ChartNames.AXIS_Y_RVR2P][1];
-                var RVR2PDiffLast = list[j - 1].indicator.IndNew[ChartNames.AXIS_Y_RVR2P][0]
-                - list[j - 1].indicator.IndNew[ChartNames.AXIS_Y_RVR2P][1];
-
-                if (RVR2PDiffNow * RVR2PDiffLast < 0)
-                {
-                    crossTimes.Add(list[j].Time);
-                    dist.Add(lastCross - j);
-                    lastCross = j;
-
-                    if (dist.Count == 3)
-                    {
-                        ratios.Add((double)dist[2] / dist[1]);
-                        ratios.Add(1);
-                        ratios.Add((double)dist[0] / dist[1]);
-
-                        break;
-                    }
-                }
-            }
 
             var indName = ChartNames.AXIS_Y_RVR2;
 
             (List<double> x, List<double> y) polList = (new List<double>(), new List<double>());
-            var size = 20;
+            var size = 10;
             var full2 = true;
             for (int j = 0; j < size; j++)
             {
@@ -4035,8 +4042,10 @@ namespace BackTestingFinal
 
             var arrayY = polList.y.ToArray();
 
-            var func = Fit.PolynomialFunc(polList.x.ToArray(), arrayY, 2);
+            var func = Fit.PolynomialFunc(polList.x.ToArray(), arrayY, 3);
             var result = new List<double>();
+            var func2 = Fit.PolynomialFunc(polList.x.ToArray(), arrayY, 2);
+            var result2 = new List<double>();
 
             for (int j = 0; j < mainChart.Series[ChartNames.SERIES_PRICE].Points.Count; j++)
             {
@@ -4049,14 +4058,16 @@ namespace BackTestingFinal
 
                 var val = func(j);
                 result.Add(val);
+                result2.Add(func2(j));
 
                 mainChart.Series[ChartAxisYSeries[indName].Keys[2]].Points[index].IsEmpty = false;
                 mainChart.Series[ChartAxisYSeries[indName].Keys[2]].Points[index].YValues[0] = val;
             }
 
             var good = GoodnessOfFit.RSquared(result.ToArray(), arrayY);
+            var good2 = GoodnessOfFit.RSquared(result2.ToArray(), arrayY);
 
-            form.Text += "\t\t good : " + good;
+            form.Text += "\t\t good3 : " + Math.Round(good, 3) + "\tgood2 : " + Math.Round(good2, 3);
 
             strategy.Enter_8_41m(list, i - 1, list[i]);
             strategy.Eixt_8_41m(Position.Long, list, i - 1, list[i]);
