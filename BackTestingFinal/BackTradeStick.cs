@@ -24,10 +24,10 @@ namespace BackTestingFinal
         {
             var limit = 0.001m;
             return 
-                (stick1.Price[0] == stick1.Price[2] || stick0.Price[0] == stick0.Price[2] || stick0.Price[0] == stick1.Price[0] || Math.Abs(1 - stick0.Price[0] / stick1.Price[0]) < limit) &&
-                (stick1.Price[1] == stick1.Price[2] || stick0.Price[1] == stick0.Price[2] || stick0.Price[1] == stick1.Price[1] || Math.Abs(1 - stick0.Price[1] / stick1.Price[1]) < limit) &&
-                //(Price[2] == stick.Price[2] || Math.Abs(1 - Price[2] / stick.Price[2]) < limit) &&    open이 안맞는 경우가 많음
-                (stick0.Price[3] == stick1.Price[3] || Math.Abs(1 - stick0.Price[3] / stick1.Price[3]) < limit) &&
+                (stick1.PriceHigh == stick1.PriceOpen || stick0.PriceHigh == stick0.PriceOpen || stick0.PriceHigh == stick1.PriceHigh || Math.Abs(1 - stick0.PriceHigh / stick1.PriceHigh) < limit) &&
+                (stick1.PriceLow == stick1.PriceOpen || stick0.PriceLow == stick0.PriceOpen || stick0.PriceLow == stick1.PriceLow || Math.Abs(1 - stick0.PriceLow / stick1.PriceLow) < limit) &&
+                //(PriceOpen == stick.PriceOpen || Math.Abs(1 - PriceOpen / stick.PriceOpen) < limit) &&    open이 안맞는 경우가 많음
+                (stick0.PriceClose == stick1.PriceClose || Math.Abs(1 - stick0.PriceClose / stick1.PriceClose) < limit) &&
                 (stick0.Ms == 0 || stick1.Ms == 0 || stick0.Ms == stick1.Ms || Math.Abs(1 - stick0.Ms / stick1.Ms) < limit) &&
                 (stick0.Md == 0 || stick1.Md == 0 || stick0.Md == stick1.Md || Math.Abs(1 - stick0.Md / stick1.Md) < limit) &&
                 (stick0.TCount == stick1.TCount || (stick0.TCount != 0 && stick1.TCount != 0 && Math.Abs(1 - stick0.TCount / stick1.TCount) < limit)) &&

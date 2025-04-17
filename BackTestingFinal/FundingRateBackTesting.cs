@@ -150,7 +150,7 @@ namespace BackTestingFinal
 
                     foreach (var stick in list)
                     {
-                        itemData.cumulativeReturn += startSize * stick.Price[0];
+                        itemData.cumulativeReturn += startSize * stick.PriceHigh;
                         itemData.CRlist.Add(itemData.cumulativeReturn);
 
                         if (itemData.cumulativeReturn > highest)
@@ -224,7 +224,7 @@ namespace BackTestingFinal
             return new BackTradeStick(null)
             {
                 Time = DateTime.ParseExact(reader["time"].ToString(), Formats.DB_TIME, null),
-                Price = new decimal[] { decimal.Parse(reader["fundingRate"].ToString()) }
+                PriceOpen = decimal.Parse(reader["fundingRate"].ToString()),
             };
         }
         List<TradeStick> LoadSticks(BackItemData itemData)
@@ -270,7 +270,7 @@ namespace BackTestingFinal
             {
                 mainChart.Series[ChartNames.SERIES_FUNDING_RATE].Points
                     .AddXY(v.list[i].Time.ToString(mainChart.ChartAreas[ChartNames.AREA_FUNDING_RATE].AxisX.LabelStyle.Format)
-                    , (double)v.list[i].Price[0]);
+                    , (double)v.list[i].PriceHigh);
                 if (itemData.CRlist.Count > 0)
                     mainChart.Series[ChartNames.SERIES_CUMULATIVE_RETURN].Points
                         .AddXY(v.list[i].Time.ToString(mainChart.ChartAreas[ChartNames.AREA_FUNDING_RATE].AxisX.LabelStyle.Format)

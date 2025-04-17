@@ -1518,7 +1518,7 @@ namespace BackTestingFinal
                             var date = strategy.simulDaysDetail[j].Keys[i];
                             if (market1DayDetail.Count > 0 && date >= market1DayDetail[0].Time && date <= market1DayDetail[market1DayDetail.Count - 1].Time)
                             {
-                                Charts[3].Series[2].Points.AddXY(axisLabel, Math.Round((market1DayDetail[m1DDI].Price[3] / market1DayDetail[0].Price[3] - 1) * 100, 0));
+                                Charts[3].Series[2].Points.AddXY(axisLabel, Math.Round((market1DayDetail[m1DDI].PriceClose / market1DayDetail[0].PriceClose - 1) * 100, 0));
                                 Charts[3].Series[4].Points.AddXY(axisLabel, market1DayDetail[m1DDI].Ms + market1DayDetail[m1DDI].Md);
                                 m1DDI++;
                             }
@@ -1529,7 +1529,7 @@ namespace BackTestingFinal
                             }
                             //if (market2DayDetail.Count > 0 && date >= market2DayDetail[0].Time && date <= market2DayDetail[market2DayDetail.Count - 1].Time)
                             //{
-                            //    Charts[3].Series[3].Points.AddXY(axisLabel, Math.Round((market2DayDetail[m2DDI].Price[3] / market2DayDetail[0].Price[3] - 1) * 100, 0));
+                            //    Charts[3].Series[3].Points.AddXY(axisLabel, Math.Round((market2DayDetail[m2DDI].PriceClose / market2DayDetail[0].PriceClose - 1) * 100, 0));
                             //    Charts[3].Series[5].Points.AddXY(axisLabel, market2DayDetail[m2DDI].Ms + market2DayDetail[m2DDI].Md);
                             //    m2DDI++;
                             //}
@@ -1598,7 +1598,7 @@ namespace BackTestingFinal
                                 var date = strategy.simulDays[j].Keys[di];
                                 if (market1Day.Count > 0 && date >= market1Day[0].Time && date <= market1Day[market1Day.Count - 1].Time)
                                 {
-                                    Charts[2].Series[2].Points.AddXY(axisLabel, Math.Round((market1Day[m1DI].Price[3] / market1Day[0].Price[3] - 1) * 100, 0));
+                                    Charts[2].Series[2].Points.AddXY(axisLabel, Math.Round((market1Day[m1DI].PriceClose / market1Day[0].PriceClose - 1) * 100, 0));
                                     Charts[2].Series[4].Points.AddXY(axisLabel, market1Day[m1DI].Ms + market1Day[m1DI].Md);
                                     m1DI++;
                                 }
@@ -1609,7 +1609,7 @@ namespace BackTestingFinal
                                 }
                                 //if (market2Day.Count > 0 && date >= market2Day[0].Time && date <= market2Day[market2Day.Count - 1].Time)
                                 //{
-                                //    Charts[2].Series[3].Points.AddXY(axisLabel, Math.Round((market2Day[m2DI].Price[3] / market2Day[0].Price[3] - 1) * 100, 0));
+                                //    Charts[2].Series[3].Points.AddXY(axisLabel, Math.Round((market2Day[m2DI].PriceClose / market2Day[0].PriceClose - 1) * 100, 0));
                                 //    Charts[2].Series[5].Points.AddXY(axisLabel, market2Day[m2DI].Ms + market2Day[m2DI].Md);
                                 //    m2DI++;
                                 //}
@@ -2984,7 +2984,7 @@ namespace BackTestingFinal
 
                                 fixedFoundList = positionData.EnterFoundList;
 
-                                var profitRow = (double)((Position)j == Position.Long ? m.CLD.lastStick.Price[3] / positionData.EnterPrice : positionData.EnterPrice / m.CLD.lastStick.Price[3]);
+                                var profitRow = (double)((Position)j == Position.Long ? m.CLD.lastStick.PriceClose / positionData.EnterPrice : positionData.EnterPrice / m.CLD.lastStick.PriceClose);
                                 var resultData = new BackResultData()
                                 {
                                     Code = itemData.Code,
@@ -3024,7 +3024,7 @@ namespace BackTestingFinal
                             {
                                 positionData2.Enter = false;
 
-                                var profitRow = (double)((Position)j == Position.Long ? m.CLD.lastStick.Price[3] / positionData2.EnterPrice : positionData2.EnterPrice / m.CLD.lastStick.Price[3]);
+                                var profitRow = (double)((Position)j == Position.Long ? m.CLD.lastStick.PriceClose / positionData2.EnterPrice : positionData2.EnterPrice / m.CLD.lastStick.PriceClose);
                                 var resultData = new BackResultData()
                                 {
                                     Code = itemData.Code,
@@ -3283,17 +3283,17 @@ namespace BackTestingFinal
                         else if (timeDiff > v.CV.seconds)
                             Error.Show();
 
-                        if (v.CLD.lastStick.Price[1] == 0)
+                        if (v.CLD.lastStick.PriceLow == 0)
                         {
-                            v.CLD.lastStick.Price[1] = m.CLD.lastStick.Price[1];
-                            v.CLD.lastStick.Price[2] = m.CLD.lastStick.Price[2];
+                            v.CLD.lastStick.PriceLow = m.CLD.lastStick.PriceLow;
+                            v.CLD.lastStick.PriceOpen = m.CLD.lastStick.PriceOpen;
                         }
 
-                        if (m.CLD.lastStick.Price[0] > v.CLD.lastStick.Price[0])
-                            v.CLD.lastStick.Price[0] = m.CLD.lastStick.Price[0];
-                        if (m.CLD.lastStick.Price[1] < v.CLD.lastStick.Price[1])
-                            v.CLD.lastStick.Price[1] = m.CLD.lastStick.Price[1];
-                        v.CLD.lastStick.Price[3] = m.CLD.lastStick.Price[3];
+                        if (m.CLD.lastStick.PriceHigh > v.CLD.lastStick.PriceHigh)
+                            v.CLD.lastStick.PriceHigh = m.CLD.lastStick.PriceHigh;
+                        if (m.CLD.lastStick.PriceLow < v.CLD.lastStick.PriceLow)
+                            v.CLD.lastStick.PriceLow = m.CLD.lastStick.PriceLow;
+                        v.CLD.lastStick.PriceClose = m.CLD.lastStick.PriceClose;
 
                         v.CLD.lastStick.Ms += m.CLD.lastStick.Ms;
                         v.CLD.lastStick.Md += m.CLD.lastStick.Md;
@@ -3383,7 +3383,7 @@ namespace BackTestingFinal
                         {
                             positionData.Enter = false;
 
-                            var profitRow = (double)((Position)j == Position.Long ? m.CLD.lastStick.Price[3] / positionData.EnterPrice : positionData.EnterPrice / m.CLD.lastStick.Price[3]);
+                            var profitRow = (double)((Position)j == Position.Long ? m.CLD.lastStick.PriceClose / positionData.EnterPrice : positionData.EnterPrice / m.CLD.lastStick.PriceClose);
                             var resultData = new BackResultData()
                             {
                                 Code = itemData.Code,
@@ -3500,7 +3500,7 @@ namespace BackTestingFinal
                         {
                             positionData2.Enter = false;
 
-                            var profitRow = (double)((Position)j == Position.Long ? m.CLD.lastStick.Price[3] / positionData2.EnterPrice : positionData2.EnterPrice / m.CLD.lastStick.Price[3]);
+                            var profitRow = (double)((Position)j == Position.Long ? m.CLD.lastStick.PriceClose / positionData2.EnterPrice : positionData2.EnterPrice / m.CLD.lastStick.PriceClose);
                             var resultData = new BackResultData()
                             {
                                 Code = itemData.Code,
@@ -3627,11 +3627,11 @@ namespace BackTestingFinal
                                     CandleEnterSetting(positionData, minV.lastStick);
                                     if (Strategy.calSimul && from2 >= start)
                                         positionData.Real = Strategy.CheckTrend((Position)j, from2,
-                                            (market1Day[m1DI].Price[3] > market1Day[m1DI].Price[2] ? 1 : -1) * market1Day[m1DI].Price[0] / market1Day[m1DI].Price[1], enterCount[j].Count);
+                                            (market1Day[m1DI].PriceClose > market1Day[m1DI].PriceOpen ? 1 : -1) * market1Day[m1DI].PriceHigh / market1Day[m1DI].PriceLow, enterCount[j].Count);
 
                                     if (market1Day[m1DI].Time != from2)
                                         Error.Show();
-                                    positionData.EnterMarketLastMin = (market1Day[m1DI].Price[3] > market1Day[m1DI].Price[2] ? 1 : -1) * market1Day[m1DI].Price[0] / market1Day[m1DI].Price[1];
+                                    positionData.EnterMarketLastMin = (market1Day[m1DI].PriceClose > market1Day[m1DI].PriceOpen ? 1 : -1) * market1Day[m1DI].PriceHigh / market1Day[m1DI].PriceLow;
                                     positionData.EnterMarketLastMins = enterCount[j].Count;
                                     //if (!Strategy.calSimul || positionData.Real)
                                         enterCount[j].Add(from2);
@@ -3693,7 +3693,7 @@ namespace BackTestingFinal
         {
             decimal sum = 0;
             for (int i = 0; i < sticks.Count; i++)
-                sum += sticks[i].Price[0] / sticks[i].Price[1];
+                sum += sticks[i].PriceHigh / sticks[i].PriceLow;
             return sum / sticks.Count;
         }
         DateTime GetDetailStartTime(DateTime time)
@@ -3806,14 +3806,14 @@ namespace BackTestingFinal
                 {
                     var stick = GetStickFromSQL(reader, chartValues);
 
-                    if (stick.Price[0] - stick.Price[2] != 0 && stick.Price[0] - stick.Price[2] < smallestDiff)
-                        smallestDiff = stick.Price[0] - stick.Price[2];
-                    if (stick.Price[0] - stick.Price[3] != 0 && stick.Price[0] - stick.Price[3] < smallestDiff)
-                        smallestDiff = stick.Price[0] - stick.Price[3];
-                    if (stick.Price[2] - stick.Price[1] != 0 && stick.Price[2] - stick.Price[1] < smallestDiff)
-                        smallestDiff = stick.Price[2] - stick.Price[1];
-                    if (stick.Price[3] - stick.Price[1] != 0 && stick.Price[3] - stick.Price[1] < smallestDiff)
-                        smallestDiff = stick.Price[3] - stick.Price[1];
+                    if (stick.PriceHigh - stick.PriceOpen != 0 && stick.PriceHigh - stick.PriceOpen < smallestDiff)
+                        smallestDiff = stick.PriceHigh - stick.PriceOpen;
+                    if (stick.PriceHigh - stick.PriceClose != 0 && stick.PriceHigh - stick.PriceClose < smallestDiff)
+                        smallestDiff = stick.PriceHigh - stick.PriceClose;
+                    if (stick.PriceOpen - stick.PriceLow != 0 && stick.PriceOpen - stick.PriceLow < smallestDiff)
+                        smallestDiff = stick.PriceOpen - stick.PriceLow;
+                    if (stick.PriceClose - stick.PriceLow != 0 && stick.PriceClose - stick.PriceLow < smallestDiff)
+                        smallestDiff = stick.PriceClose - stick.PriceLow;
 
                     if (toPast)
                         list.Insert(0, stick);
@@ -3835,20 +3835,7 @@ namespace BackTestingFinal
         }
         BackTradeStick GetStickFromSQL(SQLiteDataReader reader, ChartValues cv)
         {
-            return new BackTradeStick(cv)
-            {
-                //Time = DateTime.ParseExact(reader["date"].ToString() + reader["time"].ToString(), Formats.DB_TIME, null),
-                Time = DateTime.ParseExact(reader["time"].ToString(), Formats.DB_TIME, null),
-                Price = new decimal[]
-                        {
-                                decimal.Parse(reader["high"].ToString()),
-                                decimal.Parse(reader["low"].ToString()),
-                                decimal.Parse(reader["open"].ToString()),
-                                decimal.Parse(reader["close"].ToString())
-                        },
-                Ms = decimal.Parse(reader["takerBuyBaseVolume"].ToString()),
-                Md = decimal.Parse(reader["baseVolume"].ToString()) - decimal.Parse(reader["takerBuyBaseVolume"].ToString())
-            };
+            return FuturesUSD.SetTradeStickFromSQL(new BackTradeStick(cv), reader, cv) as BackTradeStick;
         }
         DateTime GetStandardDate(bool first = false, bool oneChart = true, ChartValues chartValues = default)
         {
