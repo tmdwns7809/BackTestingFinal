@@ -233,8 +233,9 @@ namespace BackTestingFinal
             //fromTextBox.Text = "2019-10-01 00:00:00";
 
             // 8.412
+            // 8.4128
             fromTextBox.Text = "2019-10-01 00:00:00";
-            toTextBox.Text = "2024-05-31 00:00:00";
+            toTextBox.Text = "2024-06-01 00:00:00";
 
         }
         void SetAdditionalMainView()
