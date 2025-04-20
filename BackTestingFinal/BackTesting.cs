@@ -3836,7 +3836,7 @@ namespace BackTestingFinal
         }
         BackTradeStick GetStickFromSQL(SQLiteDataReader reader, ChartValues cv)
         {
-            return FuturesUSD.SetTradeStickFromSQL(new BackTradeStick(cv), reader, cv) as BackTradeStick;
+            return FuturesUSD.GetStickFromSQLWithInd(reader, cv, new BackTradeStick(cv)) as BackTradeStick;
         }
         DateTime GetStandardDate(bool first = false, bool oneChart = true, ChartValues chartValues = default)
         {

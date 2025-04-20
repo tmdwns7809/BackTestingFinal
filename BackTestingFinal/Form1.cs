@@ -18,8 +18,8 @@ namespace BackTestingFinal
             //BackTesting.instance = new BackTesting(this, Settings.ProgramBackTesting, 101);
 
             //BackTesting.instance = new BackTesting(this, Settings.ProgramBackTesting, 8.412m);
-            //BackTesting.instance = new BackTesting(this, Settings.ProgramBackTesting, 1000);
-            BackTesting.instance = new BackTesting(this, Settings.ProgramBackTesting, 101);
+            BackTesting.instance = new BackTesting(this, Settings.ProgramBackTesting, 1000.01m);
+            //BackTesting.instance = new BackTesting(this, Settings.ProgramBackTesting, 101);
             //BackTesting.instance = new BackTesting(this, Settings.ProgramBackTesting, 8.4128m);
 
             //FundingRateBackTesting.instance = new FundingRateBackTesting(this, Settings.ProgramBackTesting, 101);
