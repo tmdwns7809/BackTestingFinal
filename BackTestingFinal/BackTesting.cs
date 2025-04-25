@@ -149,6 +149,8 @@ namespace BackTestingFinal
 
         public BackTesting(Form form, string programName, decimal st) : base(form, programName, st)
         {
+            FuturesUSD.CreateTestData();
+
             baseInstance = this;
 
             TestAll = Settings.values[Settings.ProgramName].others[Settings.TestAll];
@@ -1125,7 +1127,7 @@ namespace BackTestingFinal
         {
             var conn = SticksDBManager.DBDic[ChartTimeSet.Minute1];
 
-            //SticksDBManager.OpenConnection(conn);
+            //OpenConnection(conn);
 
             var reader = new SQLiteCommand("Select name From sqlite_master where type='table'", conn).ExecuteReader();
 
@@ -1144,10 +1146,10 @@ namespace BackTestingFinal
                 itemDataDic.Add(itemData.Code, itemData);
             }
 
-            //SticksDBManager.CloseConnection(conn);
+            //CloseConnection(conn);
 
             //foreach (var code in dropCodeList)
-            //    SticksDBManager.DropCode(code);
+            //    DropCode(code);
 
             metricDic.Add(MetricCR, new MetricData() { MetricName = MetricCR });
             metricListView.AddObject(metricDic[MetricCR]);
@@ -1280,7 +1282,7 @@ namespace BackTestingFinal
 
             form.BeginInvoke(new Action(() =>
             {
-                form.Text += "  " + strategy.sttext + " done : " + sw.Elapsed.ToString(Formats.TIME_SPAN);
+                form.Text += $"  ST : {Strategy.ST} done : {sw.Elapsed.ToString(Formats.TIME_SPAN)}";
                 CalculateMetric(start, end, isAllLongShort);
                 if (!Charts[2].Visible)
                     Buttons[2].PerformClick();
@@ -1974,45 +1976,45 @@ namespace BackTestingFinal
                             var threadName = "thread";
                             var test_spend_timeName = "test_spend_time";
 
-                            columnDic.Add(isJooName, "TEXT");
-                            columnDic.Add(isFuturesName, "TEXT");
-                            columnDic.Add(strategyName, "INTEGER");
-                            columnDic.Add(CRName, "TEXT");
-                            columnDic.Add(isLongName, "TEXT");
-                            columnDic.Add(start_dayName, "TEXT");
-                            columnDic.Add(end_dayName, "TEXT");
-                            columnDic.Add(daysName, "TEXT");
-                            columnDic.Add(Cumulative_ReturnName, "TEXT");
-                            columnDic.Add(Win_RateName, "TEXT");
-                            columnDic.Add(CountName, "INTEGER");
-                            columnDic.Add(DisappearName, "INTEGER");
-                            columnDic.Add(LastDisappearName, "INTEGER");
-                            columnDic.Add(Average_Profit_RateName, "TEXT");
-                            columnDic.Add(Win_APRName, "TEXT");
-                            columnDic.Add(Lose_APRName, "TEXT");
-                            columnDic.Add(CommisionName, "TEXT");
-                            columnDic.Add(SlippageName, "TEXT");
-                            columnDic.Add(Max_Draw_DownName, "TEXT");
-                            columnDic.Add(MDD_DaysName, "TEXT");
-                            columnDic.Add(MDD_Start_DayName, "TEXT");
-                            columnDic.Add(MDD_Low_DayName, "TEXT");
-                            columnDic.Add(MDD_End_DayName, "TEXT");
-                            columnDic.Add(Longest_Draw_DownName, "TEXT");
-                            columnDic.Add(LDD_DaysName, "TEXT");
-                            columnDic.Add(LDD_Start_DayName, "TEXT");
-                            columnDic.Add(LDD_Low_DayName, "TEXT");
-                            columnDic.Add(LDD_End_DayName, "TEXT");
-                            columnDic.Add(Day_Max_HasName, "INTEGER");
-                            columnDic.Add(DMH_DayName, "TEXT");
-                            columnDic.Add(Longest_Has_TimeName, "TEXT");
-                            columnDic.Add(LHT_CodeName, "TEXT");
-                            columnDic.Add(LHT_StartName, "TEXT");
-                            columnDic.Add(Min_KellyName, "TEXT");
-                            columnDic.Add(Max_KellyName, "TEXT");
+                            columnDic.Add(isJooName, Columns.TYPE_TEXT);
+                            columnDic.Add(isFuturesName, Columns.TYPE_TEXT);
+                            columnDic.Add(strategyName, Columns.TYPE_INTEGER);
+                            columnDic.Add(CRName, Columns.TYPE_TEXT);
+                            columnDic.Add(isLongName, Columns.TYPE_TEXT);
+                            columnDic.Add(start_dayName, Columns.TYPE_TEXT);
+                            columnDic.Add(end_dayName, Columns.TYPE_TEXT);
+                            columnDic.Add(daysName, Columns.TYPE_TEXT);
+                            columnDic.Add(Cumulative_ReturnName, Columns.TYPE_TEXT);
+                            columnDic.Add(Win_RateName, Columns.TYPE_TEXT);
+                            columnDic.Add(CountName, Columns.TYPE_INTEGER);
+                            columnDic.Add(DisappearName, Columns.TYPE_INTEGER);
+                            columnDic.Add(LastDisappearName, Columns.TYPE_INTEGER);
+                            columnDic.Add(Average_Profit_RateName, Columns.TYPE_TEXT);
+                            columnDic.Add(Win_APRName, Columns.TYPE_TEXT);
+                            columnDic.Add(Lose_APRName, Columns.TYPE_TEXT);
+                            columnDic.Add(CommisionName, Columns.TYPE_TEXT);
+                            columnDic.Add(SlippageName, Columns.TYPE_TEXT);
+                            columnDic.Add(Max_Draw_DownName, Columns.TYPE_TEXT);
+                            columnDic.Add(MDD_DaysName, Columns.TYPE_TEXT);
+                            columnDic.Add(MDD_Start_DayName, Columns.TYPE_TEXT);
+                            columnDic.Add(MDD_Low_DayName, Columns.TYPE_TEXT);
+                            columnDic.Add(MDD_End_DayName, Columns.TYPE_TEXT);
+                            columnDic.Add(Longest_Draw_DownName, Columns.TYPE_TEXT);
+                            columnDic.Add(LDD_DaysName, Columns.TYPE_TEXT);
+                            columnDic.Add(LDD_Start_DayName, Columns.TYPE_TEXT);
+                            columnDic.Add(LDD_Low_DayName, Columns.TYPE_TEXT);
+                            columnDic.Add(LDD_End_DayName, Columns.TYPE_TEXT);
+                            columnDic.Add(Day_Max_HasName, Columns.TYPE_INTEGER);
+                            columnDic.Add(DMH_DayName, Columns.TYPE_TEXT);
+                            columnDic.Add(Longest_Has_TimeName, Columns.TYPE_TEXT);
+                            columnDic.Add(LHT_CodeName, Columns.TYPE_TEXT);
+                            columnDic.Add(LHT_StartName, Columns.TYPE_TEXT);
+                            columnDic.Add(Min_KellyName, Columns.TYPE_TEXT);
+                            columnDic.Add(Max_KellyName, Columns.TYPE_TEXT);
                             columnDic.Add(ImageName, "BLOB");
-                            columnDic.Add(test_timeName, "TEXT");
-                            columnDic.Add(threadName, "INTEGER");
-                            columnDic.Add(test_spend_timeName, "TEXT");
+                            columnDic.Add(test_timeName, Columns.TYPE_TEXT);
+                            columnDic.Add(threadName, Columns.TYPE_INTEGER);
+                            columnDic.Add(test_spend_timeName, Columns.TYPE_TEXT);
 
                             var statement = "";
 
@@ -2036,7 +2038,7 @@ namespace BackTestingFinal
 
                             columnDic[isJooName] = "'" + isJoo.ToString() + "'";
                             columnDic[isFuturesName] = "'" + isFutures.ToString() + "'";
-                            columnDic[strategyName] = "'" + Strategy.ST.ToString() + ".'";
+                            columnDic[strategyName] = "'" + Strategy.ST.ToString() + "'";
                             columnDic[CRName] = "'" + CRType.ToString() + "'";
                             columnDic[isLongName] = "'" + Enum.GetName(typeof(Position), i2).ToString() + "'";
                             columnDic[start_dayName] = "'" + start.ToString(Formats.DATE_TIME) + "'";
@@ -3755,7 +3757,7 @@ namespace BackTestingFinal
 
             var conn = SticksDBManager.DBDic[chartValues];
 
-            //SticksDBManager.OpenConnection(conn);
+            //OpenConnection(conn);
 
             size = (int)(to.Subtract(from).TotalSeconds / chartValues.seconds) + 1;
 
@@ -3830,7 +3832,7 @@ namespace BackTestingFinal
                 throw;
             }
 
-            //SticksDBManager.CloseConnection(conn);
+            //CloseConnection(conn);
 
             return list;
         }
@@ -3863,7 +3865,7 @@ namespace BackTestingFinal
                 chartValues = mainChart.Tag as ChartValues;
 
             var conn = SticksDBManager.DBDic[chartValues];
-            //SticksDBManager.OpenConnection(conn);
+            //OpenConnection(conn);
 
             var time = first ? DateTime.MaxValue : DateTime.MinValue;
             if (!DateTime.TryParse(toTextBox.Text, out var end) || !DateTime.TryParse(fromTextBox.Text, out var start))
@@ -3923,7 +3925,7 @@ namespace BackTestingFinal
             if (time == DateTime.MinValue || time == DateTime.MaxValue)
                 Error.Show();
 
-            //SticksDBManager.CloseConnection(conn);
+            //CloseConnection(conn);
 
             return (time, itemData);
         }
@@ -4009,7 +4011,7 @@ namespace BackTestingFinal
             var indName = ChartNames.AXIS_Y_RVR2;
 
             (List<double> x, List<double> y) polList = (new List<double>(), new List<double>());
-            var size = 10;
+            var size = 40;
             var full2 = true;
             for (int j = 0; j < size; j++)
             {
@@ -4031,9 +4033,8 @@ namespace BackTestingFinal
             var arrayY = polList.y.ToArray();
 
             var func = Fit.PolynomialFunc(polList.x.ToArray(), arrayY, 3);
+            var pol = Fit.Polynomial(polList.x.ToArray(), arrayY, 3);
             var result = new List<double>();
-            var func2 = Fit.PolynomialFunc(polList.x.ToArray(), arrayY, 2);
-            var result2 = new List<double>();
 
             for (int j = 0; j < mainChart.Series[ChartNames.SERIES_PRICE].Points.Count; j++)
             {
@@ -4046,16 +4047,16 @@ namespace BackTestingFinal
 
                 var val = func(j);
                 result.Add(val);
-                result2.Add(func2(j));
 
                 mainChart.Series[ChartAxisYSeries[indName].Keys[2]].Points[index].IsEmpty = false;
                 mainChart.Series[ChartAxisYSeries[indName].Keys[2]].Points[index].YValues[0] = val;
             }
 
-            var good = GoodnessOfFit.RSquared(result.ToArray(), arrayY);
-            var good2 = GoodnessOfFit.RSquared(result2.ToArray(), arrayY);
+            var RSquared = GoodnessOfFit.RSquared(result.ToArray(), arrayY);
+            var CoefficientOfDetermination = GoodnessOfFit.CoefficientOfDetermination(result.ToArray(), arrayY);
 
-            form.Text += "\t\t good3 : " + Math.Round(good, 3) + "\tgood2 : " + Math.Round(good2, 3);
+            form.Text += $"\t\t RSquared : {Math.Round(RSquared, 3)}\tCoefficientOfDetermination : {Math.Round(CoefficientOfDetermination, 3)}"
+                + $"\tpol[3] = {pol[3]}";
 
             strategy.Enter_8_41m(list, i - 1, list[i]);
             strategy.Eixt_8_41m(Position.Long, list, i - 1, list[i]);
