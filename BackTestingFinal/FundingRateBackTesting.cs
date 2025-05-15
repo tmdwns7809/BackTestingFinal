@@ -27,6 +27,7 @@ using TradingLibrary.Base.Values.Chart;
 using Newtonsoft.Json.Linq;
 using System.Drawing.Imaging;
 using Series = System.Windows.Forms.DataVisualization.Charting.Series;
+using TradingLibrary.Trading;
 
 namespace BackTestingFinal
 {

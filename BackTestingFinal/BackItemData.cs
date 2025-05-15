@@ -9,7 +9,7 @@ using TradingLibrary.Base.Enum;
 
 namespace BackTestingFinal
 {
-    class BackItemData : BaseItemData
+    public class BackItemData : BaseItemData
     {
         public decimal hoDiff = decimal.MaxValue;
 
@@ -22,7 +22,6 @@ namespace BackTestingFinal
         public bool ExitException;
 
         public DateTime BeforeExitTime;
-        public (DateTime firstMin, DateTime lastMin) firstLastMin;
 
         public BackResultData[] resultDataForMetricReal = new BackResultData[2];
 
