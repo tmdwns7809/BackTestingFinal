@@ -855,83 +855,79 @@ namespace BackTestingFinal
             legend.BorderWidth = 1;
             legend.DockedToChartArea = ca.Name;
         }
-        public override void SetRestView()
-        {
-            var runAction = new Action<Position>((isALS) =>
-            {
-                var CRType = (CR)Enum.Parse(typeof(CR), CRComboBox.Text);
-                Task.Run(new Action(() =>
-                {
+        public override void SetRestView() {
+            var runAction = new Action<Position>((isALS) => {
+                var CRType = (CR)Enum.Parse(typeof(CR) , CRComboBox.Text);
+                Task.Run(new Action(() => {
                     var from = GetSafeFirstOrLastTime(first: true);
                     var to = GetSafeFirstOrLastTime(first: false);
-                    if (from > to)
-                    {
+                    if(from>to) {
                         Error.Show(message: "input error");
                         return;
                     }
 
-                    form.BeginInvoke(new Action(() => { fromTextBox.Text = from.ToString(Formats.TIME); }));
-                    form.BeginInvoke(new Action(() => { toTextBox.Text = to.ToString(Formats.TIME); }));
+                    form.BeginInvoke(new Action(() => { fromTextBox.Text=from.ToString(Formats.TIME); }));
+                    form.BeginInvoke(new Action(() => { toTextBox.Text=to.ToString(Formats.TIME); }));
 
-                    RunMain(from, to, isALS, CRType);
+                    RunMain(from , to , isALS , CRType);
                 }));
             });
 
             var firstButton = buttonDic.ElementAt(0).Value;
             #region From_To_Run
 
-            SetTextBox(fromTextBox, "");
-            fromTextBox.ReadOnly = false;
-            fromTextBox.BorderStyle = BorderStyle.Fixed3D;
-            fromTextBox.Size = new Size((GetFormWidth(form) - firstButton.Location.X - firstButton.Width) / 2 - 20, 30);
-            fromTextBox.Location = new Point(firstButton.Location.X + firstButton.Width + 5, mainChart.Location.Y + 5);
+            SetTextBox(fromTextBox , "");
+            fromTextBox.ReadOnly=false;
+            fromTextBox.BorderStyle=BorderStyle.Fixed3D;
+            fromTextBox.Size=new Size((GetFormWidth(form)-firstButton.Location.X-firstButton.Width)/2-20 , 30);
+            fromTextBox.Location=new Point(firstButton.Location.X+firstButton.Width+5 , mainChart.Location.Y+5);
 
-            SetTextBox(midTextBox, "~");
-            midTextBox.Size = new Size(10, fromTextBox.Height);
-            midTextBox.Location = new Point(fromTextBox.Location.X + fromTextBox.Width + 10, fromTextBox.Location.Y);
+            SetTextBox(midTextBox , "~");
+            midTextBox.Size=new Size(10 , fromTextBox.Height);
+            midTextBox.Location=new Point(fromTextBox.Location.X+fromTextBox.Width+10 , fromTextBox.Location.Y);
 
-            SetTextBox(toTextBox, "");
-            toTextBox.ReadOnly = false;
-            toTextBox.BorderStyle = BorderStyle.Fixed3D;
-            toTextBox.Size = new Size(fromTextBox.Width, fromTextBox.Height);
-            toTextBox.Location = new Point(midTextBox.Location.X + midTextBox.Width + 10, midTextBox.Location.Y);
+            SetTextBox(toTextBox , "");
+            toTextBox.ReadOnly=false;
+            toTextBox.BorderStyle=BorderStyle.Fixed3D;
+            toTextBox.Size=new Size(fromTextBox.Width , fromTextBox.Height);
+            toTextBox.Location=new Point(midTextBox.Location.X+midTextBox.Width+10 , midTextBox.Location.Y);
 
-            SetComboBox(CRComboBox, Enum.GetNames(typeof(CR)));
-            CRComboBox.Size = new Size(150, toTextBox.Height);
-            CRComboBox.Location = new Point(fromTextBox.Location.X, fromTextBox.Location.Y + fromTextBox.Height + 3);
-            CRComboBox.SelectedIndex = CRComboBox.FindString(CR.Average.ToString());
+            SetComboBox(CRComboBox , Enum.GetNames(typeof(CR)));
+            CRComboBox.Size=new Size(150 , toTextBox.Height);
+            CRComboBox.Location=new Point(fromTextBox.Location.X , fromTextBox.Location.Y+fromTextBox.Height+3);
+            CRComboBox.SelectedIndex=CRComboBox.FindString(CR.Average.ToString());
 
 
-            SetButton(runAllButton, "All", (sender, e) => { runAction(Position.All); });
-            runAllButton.Size = new Size((GetFormWidth(form) - CRComboBox.Location.X - CRComboBox.Width - 10) / 3 - 2, toTextBox.Height);
-            runAllButton.Location = new Point(CRComboBox.Location.X + CRComboBox.Width + 5, CRComboBox.Location.Y);
+            SetButton(runAllButton , "All" , (sender , e) => { runAction(Position.All); });
+            runAllButton.Size=new Size((GetFormWidth(form)-CRComboBox.Location.X-CRComboBox.Width-10)/3-2 , toTextBox.Height);
+            runAllButton.Location=new Point(CRComboBox.Location.X+CRComboBox.Width+5 , CRComboBox.Location.Y);
 
-            SetButton(runLongButton, "Long", (sender, e) => { runAction(Position.Long); });
-            runLongButton.Size = new Size(runAllButton.Width - 2, toTextBox.Height);
-            runLongButton.Location = new Point(runAllButton.Location.X + runAllButton.Width + 4, CRComboBox.Location.Y);
+            SetButton(runLongButton , "Long" , (sender , e) => { runAction(Position.Long); });
+            runLongButton.Size=new Size(runAllButton.Width-2 , toTextBox.Height);
+            runLongButton.Location=new Point(runAllButton.Location.X+runAllButton.Width+4 , CRComboBox.Location.Y);
             //runLongButton.Font = new Font(runLongButton.Font.FontFamily, 5);
-            runLongButton.BackColor = ColorSet.PlusPrice;
+            runLongButton.BackColor=ColorSet.PlusPrice;
 
-            SetButton(runShortButton, "Short", (sender, e) => { runAction(Position.Short); });
-            runShortButton.Size = new Size(runLongButton.Width, toTextBox.Height);
-            runShortButton.Location = new Point(runLongButton.Location.X + runLongButton.Width + 4, CRComboBox.Location.Y);
+            SetButton(runShortButton , "Short" , (sender , e) => { runAction(Position.Short); });
+            runShortButton.Size=new Size(runLongButton.Width , toTextBox.Height);
+            runShortButton.Location=new Point(runLongButton.Location.X+runLongButton.Width+4 , CRComboBox.Location.Y);
             //runShortButton.Font = new Font(runShortButton.Font.FontFamily, runShortButton.Font.Size);
-            runShortButton.BackColor = ColorSet.MinusPrice;
+            runShortButton.BackColor=ColorSet.MinusPrice;
             #endregion
 
             #region Metric
-            SetListView(metricListView, new (string, string, int)[]
+            SetListView(metricListView , new (string, string, int)[]
                 {
                     ("Metric", "MetricName", 4),
                     ("Long", "Long", 4),
                     ("Short", "Short", 4)
                 });
-            metricListView.Size = new Size(GetFormWidth(form) - fromTextBox.Location.X - 5, 300);
-            metricListView.Location = new Point(fromTextBox.Location.X, CRComboBox.Location.Y + CRComboBox.Height + 5);
+            metricListView.Size=new Size(GetFormWidth(form)-fromTextBox.Location.X-5 , 300);
+            metricListView.Location=new Point(fromTextBox.Location.X , CRComboBox.Location.Y+CRComboBox.Height+5);
             #endregion
 
             #region Code_List_Result
-            SetListView(codeListView, new (string, string, int)[]
+            SetListView(codeListView , new (string, string, int)[]
                 {
                     ("No.", "number", 2),
                     ("Code", "Code", 7),
@@ -939,30 +935,28 @@ namespace BackTestingFinal
                     ("WR(%)", "WinRate", 3),
                     ("SBG", "ShortestBeforeGapText", 5)
                 });
-            codeListView.Size = new Size(metricListView.Width, 300);
-            codeListView.Location = new Point(metricListView.Location.X, metricListView.Location.Y + metricListView.Height + 5);
-            codeListView.SelectionChanged += (sender, e) =>
-            {
-                if (codeListView.SelectedIndices.Count != 1)
+            codeListView.Size=new Size(metricListView.Width , 300);
+            codeListView.Location=new Point(metricListView.Location.X , metricListView.Location.Y+metricListView.Height+5);
+            codeListView.SelectionChanged+=(sender , e) => {
+                if(codeListView.SelectedIndices.Count!=1)
                     return;
 
                 var itemData = codeListView.SelectedObject as BackItemData;
 
                 var s = new Stopwatch();
                 s.Start();
-                ShowChart(itemData, (GetFirstOrLastStickMost(false).stick, chartViewSticksSize, false));
+                ShowChart(itemData , (GetFirstOrLastStickMost(false).stick, chartViewSticksSize, false));
                 s.Stop();
 
                 ShowCodeResult(itemData);
 
-                form.Text += s.Elapsed.ToString();
+                form.Text+=s.Elapsed.ToString();
             };
             #endregion
 
             #region Results
-            var action = new Action<FastObjectListView>((sender) =>
-            {
-                if (sender.SelectedIndices.Count != 1)
+            var action = new Action<FastObjectListView>((sender) => {
+                if(sender.SelectedIndices.Count!=1)
                     return;
 
                 var data = sender.SelectedObject as BackResultData;
@@ -970,16 +964,16 @@ namespace BackTestingFinal
                 //var result = LoadAndCheckSticks(itemData:itemData, newLoad:true, toPast:false, minSize:default, from:data.OutEnterTime == default ? data.EnterTime : data.OutEnterTime, chartValues:default, oneChart:false);
                 //SetChartNowOrLoad(result.chartValues);
                 //ShowChart(itemData, (result.foundTime, chartViewSticksSize / 2, true), true, result.chartValues);
-                ShowChart(itemData, (data.EnterStick, chartViewSticksSize / 2, true), true, data.cv);
+                ShowChart(itemData , (data.EnterStick, chartViewSticksSize/2, true) , true , data.cv);
             });
 
-            var tab_page_list = new List<TabPage>() { new TabPage("Metric Result"), new TabPage("Day Result") };
+            var tab_page_list = new List<TabPage>() { new TabPage("Metric Result") , new TabPage("Day Result") };
 
-            SetTabControl(resultTabControl, new Size(codeListView.Width, 300),
-                new Point(codeListView.Location.X, codeListView.Location.Y + codeListView.Height + 10), tab_page_list);
+            SetTabControl(resultTabControl , new Size(codeListView.Width , 300) ,
+                new Point(codeListView.Location.X , codeListView.Location.Y+codeListView.Height+10) , tab_page_list);
 
             var tabPage = resultTabControl.TabPages[0];
-            SetListView(metricResultListView, new (string, string, int)[]
+            SetListView(metricResultListView , new (string, string, int)[]
                 {
                     ("No.", "Number", 30),
                     ("Date", "Date", 150),
@@ -989,13 +983,11 @@ namespace BackTestingFinal
                     ("PRA(%)", "ProfitRateAvg", 60),
                     ("WPRA(%)", "WinProfitRateAvg", 80),
                     ("LPRA(%)", "LoseProfitRateAvg", 80),
-                }, isFillProportion: false);
-            metricResultListView.Size = new Size(tabPage.Width - 12, tabPage.Height - 6);
-            metricResultListView.Location = new Point(6, 6);
-            metricResultListView.SelectionChanged += (sender, e) =>
-            {
-                if (metricResultListView.SelectedIndices.Count == 1)
-                {
+                } , isFillProportion: false);
+            metricResultListView.Size=new Size(tabPage.Width-12 , tabPage.Height-6);
+            metricResultListView.Location=new Point(6 , 6);
+            metricResultListView.SelectionChanged+=(sender , e) => {
+                if(metricResultListView.SelectedIndices.Count==1) {
                     var data = metricResultListView.SelectedObject as DayData;
                     clickResultAction(data);
                     resultTabControl.SelectTab(1);
@@ -1003,24 +995,23 @@ namespace BackTestingFinal
             };
             tabPage.Controls.Add(metricResultListView);
 
-            tabPage = resultTabControl.TabPages[1];
-            SetListView(dayResultListView, new (string, string, int)[]
+            tabPage=resultTabControl.TabPages[1];
+            SetListView(dayResultListView , new (string, string, int)[]
                 {
                     ("No.", "NumberForClick", 30),
                     ("Code", "Code", 80),
-                    ("EnterTime", "EnterTime", 150),
-                    ("ExitTime", "ExitTime", 150),
+                    ("EnterTime", "EnterStick.Time", 150),
+                    ("ExitTime", "ExitStick.Time", 150),
                     ("Dura", "Duration", 60),
                     ("Long", "LorS", 60),
                     ("PR(%)", "ProfitRate", 60),
                     ("LM", "EnterMarketLastMin", 60),
                     ("LMs", "EnterMarketLastMins", 60)
-                }, isFillProportion: false);
-            dayResultListView.Size = new Size(tabPage.Width - 12, tabPage.Height - 6);
-            dayResultListView.Location = new Point(6, 6);
-            dayResultListView.SelectionChanged += (sender, e) =>
-            {
-                if (dayResultListView.SelectedObject == null)
+                } , isFillProportion: false);
+            dayResultListView.Size=new Size(tabPage.Width-12 , tabPage.Height-6);
+            dayResultListView.Location=new Point(6 , 6);
+            dayResultListView.SelectionChanged+=(sender , e) => {
+                if(dayResultListView.SelectedObject==null)
                     return;
 
                 action(dayResultListView);
@@ -1028,13 +1019,13 @@ namespace BackTestingFinal
             };
             tabPage.Controls.Add(dayResultListView);
 
-            tab_page_list = new List<TabPage>() { new TabPage("Code Result") };
+            tab_page_list=new List<TabPage>() { new TabPage("Code Result") };
 
-            SetTabControl(resultTabControl2, new Size(resultTabControl.Width, mainChart.Location.Y + mainChart.Height - resultTabControl.Location.Y - resultTabControl.Height - 10),
-                new Point(resultTabControl.Location.X, resultTabControl.Location.Y + resultTabControl.Height + 10), tab_page_list);
+            SetTabControl(resultTabControl2 , new Size(resultTabControl.Width , mainChart.Location.Y+mainChart.Height-resultTabControl.Location.Y-resultTabControl.Height-10) ,
+                new Point(resultTabControl.Location.X , resultTabControl.Location.Y+resultTabControl.Height+10) , tab_page_list);
 
-            tabPage = resultTabControl2.TabPages[0];
-            SetListView(codeResultListView, new (string, string, int)[]
+            tabPage=resultTabControl2.TabPages[0];
+            SetListView(codeResultListView , new (string, string, int)[]
                 {
                     ("No.", "NumberForSingle", 30),
                     ("EnterTime", "EnterTime", 150),
@@ -1043,10 +1034,10 @@ namespace BackTestingFinal
                     ("PR(%)", "ProfitRate", 60),
                     ("Dura", "Duration", 60),
                     ("BefGap", "BeforeGap", 60)
-                }, isFillProportion: false);
-            codeResultListView.Size = new Size(tabPage.Width - 12, tabPage.Height - 6);
-            codeResultListView.Location = new Point(6, 6);
-            codeResultListView.SelectionChanged += (sender, e) => { action(codeResultListView); };
+                } , isFillProportion: false);
+            codeResultListView.Size=new Size(tabPage.Width-12 , tabPage.Height-6);
+            codeResultListView.Location=new Point(6 , 6);
+            codeResultListView.SelectionChanged+=(sender , e) => { action(codeResultListView); };
             tabPage.Controls.Add(codeResultListView);
             #endregion
         }
@@ -1060,16 +1051,16 @@ namespace BackTestingFinal
             else
                 return time;
         }
-        void ShowCodeResult(BackItemData itemData)
-        {
+        void ShowCodeResult(BackItemData itemData) {
             codeResultListView.ClearObjects();
             var n = 0;
-            foreach (var sd in strategy.simulDays)
-                foreach (var day in sd)
-                    foreach (var resultData in day.Value.resultDatas)
-                        if (itemData.Code == resultData.Code && resultData.EnterStick.Time.Date == day.Key && resultData.ExitStick.Time.Date >= sd.Values[0].Date)
-                        {
-                            resultData.NumberForSingle = ++n;
+            foreach(var sd in strategy.simulDays)
+                foreach(var day in sd)
+                    foreach(var resultData in day.Value.resultDatas)
+                        if(itemData.Code==resultData.Code
+                            &&resultData.EnterStick.Time.Date==day.Key
+                            &&resultData.ExitStick.Time.Date>=sd.Values[0].Date) {
+                            resultData.NumberForSingle=++n;
                             codeResultListView.AddObject(resultData);
                         }
         }
@@ -2559,33 +2550,28 @@ namespace BackTestingFinal
             TimeCountChart.Visible = false;
             TimeCountChartButton.BackColor = ColorSet.Button;
 
-            var from = mainChart.Tag != null ? GetStandardStick(chartValues: chartValues) : default;
             var cursorOn = !double.IsNaN(mainChart.ChartAreas[ChartNames.AREA_PRICE].CursorX.Position);
-            if (position == int.MinValue)
-                position = cursorOn ? (int)(mainChart.ChartAreas[ChartNames.AREA_PRICE].CursorX.Position - mainChart.ChartAreas[ChartNames.AREA_PRICE].AxisX.ScaleView.ViewMinimum - 1)
-                : chartViewSticksSize;
+            if (position==int.MinValue)
+                position=cursorOn
+                    ? (int)(mainChart.ChartAreas[ChartNames.AREA_PRICE].CursorX.Position - mainChart.ChartAreas[ChartNames.AREA_PRICE].AxisX.ScaleView.ViewMinimum - 1)
+                    : chartViewSticksSize;
 
             ClearMainChartAndSet(chartValues, showingItemData);
 
             if (showingItemData == default)
                 return;
 
-            var firstStick = showingItemData.firstOrLastStick[chartValues][true];
-            if (from.Time < firstStick.Time)
-                from = firstStick;
-
-            if (!DateTime.TryParse(toTextBox.Text, out DateTime et))
-                Error.Show();
-
+            var from = GetStandardStick();
             var list = showingItemData.listDic[mainChart.Tag as ChartValues].list;
             ShowChart(showingItemData as BackItemData,
                 (from, position, cursorOn),
-                !loadNew && list.Count != 0 && from.Time >= list[0].Time && from.Time <= list[list.Count - 1].Time, updateZoom: updateZoom);
+                loadNew||list.Count==0||from.Time<list[0].Time||from.Time>list[list.Count - 1].Time,
+                cv:chartValues,
+                updateZoom: updateZoom);
 
             base.SetChartNowOrLoad(chartValues, updateZoom: updateZoom);
         }
-        void ShowChart(
-            BackItemData itemData, (TradeStick stick, int position, bool on) cursor
+        void ShowChart(BackItemData itemData, (TradeStick stick, int position, bool on) cursor
             , bool loadNew = true, ChartValues cv = default, bool updateZoom = true)
         {
             if (cv == default) cv = mainChart.Tag as ChartValues;
@@ -2600,73 +2586,38 @@ namespace BackTestingFinal
 
             var v = itemData.listDic[cv];
 
+            var rowID = cursor.stick.rowId;
+            if (cursor.stick.cv!=cv)
+                rowID=GetSmallRowID(itemData , cursor.stick , cv);
+
             if (loadNew)
             {
-                v.list.AddRange(LoadSticks(itemData , cursor.stick.rowId+chartViewSticksSize , cv , 1 , true));
+                v.list.AddRange(LoadSticks(itemData , rowID+chartViewSticksSize , cv , 1 , true));
                 LoadAndCheckSticks(itemData, v.list, cv , true, loadSize);
-
-                if (v.list[0].Time < startStick.Time)
-                {
-                    var startIndex = GetStartIndex(v.list, startStick.Time);
-                    v.list.RemoveRange(0, startIndex);
-                }
             }
             else
             {
-                if (cursor.stick.Time < v.list[0].Time)
+                if (rowID<v.list[0].rowId) {
+                    loadSize+=(int)(v.list[0].rowId-rowID);
                     LoadAndCheckSticks(itemData, v.list , cv , true , loadSize , true);
-                else if (cursor.stick.Time > v.list[v.list.Count - 1].Time)
-                    LoadAndCheckSticks(itemData, v.list , cv , false , loadSize , true);
-
-                if (cursor.stick.Time.Subtract(v.list[0].Time).TotalSeconds / cv.seconds < chartViewSticksSize)
-                    LoadAndCheckSticks(itemData, v.list , cv , true , loadSize , true);
-                if (v.list[v.list.Count - 1].Time.Subtract(cursor.stick.Time).TotalSeconds / cv.seconds < chartViewSticksSize)
-                    LoadAndCheckSticks(itemData, v.list , cv , false , loadSize , true);
-
-                var foundIndex = 0;
-                var enterIndex = -1;
-                for (int i = 0; i < v.list.Count; i++)
-                {
-                    if (v.list[i].Time == cursor.stick.Time)
-                        foundIndex = i;
-                    var resultData = (v.list[i] as BackTradeStick).resultData;
-                    if (resultData != default)
-                    {
-                        var exitOpenTime = ChartTimeSet.AddSeconds(resultData.ExitStick.Time, -(int)resultData.ExitStick.Time.TimeOfDay.TotalSeconds % cv.seconds);
-                        var enterOpenTime = ChartTimeSet.AddSeconds(resultData.EnterStick.Time, -(int)resultData.EnterStick.Time.TimeOfDay.TotalSeconds % cv.seconds);
-                        enterIndex = i - (int)(exitOpenTime.Subtract(enterOpenTime).TotalSeconds / cv.seconds);
-                        if (v.list[enterIndex].Time != enterOpenTime)
-                            Error.Show();
-                    }
                 }
-
-                if (enterIndex == -1)
-                {
-                    if (v.list.Count > foundIndex + chartViewSticksSize)
-                        v.list.RemoveRange(foundIndex + chartViewSticksSize, v.list.Count - (foundIndex + chartViewSticksSize));
-                    if (foundIndex > chartViewSticksSize)
-                        v.list.RemoveRange(0, foundIndex - chartViewSticksSize);
-                }
-
-                if (v.list[0].Time < startStick.Time)
-                {
-                    var startIndex = GetStartIndex(v.list, startStick.Time);
-                    v.list.RemoveRange(0, startIndex);
+                else if (rowID>v.list[v.list.Count - 1].rowId) {
+                    loadSize+=(int)(rowID-v.list[v.list.Count-1].rowId);
+                    LoadAndCheckSticks(itemData , v.list , cv , false , loadSize , true);
                 }
             }
 
-            //if (mainChart.Series[0].Points.Count != 0)
             ClearMainChartAndSet(cv, itemData);
 
             if (v.list.Count == 0)
                 return;
 
-            var cursorIndex = v.list.Count - 1;
+            var cursorIndex = 0;
             for (int i = 0; i < v.list.Count; i++)
             {
                 AddNewChartPoint(mainChart, showingItemData as BackItemData, i, false);
-                if (v.list[i].Time == cursor.stick.Time || (i + 1 < v.list.Count && v.list[i].Time <= cursor.stick.Time && cursor.stick.Time <= v.list[i + 1].Time))
-                    cursorIndex = i;
+                if (v.list[i].rowId==rowID)
+                    cursorIndex=i;
             }
             MakeVolumeProfileChart(v.list);
 
@@ -2680,10 +2631,6 @@ namespace BackTestingFinal
             }
             else
                 cursorTimeTextBox.Text = "";
-
-            //OneChartFindAndShow(showingItemData);
-            //RecalOBVandSignandUpdateChart();
-            //RecalROBVandSignandUpdateChart();
 
             RecalculateChart(mainChart, updateZoom);
 
@@ -2826,7 +2773,7 @@ namespace BackTestingFinal
 
             var startIndex = prevList.Count-1;
             if(toPast) startIndex=Strategy.FindNeedSticks-(loadSize-list.Count);
-            if(startIndex<0) return result;
+            if(startIndex<0) startIndex=0;
 
             if(chartValues.minutes>ChartTimeSet.Minute1.minutes) {
                 var lastTime = itemData.firstOrLastStick[chartValues][false].Time;
@@ -3509,6 +3456,16 @@ namespace BackTestingFinal
             }
         }
 
+        private static long GetSmallRowID(BackItemData itemData , TradeStick stick , ChartValues cv) {
+
+            long rowID = (long)Math.Round((stick.rowId+(stick.rowId+1))*(double)stick.cv.minutes/cv.minutes/2);
+
+            if(!SticksDBManager.isVolume)
+                rowID-=FuturesUSD.GetStartEmptyMinutes(itemData.firstOrLastStick[cv][true] , stick.cv)/cv.minutes;
+
+            return rowID;
+
+        }
         List<TradeStick> LoadSticks(BackItemData itemData ,
             long lastRowID , ChartValues chartValues = null,
             int size = int.MinValue, bool toPast = true)
@@ -3564,33 +3521,19 @@ namespace BackTestingFinal
             else
                 return FuturesUSD.GetStickFromSQLWithInd(reader, cv, new BackTradeStick(cv)) as BackTradeStick;
         }
-        TradeStick GetStandardStick(bool first = false, bool oneChart = true, ChartValues chartValues = default)
-        {
-            var from = GetCursorStick();
+        TradeStick GetStandardStick(bool first = false) {
+            var stick = GetCursorStick();
 
-            //if (from == default) {
-            //    var standardIndex = first
-            //        ? (int)mainChart.ChartAreas[ChartNames.AREA_PRICE].AxisX.ScaleView.ViewMinimum
-            //        : (int)mainChart.ChartAreas[ChartNames.AREA_PRICE].AxisX.ScaleView.ViewMaximum-2;
-            //    from=(standardIndex<mainChart.Series[ChartNames.SERIES_PRICE].Points.Count-1&&standardIndex>0)
-            //            ? DateTime.Parse(mainChart.Series[ChartNames.SERIES_PRICE].Points[standardIndex].AxisLabel)
-            //            : GetFirstOrLastTime(first
-            //                , mainChart.Series[ChartNames.SERIES_PRICE].Points.Count==0 ? default : showingItemData as BackItemData
-            //                , oneChart ? chartValues : ChartTimeSet.Minute1).time;
-            //}
-            //if(!oneChart&&!first)
-            //    from=ChartTimeSet.AddSeconds(from , (mainChart.Tag as ChartValues).seconds - ChartTimeSet.Minute1.seconds);
+            if (stick == default) {
+                var standardIndex = first
+                    ? (int)mainChart.ChartAreas[ChartNames.AREA_PRICE].AxisX.ScaleView.ViewMinimum
+                    : (int)(mainChart.ChartAreas[ChartNames.AREA_PRICE].AxisX.ScaleView.ViewMaximum-2);
+                stick=(standardIndex<mainChart.Series[ChartNames.SERIES_PRICE].Points.Count-1&&standardIndex>0)
+                        ? showingItemData.listDic[mainChart.Tag as ChartValues].list[standardIndex]
+                        : showingItemData.firstOrLastStick[mainChart.Tag as ChartValues][first];
+            }
 
-            return from;
-
-            //var mainArea = mainChart.ChartAreas[ChartNames.AREA_PRICE];
-            //var mainSeries = mainChart.Series[ChartNames.SERIES_PRICE];
-            //return double.IsNaN(mainArea.CursorX.Position)||
-            //    mainArea.CursorX.Position==0||
-            //    mainArea.CursorX.Position>mainSeries.Points.Count||
-            //    (int)mainArea.CursorX.Position-1<0 ?
-            //        default :
-            //        showingItemData.listDic[mainChart.Tag as ChartValues].list[(int)mainArea.CursorX.Position-1];
+            return stick;
         }
         private static (TradeStick stick, BackItemData itemData) GetFirstOrLastStickMost(bool first, ChartValues cv = null)
         {
